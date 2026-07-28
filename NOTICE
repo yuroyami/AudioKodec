@@ -1,0 +1,47 @@
+KiteAudio
+Copyright 2026 yuroyami
+
+This product is a from-scratch Kotlin Multiplatform implementation of
+established audio container and coding formats.
+
+Everything in this release was written from published specifications, not
+translated from another implementation:
+
+  RIFF WAVE and WAVE_FORMAT_EXTENSIBLE   Microsoft multimedia programming
+                                         documentation
+  RF64 and BW64                          EBU Tech 3306, EBU Tech 3285
+  Wave64                                 Sony Wave64 specification
+  AIFF and AIFF-C                        Apple Audio Interchange File Format
+                                         1.3 and AIFF-C
+  AU                                     Sun and NeXT audio file format
+                                         documentation
+  A-law and mu-law                       ITU-T Recommendation G.711
+  IMA and DVI ADPCM                      IMA Digital Audio Focus and Technical
+                                         Working Group recommended practices,
+                                         and Microsoft's IMA ADPCM WAVE type
+                                         documentation
+  Microsoft ADPCM                        Microsoft ADPCM WAVE type
+                                         documentation
+  QuickTime IMA (ima4)                   Apple QuickTime File Format
+                                         documentation
+
+Formats named by the sniffer but not decoded are identified from their
+published magic numbers only.
+
+Test oracles are used as external programs and never read or redistributed as
+source. The suites that compare against ffmpeg skip themselves when it is not
+installed.
+
+reference/REFERENCES.md records every specification consulted, and, for the
+work still to come, which permissively licensed implementations may be ported
+from. GPL and LGPL sources are out of bounds for this project and are listed
+there so the boundary stays explicit.
+
+Deliberate exclusions, so that a reader knows they are decisions rather than
+gaps waiting to be filled:
+
+  WMA has no open specification and no permissively licensed implementation.
+  TAK and OptimFROG are closed source.
+  Shorten has a restrictive licence history and no current use.
+  DTS and Enhanced AC-3 are named by the sniffer and will not be decoded while
+  their patent positions remain unclear.

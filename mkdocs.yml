@@ -1,0 +1,80 @@
+# Shared MkDocs base for the Kite family.
+#
+# This is a template, not a live config: KiteAudio / Audio containers and codecs in pure Kotlin for Kotlin Multiplatform / KiteAudio are
+# substituted per repository. Each repo keeps its own mkdocs.yml so it still
+# builds standalone from a fresh clone; this file is the thing to edit when the
+# whole family should change.
+
+site_name: KiteAudio
+site_url: https://yuroyami.github.io/KiteAudio/
+site_description: Audio containers and codecs in pure Kotlin for Kotlin Multiplatform
+site_author: yuroyami
+copyright: Apache-2.0
+
+repo_name: yuroyami/KiteAudio
+repo_url: https://github.com/yuroyami/KiteAudio
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+    - search.share
+
+extra_css:
+  - theme/kite.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - API reference: https://yuroyami.github.io/KiteAudio/api/

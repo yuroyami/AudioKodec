@@ -1,0 +1,510 @@
+package io.github.yuroyami.kiteaudio
+
+import java.io.File
+import java.util.concurrent.TimeUnit
+import kotlin.math.abs
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+/**
+ * Checks the MPEG audio layer against ffmpeg and LAME.
+ *
+ * MPEG audio has no file header, so everything a caller wants to know about a
+ * file comes from finding its frames and reading what an encoder left inside
+ * the first one. These tests cover that: where the audio starts and stops, how
+ * long it is, and whether the encoder's own padding is being taken off.
+ *
+ * Every test skips itself when its tool is missing.
+ */
+class MpegOracleTest {
+
+    private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
+    private val ffprobe: String? by lazy { findOnPath("ffprobe") }
+    private val lame: String? by lazy { findOnPath("lame") }
+
+    @Test
+    fun mpegHeadersAgreeWithFfprobe() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val ffprobe = ffprobe ?: return skip()
+        for (rate in intArrayOf(32_000, 44_100, 48_000, 22_050, 16_000)) {
+            for (channels in intArrayOf(1, 2)) {
+                for (bitrate in intArrayOf(64, 128, 320)) {
+                    if (rate < 32_000 && bitrate > 160) continue
+                    val what = "MP3 $rate Hz, $channels channels, $bitrate kbps"
+                    val frames = rate
+                    val mp3 = encode(ffmpeg, frames, channels, rate, "-b:a", "${bitrate}k", "cbr_${rate}_${channels}_$bitrate")
+
+                    val info = KiteAudio.probe(mp3.readBytes())
+                    assertEquals(AudioContainer.MPEG_AUDIO, info.container, "$what: container")
+                    assertEquals(AudioCodec.MP3, info.codec, "$what: codec")
+                    assertEquals(rate, info.format.sampleRate, "$what: sample rate")
+                    assertEquals(channels, info.format.channels, "$what: channels")
+
+                    val probed = probeDuration(ffprobe, mp3)
+                    val ours = info.durationFrames
+                    assertNotNull(ours, "$what: duration")
+                    // ffprobe reports the untrimmed length for a file whose
+                    // gapless numbers it does not apply, so a frame either way
+                    // is agreement.
+                    val theirs = (probed * rate).toLong()
+                    assertTrue(
+                        abs(ours - theirs) <= 1152 * 2,
+                        "$what: duration is $ours frames and ffprobe says $theirs",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun aVariableBitrateFileReportsItsStoredFrameCount() {
+        val lame = lame ?: return skip()
+        val wav = temp("vbr.wav")
+        wav.writeBytes(
+            KiteAudio.encode(sweep(44_100 * 2, 2, 44_100), AudioFormat(44_100, 2), EncodeTarget.wav(16)),
+        )
+        val mp3 = temp("vbr.mp3")
+        mp3.delete()
+        run(listOf(lame, "--quiet", "-V", "2", wav.absolutePath, mp3.absolutePath), "LAME VBR")
+
+        val info = KiteAudio.probe(mp3.readBytes())
+        assertEquals(44_100, info.format.sampleRate, "sample rate")
+        assertEquals(2, info.format.channels, "channels")
+        assertTrue(info.isVariableBitrate, "LAME -V writes a variable bitrate file")
+        val duration = assertNotNull(info.durationFrames, "duration")
+        // LAME writes gapless information, so the length should come back as
+        // what went in rather than as the padded frame count.
+        assertTrue(
+            abs(duration - 88_200L) <= 1_152,
+            "a two second file decoded to $duration frames",
+        )
+    }
+
+    /**
+     * Tags in front of and behind the audio are not audio.
+     *
+     * A decoder that scans from byte zero finds a false sync inside a large
+     * cover image sooner or later, and one that reads to the end of the file
+     * decodes an ID3v1 block as a burst of noise.
+     */
+    @Test
+    fun tagBlocksAreNotMistakenForAudio() {
+        val lame = lame ?: return skip()
+        val wav = temp("tagged.wav")
+        wav.writeBytes(
+            KiteAudio.encode(sweep(44_100, 1, 44_100), AudioFormat(44_100, 1), EncodeTarget.wav(16)),
+        )
+        val plain = temp("tagged-plain.mp3")
+        plain.delete()
+        run(listOf(lame, "--quiet", "-b", "128", wav.absolutePath, plain.absolutePath), "LAME")
+        val plainInfo = KiteAudio.probe(plain.readBytes())
+
+        // A large ID3v2 block in front, and an ID3v1 block behind.
+        val picture = ByteArray(300_000) { ((it * 31) and 0xFF).toByte() }
+        val tagged = KiteAudio.writeTags(
+            plain.readBytes(),
+            KiteAudio.readTags(plain.readBytes()).edit {
+                set(io.github.yuroyami.kiteaudio.tag.TagField.TITLE, "Tagged")
+                addPicture(
+                    io.github.yuroyami.kiteaudio.tag.TagPicture(
+                        mimeType = "image/jpeg",
+                        description = "Cover",
+                        bytes = picture,
+                    ),
+                )
+            },
+        )
+        val taggedFile = temp("tagged.mp3")
+        taggedFile.writeBytes(tagged)
+
+        val info = KiteAudio.probe(tagged)
+        assertEquals(plainInfo.format.sampleRate, info.format.sampleRate, "sample rate")
+        assertEquals(plainInfo.durationFrames, info.durationFrames, "duration")
+        assertTrue(
+            info.dataOffset > 300_000,
+            "the audio should start after the picture, and started at ${info.dataOffset}",
+        )
+    }
+
+    /**
+     * The decoded waveform has to be the one ffmpeg gets.
+     *
+     * Layer III is lossy, so the two decoders never agree bit for bit, but they
+     * are decoding the same spectrum through the same filterbank and should
+     * land within rounding of each other. A structural mistake, a wrong table
+     * or a misplaced window shows up here as an error hundreds of times larger
+     * than that, not as a subtle one.
+     */
+    @Test
+    fun decodedAudioMatchesFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (rate in intArrayOf(44_100, 48_000, 32_000, 24_000, 16_000)) {
+            for (channels in intArrayOf(1, 2)) {
+                val what = "MP3 $rate Hz, $channels channels"
+                val mp3 = encode(ffmpeg, rate, channels, rate, "-b:a", "128k", "dec_${rate}_$channels")
+
+                val ours = KiteAudio.decode(mp3.readBytes())
+                assertEquals(rate, ours.format.sampleRate, "$what: sample rate")
+                assertEquals(channels, ours.format.channels, "$what: channels")
+
+                val theirs = decodeWithFfmpeg(ffmpeg, mp3, rate, channels)
+                assertEquals(
+                    theirs.size / channels, ours.frames,
+                    "$what: length differs from ffmpeg's",
+                )
+                val compared = minOf(ours.frames, theirs.size / channels)
+                assertTrue(
+                    compared > rate / 2,
+                    "$what: only $compared frames to compare, ours has ${ours.frames} and " +
+                        "ffmpeg has ${theirs.size / channels}",
+                )
+
+                var worst = 0.0
+                var sumSquared = 0.0
+                for (i in 0 until compared * channels) {
+                    val delta = (ours.samples[i] - theirs[i]).toDouble()
+                    if (abs(delta) > worst) worst = abs(delta)
+                    sumSquared += delta * delta
+                }
+                val rms = kotlin.math.sqrt(sumSquared / (compared * channels))
+                assertTrue(
+                    worst < 1e-4 && rms < 1e-5,
+                    "$what: worst sample differs by $worst and the RMS difference is $rms " +
+                        "over $compared frames",
+                )
+            }
+        }
+    }
+
+    /**
+     * A variable bitrate file decodes to the same length as a constant one.
+     *
+     * LAME's own encoder is a different writer from ffmpeg's wrapper around it,
+     * and a variable bitrate stream exercises the bit reservoir far harder: a
+     * frame can be a quarter the size of the one before it and borrow the rest.
+     */
+    @Test
+    fun aVariableBitrateFileDecodes() {
+        val lame = lame ?: return skip()
+        val ffmpeg = ffmpeg ?: return skip()
+        val frames = 44_100 * 2
+        val wav = temp("vbrdec.wav")
+        wav.writeBytes(
+            KiteAudio.encode(sweep(frames, 2, 44_100), AudioFormat(44_100, 2), EncodeTarget.wav(16)),
+        )
+        val mp3 = temp("vbrdec.mp3")
+        mp3.delete()
+        run(listOf(lame, "--quiet", "-V", "0", wav.absolutePath, mp3.absolutePath), "LAME VBR")
+
+        val ours = KiteAudio.decode(mp3.readBytes())
+        assertTrue(KiteAudio.probe(mp3.readBytes()).isVariableBitrate, "LAME -V 0 is variable")
+        val theirs = decodeWithFfmpeg(ffmpeg, mp3, 44_100, 2)
+        assertEquals(theirs.size / 2, ours.frames, "length differs from ffmpeg's")
+
+        var worst = 0.0
+        for (i in 0 until minOf(ours.samples.size, theirs.size)) {
+            val delta = abs(ours.samples[i] - theirs[i]).toDouble()
+            if (delta > worst) worst = delta
+        }
+        assertTrue(worst < 1e-4, "the worst sample differs by $worst")
+    }
+
+    /**
+     * Seeking lands on the sample it was asked for.
+     *
+     * Layer III makes this harder than it sounds. A frame borrows bits from the
+     * ones before it and the transform carries an overlap between granules, so
+     * a decoder that simply jumps to a frame boundary produces a click and then
+     * several frames of quietly wrong audio. The check is therefore not that
+     * seeking returns something, but that it returns what a straight decode
+     * from the beginning produced at the same place.
+     */
+    @Test
+    fun seekingLandsOnTheRightSample() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val rate = 44_100
+        val mp3 = encode(ffmpeg, rate * 3, 2, rate, "-b:a", "192k", "seek")
+        val whole = KiteAudio.decode(mp3.readBytes())
+
+        KiteAudio.open(mp3.readBytes()).use { decoder ->
+            for (target in longArrayOf(0, 1, 1151, 1152, 5_000, 44_100, 100_000, whole.frames - 2_000L)) {
+                if (target < 0 || target >= whole.frames) continue
+                val landed = decoder.seek(target)
+                assertEquals(target, landed, "seek to $target reported landing elsewhere")
+
+                val frame = decoder.nextFrame()
+                assertNotNull(frame, "seek to $target then read gave nothing")
+                assertEquals(target, frame.positionFrames, "seek to $target: reported position")
+
+                val compare = minOf(frame.frameCount, 512)
+                var worst = 0.0
+                for (i in 0 until compare * 2) {
+                    val delta = abs(frame.samples[i] - whole.samples[(target * 2 + i).toInt()])
+                    if (delta > worst) worst = delta.toDouble()
+                }
+                // The reservoir and the overlap are refilled by decoding ahead,
+                // so this is not "close enough", it is the same samples.
+                assertTrue(
+                    worst < 1e-5,
+                    "seek to $target: the worst of $compare frames differs by $worst from a " +
+                        "straight decode",
+                )
+            }
+        }
+    }
+
+    /**
+     * Layer II decodes to what ffmpeg gets.
+     *
+     * Layer II is a different decoder from Layer III sharing only the
+     * filterbank, and its bit allocation table is chosen by the bitrate, so
+     * this covers several bitrates on purpose: at 32 kbps a channel the format
+     * switches to a table with eight subbands instead of twenty-seven, and a
+     * decoder that picks the wrong one produces noise rather than a small
+     * error.
+     */
+    @Test
+    fun layerTwoDecodesLikeFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (rate in intArrayOf(44_100, 48_000, 32_000, 24_000, 16_000)) {
+            // MPEG-2 stops at 160 kbps, and its one allocation table covers
+            // every rate it does reach.
+            val bitrates = if (rate < 32_000) intArrayOf(32, 64, 160) else intArrayOf(64, 128, 192)
+            for (channels in intArrayOf(1, 2)) {
+                for (bitrate in bitrates) {
+                    val what = "MP2 $rate Hz, $channels channels, $bitrate kbps"
+                    val mp2 = encodeWith(
+                        ffmpeg, "mp2", rate, channels, "l2_${rate}_${channels}_$bitrate",
+                        "-b:a", "${bitrate}k",
+                    )
+
+                    val info = KiteAudio.probe(mp2.readBytes())
+                    assertEquals(AudioCodec.MP2, info.codec, "$what: codec")
+                    assertEquals(rate, info.format.sampleRate, "$what: sample rate")
+
+                    val ours = KiteAudio.decode(mp2.readBytes())
+                    val theirs = decodeWithFfmpeg(ffmpeg, mp2, rate, channels, "mp2float")
+                    val compared = minOf(ours.frames, theirs.size / channels)
+                    assertTrue(compared > rate / 2, "$what: only $compared frames to compare")
+
+                    var worst = 0.0
+                    for (i in 0 until compared * channels) {
+                        val delta = abs(ours.samples[i] - theirs[i]).toDouble()
+                        if (delta > worst) worst = delta
+                    }
+                    assertTrue(worst < 1e-4, "$what: the worst sample differs by $worst")
+                }
+            }
+        }
+    }
+
+    /**
+     * Layer I decodes to what ffmpeg gets.
+     *
+     * No encoder for Layer I is still shipping anywhere, so the file is written
+     * here: a frame's layout is simple enough to build by hand, and ffmpeg
+     * still decodes it. That makes this a real comparison rather than a test of
+     * KiteAudio against itself.
+     */
+    @Test
+    fun layerOneDecodesLikeFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val rate = 44_100
+        val mp1 = temp("built.mp1")
+        mp1.writeBytes(buildLayer1File(frames = 60, rate = rate))
+
+        val info = KiteAudio.probe(mp1.readBytes())
+        assertEquals(AudioCodec.MP1, info.codec, "codec")
+        assertEquals(rate, info.format.sampleRate, "sample rate")
+        assertEquals(1, info.format.channels, "channels")
+
+        val ours = KiteAudio.decode(mp1.readBytes())
+        val theirs = decodeWithFfmpeg(ffmpeg, mp1, rate, 1, "mp1float")
+        val compared = minOf(ours.frames, theirs.size)
+        assertTrue(compared >= 384 * 55, "only $compared frames to compare")
+
+        var worst = 0.0
+        for (i in 0 until compared) {
+            val delta = abs(ours.samples[i] - theirs[i]).toDouble()
+            if (delta > worst) worst = delta
+        }
+        assertTrue(worst < 1e-4, "the worst sample differs by $worst")
+    }
+
+    /**
+     * Writes a mono Layer I file whose subband samples follow a fixed pattern.
+     *
+     * The point is not that it sounds like anything, but that every subband
+     * carries a different allocation width and a different scalefactor, so a
+     * decoder that mixes up a width, a scalefactor or the order they are read
+     * in cannot agree with another decoder by luck.
+     */
+    private fun buildLayer1File(frames: Int, rate: Int): ByteArray {
+        // 448 kbps, which is bitrate index 14 and leaves room for every
+        // allocation width the test uses.
+        val bitrateIndex = 14
+        val bitrate = 448
+        // Layer I counts its frames in four-byte slots.
+        val frameBytes = (12 * bitrate * 1000 / rate) * 4
+        val out = ByteArray(frameBytes * frames)
+        for (f in 0 until frames) {
+            val frame = ByteArray(frameBytes)
+            // MPEG-1 Layer I, no CRC, 192 kbps, 44100 Hz, mono.
+            frame[0] = 0xFF.toByte()
+            frame[1] = 0xFF.toByte()
+            frame[2] = ((bitrateIndex shl 4) or (0 shl 2)).toByte()
+            frame[3] = (3 shl 6).toByte()
+
+            val writer = io.github.yuroyami.kiteaudio.internal.bits.BitWriterMsb()
+            val widths = IntArray(32) { if (it < 16) (it % 14) + 1 else 0 }
+            for (sb in 0 until 32) writer.writeBits(widths[sb], 4)
+            for (sb in 0 until 32) {
+                if (widths[sb] != 0) writer.writeBits((sb * 3 + f) % 63, 6)
+            }
+            for (slot in 0 until 12) {
+                for (sb in 0 until 32) {
+                    val width = widths[sb]
+                    if (width == 0) continue
+                    val bits = width + 1
+                    val value = (slot * 37 + sb * 11 + f * 5) and ((1 shl bits) - 1)
+                    writer.writeBits(value, bits)
+                }
+            }
+            writer.alignToByte()
+            val payload = writer.toByteArray()
+            payload.copyInto(frame, 4, 0, minOf(payload.size, frameBytes - 4))
+            frame.copyInto(out, f * frameBytes)
+        }
+        return out
+    }
+
+    private fun encodeWith(
+        ffmpeg: String,
+        codec: String,
+        rate: Int,
+        channels: Int,
+        name: String,
+        vararg options: String,
+    ): File {
+        val wav = temp("$name.wav")
+        wav.writeBytes(
+            KiteAudio.encode(sweep(rate, channels, rate), AudioFormat(rate, channels), EncodeTarget.wav(16)),
+        )
+        val out = temp("$name.${if (codec == "mp2") "mp2" else codec}")
+        out.delete()
+        val command = ArrayList<String>()
+        command += listOf(ffmpeg, "-y", "-v", "quiet", "-i", wav.absolutePath, "-c:a", codec)
+        command += options
+        command += out.absolutePath
+        run(command, "encoding $name")
+        return out
+    }
+
+    /** Decodes to raw 32-bit float with ffmpeg, interleaved. */
+    private fun decodeWithFfmpeg(
+        ffmpeg: String,
+        mp3: File,
+        rate: Int,
+        channels: Int,
+        decoder: String? = null,
+    ): FloatArray {
+        val raw = File(mp3.absolutePath + ".f32")
+        raw.delete()
+        val command = ArrayList<String>()
+        command += listOf(ffmpeg, "-y", "-v", "quiet")
+        // ffmpeg ships two decoders for Layers I and II and picks the fixed
+        // point one by default. Its own float decoder disagrees with it by
+        // about 0.03, so the fixed point one is no use as a reference for
+        // anything finer than that.
+        if (decoder != null) command += listOf("-c:a", decoder)
+        command += listOf(
+            "-i", mp3.absolutePath,
+            "-f", "f32le", "-acodec", "pcm_f32le", "-ar", "$rate", "-ac", "$channels",
+            raw.absolutePath,
+        )
+        run(command, "decoding ${mp3.name}")
+        val bytes = raw.readBytes()
+        val out = FloatArray(bytes.size / 4)
+        val buffer = java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        for (i in out.indices) out[i] = buffer.getFloat(i * 4)
+        return out
+    }
+
+    private fun sweep(frames: Int, channels: Int, rate: Int): FloatArray {
+        val out = FloatArray(frames * channels)
+        for (c in 0 until channels) {
+            val start = 200.0 * (c + 1)
+            for (f in 0 until frames) {
+                val t = f / rate.toDouble()
+                out[f * channels + c] =
+                    (0.7 * kotlin.math.sin(2.0 * Math.PI * (start * t + 2_000.0 * t * t))).toFloat()
+            }
+        }
+        return out
+    }
+
+    private fun encode(
+        ffmpeg: String,
+        frames: Int,
+        channels: Int,
+        rate: Int,
+        vararg options: String,
+    ): File {
+        val name = options.last()
+        val wav = temp("$name.wav")
+        wav.writeBytes(
+            KiteAudio.encode(sweep(frames, channels, rate), AudioFormat(rate, channels), EncodeTarget.wav(16)),
+        )
+        val mp3 = temp("$name.mp3")
+        mp3.delete()
+        val command = ArrayList<String>()
+        command += listOf(ffmpeg, "-y", "-v", "quiet", "-i", wav.absolutePath, "-c:a", "libmp3lame")
+        command += options.dropLast(1)
+        command += mp3.absolutePath
+        run(command, "encoding $name")
+        return mp3
+    }
+
+    private fun probeDuration(ffprobe: String, file: File): Double {
+        val process = ProcessBuilder(
+            listOf(
+                ffprobe, "-v", "quiet", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", file.absolutePath,
+            ),
+        ).redirectErrorStream(true).start()
+        val text = process.inputStream.bufferedReader().readText().trim()
+        process.waitFor(60, TimeUnit.SECONDS)
+        return text.toDoubleOrNull() ?: 0.0
+    }
+
+    private fun run(command: List<String>, what: String) {
+        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().readText()
+        val finished = process.waitFor(180, TimeUnit.SECONDS)
+        assertTrue(finished, "${command.first()} did not finish within three minutes")
+        assertEquals(0, process.exitValue(), "$what: ${command.joinToString(" ")} failed:\n$output")
+    }
+
+    private fun temp(name: String): File = File(workDirectory, name)
+
+    private fun skip() {
+        println("an MPEG oracle tool is not on the path, so the comparison did not run")
+    }
+
+    private companion object {
+        val workDirectory: File = File(
+            System.getProperty("java.io.tmpdir"), "kiteaudio-mpeg-oracle",
+        ).also { it.mkdirs() }
+
+        fun findOnPath(tool: String): String? {
+            val path = System.getenv("PATH") ?: return null
+            for (directory in path.split(File.pathSeparator)) {
+                val candidate = File(directory, tool)
+                if (candidate.canExecute()) return candidate.absolutePath
+            }
+            return null
+        }
+    }
+}

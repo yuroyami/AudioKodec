@@ -1,0 +1,754 @@
+// Klib ABI Dump
+// Targets: [androidNativeArm32, androidNativeArm64, androidNativeX64, androidNativeX86, iosArm64, iosSimulatorArm64, iosX64, js, linuxArm64, linuxX64, macosArm64, mingwX64, tvosArm64, tvosSimulatorArm64, wasmJs, wasmWasi, watchosArm32, watchosArm64, watchosDeviceArm64, watchosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.yuroyami:kiteaudio>
+final enum class io.github.yuroyami.kiteaudio.tag/PictureType : kotlin/Enum<io.github.yuroyami.kiteaudio.tag/PictureType> { // io.github.yuroyami.kiteaudio.tag/PictureType|null[0]
+    enum entry ARTIST // io.github.yuroyami.kiteaudio.tag/PictureType.ARTIST|null[0]
+    enum entry BACK_COVER // io.github.yuroyami.kiteaudio.tag/PictureType.BACK_COVER|null[0]
+    enum entry BAND // io.github.yuroyami.kiteaudio.tag/PictureType.BAND|null[0]
+    enum entry BAND_LOGO // io.github.yuroyami.kiteaudio.tag/PictureType.BAND_LOGO|null[0]
+    enum entry BRIGHT_COLOURED_FISH // io.github.yuroyami.kiteaudio.tag/PictureType.BRIGHT_COLOURED_FISH|null[0]
+    enum entry COMPOSER // io.github.yuroyami.kiteaudio.tag/PictureType.COMPOSER|null[0]
+    enum entry CONDUCTOR // io.github.yuroyami.kiteaudio.tag/PictureType.CONDUCTOR|null[0]
+    enum entry DURING_PERFORMANCE // io.github.yuroyami.kiteaudio.tag/PictureType.DURING_PERFORMANCE|null[0]
+    enum entry DURING_RECORDING // io.github.yuroyami.kiteaudio.tag/PictureType.DURING_RECORDING|null[0]
+    enum entry FILE_ICON // io.github.yuroyami.kiteaudio.tag/PictureType.FILE_ICON|null[0]
+    enum entry FRONT_COVER // io.github.yuroyami.kiteaudio.tag/PictureType.FRONT_COVER|null[0]
+    enum entry ILLUSTRATION // io.github.yuroyami.kiteaudio.tag/PictureType.ILLUSTRATION|null[0]
+    enum entry LEAD_ARTIST // io.github.yuroyami.kiteaudio.tag/PictureType.LEAD_ARTIST|null[0]
+    enum entry LEAFLET_PAGE // io.github.yuroyami.kiteaudio.tag/PictureType.LEAFLET_PAGE|null[0]
+    enum entry LYRICIST // io.github.yuroyami.kiteaudio.tag/PictureType.LYRICIST|null[0]
+    enum entry MEDIA // io.github.yuroyami.kiteaudio.tag/PictureType.MEDIA|null[0]
+    enum entry OTHER // io.github.yuroyami.kiteaudio.tag/PictureType.OTHER|null[0]
+    enum entry OTHER_FILE_ICON // io.github.yuroyami.kiteaudio.tag/PictureType.OTHER_FILE_ICON|null[0]
+    enum entry PUBLISHER_LOGO // io.github.yuroyami.kiteaudio.tag/PictureType.PUBLISHER_LOGO|null[0]
+    enum entry RECORDING_LOCATION // io.github.yuroyami.kiteaudio.tag/PictureType.RECORDING_LOCATION|null[0]
+    enum entry SCREEN_CAPTURE // io.github.yuroyami.kiteaudio.tag/PictureType.SCREEN_CAPTURE|null[0]
+
+    final val entries // io.github.yuroyami.kiteaudio.tag/PictureType.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.kiteaudio.tag/PictureType> // io.github.yuroyami.kiteaudio.tag/PictureType.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.kiteaudio.tag/PictureType // io.github.yuroyami.kiteaudio.tag/PictureType.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.kiteaudio.tag/PictureType> // io.github.yuroyami.kiteaudio.tag/PictureType.values|values#static(){}[0]
+
+    final object Companion { // io.github.yuroyami.kiteaudio.tag/PictureType.Companion|null[0]
+        final fun fromCode(kotlin/Int): io.github.yuroyami.kiteaudio.tag/PictureType // io.github.yuroyami.kiteaudio.tag/PictureType.Companion.fromCode|fromCode(kotlin.Int){}[0]
+    }
+}
+
+final enum class io.github.yuroyami.kiteaudio.tag/TagField : kotlin/Enum<io.github.yuroyami.kiteaudio.tag/TagField> { // io.github.yuroyami.kiteaudio.tag/TagField|null[0]
+    enum entry ACOUSTID_ID // io.github.yuroyami.kiteaudio.tag/TagField.ACOUSTID_ID|null[0]
+    enum entry ALBUM // io.github.yuroyami.kiteaudio.tag/TagField.ALBUM|null[0]
+    enum entry ALBUM_ARTIST // io.github.yuroyami.kiteaudio.tag/TagField.ALBUM_ARTIST|null[0]
+    enum entry ARTIST // io.github.yuroyami.kiteaudio.tag/TagField.ARTIST|null[0]
+    enum entry BARCODE // io.github.yuroyami.kiteaudio.tag/TagField.BARCODE|null[0]
+    enum entry BPM // io.github.yuroyami.kiteaudio.tag/TagField.BPM|null[0]
+    enum entry CATALOG_NUMBER // io.github.yuroyami.kiteaudio.tag/TagField.CATALOG_NUMBER|null[0]
+    enum entry COMMENT // io.github.yuroyami.kiteaudio.tag/TagField.COMMENT|null[0]
+    enum entry COMPILATION // io.github.yuroyami.kiteaudio.tag/TagField.COMPILATION|null[0]
+    enum entry COMPOSER // io.github.yuroyami.kiteaudio.tag/TagField.COMPOSER|null[0]
+    enum entry CONDUCTOR // io.github.yuroyami.kiteaudio.tag/TagField.CONDUCTOR|null[0]
+    enum entry COPYRIGHT // io.github.yuroyami.kiteaudio.tag/TagField.COPYRIGHT|null[0]
+    enum entry DATE // io.github.yuroyami.kiteaudio.tag/TagField.DATE|null[0]
+    enum entry DESCRIPTION // io.github.yuroyami.kiteaudio.tag/TagField.DESCRIPTION|null[0]
+    enum entry DISC_NUMBER // io.github.yuroyami.kiteaudio.tag/TagField.DISC_NUMBER|null[0]
+    enum entry DISC_TOTAL // io.github.yuroyami.kiteaudio.tag/TagField.DISC_TOTAL|null[0]
+    enum entry ENCODER // io.github.yuroyami.kiteaudio.tag/TagField.ENCODER|null[0]
+    enum entry ENCODING_SETTINGS // io.github.yuroyami.kiteaudio.tag/TagField.ENCODING_SETTINGS|null[0]
+    enum entry GENRE // io.github.yuroyami.kiteaudio.tag/TagField.GENRE|null[0]
+    enum entry GROUPING // io.github.yuroyami.kiteaudio.tag/TagField.GROUPING|null[0]
+    enum entry ISRC // io.github.yuroyami.kiteaudio.tag/TagField.ISRC|null[0]
+    enum entry KEY // io.github.yuroyami.kiteaudio.tag/TagField.KEY|null[0]
+    enum entry LANGUAGE // io.github.yuroyami.kiteaudio.tag/TagField.LANGUAGE|null[0]
+    enum entry LYRICIST // io.github.yuroyami.kiteaudio.tag/TagField.LYRICIST|null[0]
+    enum entry LYRICS // io.github.yuroyami.kiteaudio.tag/TagField.LYRICS|null[0]
+    enum entry MEDIA // io.github.yuroyami.kiteaudio.tag/TagField.MEDIA|null[0]
+    enum entry MOOD // io.github.yuroyami.kiteaudio.tag/TagField.MOOD|null[0]
+    enum entry MUSICBRAINZ_ARTIST_ID // io.github.yuroyami.kiteaudio.tag/TagField.MUSICBRAINZ_ARTIST_ID|null[0]
+    enum entry MUSICBRAINZ_RECORDING_ID // io.github.yuroyami.kiteaudio.tag/TagField.MUSICBRAINZ_RECORDING_ID|null[0]
+    enum entry MUSICBRAINZ_RELEASE_ARTIST_ID // io.github.yuroyami.kiteaudio.tag/TagField.MUSICBRAINZ_RELEASE_ARTIST_ID|null[0]
+    enum entry MUSICBRAINZ_RELEASE_GROUP_ID // io.github.yuroyami.kiteaudio.tag/TagField.MUSICBRAINZ_RELEASE_GROUP_ID|null[0]
+    enum entry MUSICBRAINZ_RELEASE_ID // io.github.yuroyami.kiteaudio.tag/TagField.MUSICBRAINZ_RELEASE_ID|null[0]
+    enum entry MUSICBRAINZ_TRACK_ID // io.github.yuroyami.kiteaudio.tag/TagField.MUSICBRAINZ_TRACK_ID|null[0]
+    enum entry ORIGINAL_DATE // io.github.yuroyami.kiteaudio.tag/TagField.ORIGINAL_DATE|null[0]
+    enum entry PERFORMER // io.github.yuroyami.kiteaudio.tag/TagField.PERFORMER|null[0]
+    enum entry PUBLISHER // io.github.yuroyami.kiteaudio.tag/TagField.PUBLISHER|null[0]
+    enum entry REMIXER // io.github.yuroyami.kiteaudio.tag/TagField.REMIXER|null[0]
+    enum entry SORT_ALBUM // io.github.yuroyami.kiteaudio.tag/TagField.SORT_ALBUM|null[0]
+    enum entry SORT_ALBUM_ARTIST // io.github.yuroyami.kiteaudio.tag/TagField.SORT_ALBUM_ARTIST|null[0]
+    enum entry SORT_ARTIST // io.github.yuroyami.kiteaudio.tag/TagField.SORT_ARTIST|null[0]
+    enum entry SORT_COMPOSER // io.github.yuroyami.kiteaudio.tag/TagField.SORT_COMPOSER|null[0]
+    enum entry SORT_TITLE // io.github.yuroyami.kiteaudio.tag/TagField.SORT_TITLE|null[0]
+    enum entry TITLE // io.github.yuroyami.kiteaudio.tag/TagField.TITLE|null[0]
+    enum entry TRACK_NUMBER // io.github.yuroyami.kiteaudio.tag/TagField.TRACK_NUMBER|null[0]
+    enum entry TRACK_TOTAL // io.github.yuroyami.kiteaudio.tag/TagField.TRACK_TOTAL|null[0]
+    enum entry URL // io.github.yuroyami.kiteaudio.tag/TagField.URL|null[0]
+
+    final val entries // io.github.yuroyami.kiteaudio.tag/TagField.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.kiteaudio.tag/TagField> // io.github.yuroyami.kiteaudio.tag/TagField.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val isNumeric // io.github.yuroyami.kiteaudio.tag/TagField.isNumeric|{}isNumeric[0]
+        final fun <get-isNumeric>(): kotlin/Boolean // io.github.yuroyami.kiteaudio.tag/TagField.isNumeric.<get-isNumeric>|<get-isNumeric>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.kiteaudio.tag/TagField // io.github.yuroyami.kiteaudio.tag/TagField.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.kiteaudio.tag/TagField> // io.github.yuroyami.kiteaudio.tag/TagField.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.kiteaudio.tag/TagFormat : kotlin/Enum<io.github.yuroyami.kiteaudio.tag/TagFormat> { // io.github.yuroyami.kiteaudio.tag/TagFormat|null[0]
+    enum entry AIFF_TEXT // io.github.yuroyami.kiteaudio.tag/TagFormat.AIFF_TEXT|null[0]
+    enum entry APEV1 // io.github.yuroyami.kiteaudio.tag/TagFormat.APEV1|null[0]
+    enum entry APEV2 // io.github.yuroyami.kiteaudio.tag/TagFormat.APEV2|null[0]
+    enum entry BWF_BEXT // io.github.yuroyami.kiteaudio.tag/TagFormat.BWF_BEXT|null[0]
+    enum entry ID3V1 // io.github.yuroyami.kiteaudio.tag/TagFormat.ID3V1|null[0]
+    enum entry ID3V2_2 // io.github.yuroyami.kiteaudio.tag/TagFormat.ID3V2_2|null[0]
+    enum entry ID3V2_3 // io.github.yuroyami.kiteaudio.tag/TagFormat.ID3V2_3|null[0]
+    enum entry ID3V2_4 // io.github.yuroyami.kiteaudio.tag/TagFormat.ID3V2_4|null[0]
+    enum entry LYRICS3 // io.github.yuroyami.kiteaudio.tag/TagFormat.LYRICS3|null[0]
+    enum entry MP4_ILST // io.github.yuroyami.kiteaudio.tag/TagFormat.MP4_ILST|null[0]
+    enum entry RIFF_INFO // io.github.yuroyami.kiteaudio.tag/TagFormat.RIFF_INFO|null[0]
+    enum entry VORBIS_COMMENT // io.github.yuroyami.kiteaudio.tag/TagFormat.VORBIS_COMMENT|null[0]
+
+    final val displayName // io.github.yuroyami.kiteaudio.tag/TagFormat.displayName|{}displayName[0]
+        final fun <get-displayName>(): kotlin/String // io.github.yuroyami.kiteaudio.tag/TagFormat.displayName.<get-displayName>|<get-displayName>(){}[0]
+    final val entries // io.github.yuroyami.kiteaudio.tag/TagFormat.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.kiteaudio.tag/TagFormat> // io.github.yuroyami.kiteaudio.tag/TagFormat.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val precedence // io.github.yuroyami.kiteaudio.tag/TagFormat.precedence|{}precedence[0]
+        final fun <get-precedence>(): kotlin/Int // io.github.yuroyami.kiteaudio.tag/TagFormat.precedence.<get-precedence>|<get-precedence>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.kiteaudio.tag/TagFormat // io.github.yuroyami.kiteaudio.tag/TagFormat.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.kiteaudio.tag/TagFormat> // io.github.yuroyami.kiteaudio.tag/TagFormat.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.kiteaudio/AudioChannel : kotlin/Enum<io.github.yuroyami.kiteaudio/AudioChannel> { // io.github.yuroyami.kiteaudio/AudioChannel|null[0]
+    enum entry BACK_CENTER // io.github.yuroyami.kiteaudio/AudioChannel.BACK_CENTER|null[0]
+    enum entry BACK_LEFT // io.github.yuroyami.kiteaudio/AudioChannel.BACK_LEFT|null[0]
+    enum entry BACK_RIGHT // io.github.yuroyami.kiteaudio/AudioChannel.BACK_RIGHT|null[0]
+    enum entry FRONT_CENTER // io.github.yuroyami.kiteaudio/AudioChannel.FRONT_CENTER|null[0]
+    enum entry FRONT_LEFT // io.github.yuroyami.kiteaudio/AudioChannel.FRONT_LEFT|null[0]
+    enum entry FRONT_LEFT_OF_CENTER // io.github.yuroyami.kiteaudio/AudioChannel.FRONT_LEFT_OF_CENTER|null[0]
+    enum entry FRONT_RIGHT // io.github.yuroyami.kiteaudio/AudioChannel.FRONT_RIGHT|null[0]
+    enum entry FRONT_RIGHT_OF_CENTER // io.github.yuroyami.kiteaudio/AudioChannel.FRONT_RIGHT_OF_CENTER|null[0]
+    enum entry LOW_FREQUENCY // io.github.yuroyami.kiteaudio/AudioChannel.LOW_FREQUENCY|null[0]
+    enum entry SIDE_LEFT // io.github.yuroyami.kiteaudio/AudioChannel.SIDE_LEFT|null[0]
+    enum entry SIDE_RIGHT // io.github.yuroyami.kiteaudio/AudioChannel.SIDE_RIGHT|null[0]
+    enum entry TOP_BACK_CENTER // io.github.yuroyami.kiteaudio/AudioChannel.TOP_BACK_CENTER|null[0]
+    enum entry TOP_BACK_LEFT // io.github.yuroyami.kiteaudio/AudioChannel.TOP_BACK_LEFT|null[0]
+    enum entry TOP_BACK_RIGHT // io.github.yuroyami.kiteaudio/AudioChannel.TOP_BACK_RIGHT|null[0]
+    enum entry TOP_CENTER // io.github.yuroyami.kiteaudio/AudioChannel.TOP_CENTER|null[0]
+    enum entry TOP_FRONT_CENTER // io.github.yuroyami.kiteaudio/AudioChannel.TOP_FRONT_CENTER|null[0]
+    enum entry TOP_FRONT_LEFT // io.github.yuroyami.kiteaudio/AudioChannel.TOP_FRONT_LEFT|null[0]
+    enum entry TOP_FRONT_RIGHT // io.github.yuroyami.kiteaudio/AudioChannel.TOP_FRONT_RIGHT|null[0]
+    enum entry UNKNOWN // io.github.yuroyami.kiteaudio/AudioChannel.UNKNOWN|null[0]
+
+    final val entries // io.github.yuroyami.kiteaudio/AudioChannel.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.kiteaudio/AudioChannel> // io.github.yuroyami.kiteaudio/AudioChannel.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val waveMaskBit // io.github.yuroyami.kiteaudio/AudioChannel.waveMaskBit|{}waveMaskBit[0]
+        final fun <get-waveMaskBit>(): kotlin/Int // io.github.yuroyami.kiteaudio/AudioChannel.waveMaskBit.<get-waveMaskBit>|<get-waveMaskBit>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.kiteaudio/AudioChannel // io.github.yuroyami.kiteaudio/AudioChannel.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.kiteaudio/AudioChannel> // io.github.yuroyami.kiteaudio/AudioChannel.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.kiteaudio/AudioCodec : kotlin/Enum<io.github.yuroyami.kiteaudio/AudioCodec> { // io.github.yuroyami.kiteaudio/AudioCodec|null[0]
+    enum entry AAC // io.github.yuroyami.kiteaudio/AudioCodec.AAC|null[0]
+    enum entry AC3 // io.github.yuroyami.kiteaudio/AudioCodec.AC3|null[0]
+    enum entry ALAC // io.github.yuroyami.kiteaudio/AudioCodec.ALAC|null[0]
+    enum entry AMR_NB // io.github.yuroyami.kiteaudio/AudioCodec.AMR_NB|null[0]
+    enum entry AMR_WB // io.github.yuroyami.kiteaudio/AudioCodec.AMR_WB|null[0]
+    enum entry APE // io.github.yuroyami.kiteaudio/AudioCodec.APE|null[0]
+    enum entry A_LAW // io.github.yuroyami.kiteaudio/AudioCodec.A_LAW|null[0]
+    enum entry DSD // io.github.yuroyami.kiteaudio/AudioCodec.DSD|null[0]
+    enum entry FLAC // io.github.yuroyami.kiteaudio/AudioCodec.FLAC|null[0]
+    enum entry GSM // io.github.yuroyami.kiteaudio/AudioCodec.GSM|null[0]
+    enum entry IMA_ADPCM // io.github.yuroyami.kiteaudio/AudioCodec.IMA_ADPCM|null[0]
+    enum entry MP1 // io.github.yuroyami.kiteaudio/AudioCodec.MP1|null[0]
+    enum entry MP2 // io.github.yuroyami.kiteaudio/AudioCodec.MP2|null[0]
+    enum entry MP3 // io.github.yuroyami.kiteaudio/AudioCodec.MP3|null[0]
+    enum entry MS_ADPCM // io.github.yuroyami.kiteaudio/AudioCodec.MS_ADPCM|null[0]
+    enum entry MUSEPACK // io.github.yuroyami.kiteaudio/AudioCodec.MUSEPACK|null[0]
+    enum entry MU_LAW // io.github.yuroyami.kiteaudio/AudioCodec.MU_LAW|null[0]
+    enum entry OPUS // io.github.yuroyami.kiteaudio/AudioCodec.OPUS|null[0]
+    enum entry PCM_FLOAT // io.github.yuroyami.kiteaudio/AudioCodec.PCM_FLOAT|null[0]
+    enum entry PCM_INTEGER // io.github.yuroyami.kiteaudio/AudioCodec.PCM_INTEGER|null[0]
+    enum entry SPEEX // io.github.yuroyami.kiteaudio/AudioCodec.SPEEX|null[0]
+    enum entry TTA // io.github.yuroyami.kiteaudio/AudioCodec.TTA|null[0]
+    enum entry UNKNOWN // io.github.yuroyami.kiteaudio/AudioCodec.UNKNOWN|null[0]
+    enum entry VORBIS // io.github.yuroyami.kiteaudio/AudioCodec.VORBIS|null[0]
+    enum entry WAVPACK // io.github.yuroyami.kiteaudio/AudioCodec.WAVPACK|null[0]
+
+    final val displayName // io.github.yuroyami.kiteaudio/AudioCodec.displayName|{}displayName[0]
+        final fun <get-displayName>(): kotlin/String // io.github.yuroyami.kiteaudio/AudioCodec.displayName.<get-displayName>|<get-displayName>(){}[0]
+    final val entries // io.github.yuroyami.kiteaudio/AudioCodec.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.kiteaudio/AudioCodec> // io.github.yuroyami.kiteaudio/AudioCodec.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val isLossless // io.github.yuroyami.kiteaudio/AudioCodec.isLossless|{}isLossless[0]
+        final fun <get-isLossless>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/AudioCodec.isLossless.<get-isLossless>|<get-isLossless>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.kiteaudio/AudioCodec // io.github.yuroyami.kiteaudio/AudioCodec.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.kiteaudio/AudioCodec> // io.github.yuroyami.kiteaudio/AudioCodec.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.kiteaudio/AudioContainer : kotlin/Enum<io.github.yuroyami.kiteaudio/AudioContainer> { // io.github.yuroyami.kiteaudio/AudioContainer|null[0]
+    enum entry AC3 // io.github.yuroyami.kiteaudio/AudioContainer.AC3|null[0]
+    enum entry ADIF // io.github.yuroyami.kiteaudio/AudioContainer.ADIF|null[0]
+    enum entry ADTS // io.github.yuroyami.kiteaudio/AudioContainer.ADTS|null[0]
+    enum entry AIFF // io.github.yuroyami.kiteaudio/AudioContainer.AIFF|null[0]
+    enum entry AMR_NB // io.github.yuroyami.kiteaudio/AudioContainer.AMR_NB|null[0]
+    enum entry AMR_WB // io.github.yuroyami.kiteaudio/AudioContainer.AMR_WB|null[0]
+    enum entry APE // io.github.yuroyami.kiteaudio/AudioContainer.APE|null[0]
+    enum entry ASF // io.github.yuroyami.kiteaudio/AudioContainer.ASF|null[0]
+    enum entry AU // io.github.yuroyami.kiteaudio/AudioContainer.AU|null[0]
+    enum entry CAF // io.github.yuroyami.kiteaudio/AudioContainer.CAF|null[0]
+    enum entry DFF // io.github.yuroyami.kiteaudio/AudioContainer.DFF|null[0]
+    enum entry DSF // io.github.yuroyami.kiteaudio/AudioContainer.DSF|null[0]
+    enum entry DTS // io.github.yuroyami.kiteaudio/AudioContainer.DTS|null[0]
+    enum entry FLAC // io.github.yuroyami.kiteaudio/AudioContainer.FLAC|null[0]
+    enum entry MATROSKA // io.github.yuroyami.kiteaudio/AudioContainer.MATROSKA|null[0]
+    enum entry MIDI // io.github.yuroyami.kiteaudio/AudioContainer.MIDI|null[0]
+    enum entry MP4 // io.github.yuroyami.kiteaudio/AudioContainer.MP4|null[0]
+    enum entry MPEG_AUDIO // io.github.yuroyami.kiteaudio/AudioContainer.MPEG_AUDIO|null[0]
+    enum entry MPEG_TS // io.github.yuroyami.kiteaudio/AudioContainer.MPEG_TS|null[0]
+    enum entry MUSEPACK // io.github.yuroyami.kiteaudio/AudioContainer.MUSEPACK|null[0]
+    enum entry OGG // io.github.yuroyami.kiteaudio/AudioContainer.OGG|null[0]
+    enum entry OPTIMFROG // io.github.yuroyami.kiteaudio/AudioContainer.OPTIMFROG|null[0]
+    enum entry RF64 // io.github.yuroyami.kiteaudio/AudioContainer.RF64|null[0]
+    enum entry SHORTEN // io.github.yuroyami.kiteaudio/AudioContainer.SHORTEN|null[0]
+    enum entry TAK // io.github.yuroyami.kiteaudio/AudioContainer.TAK|null[0]
+    enum entry TTA // io.github.yuroyami.kiteaudio/AudioContainer.TTA|null[0]
+    enum entry WAV // io.github.yuroyami.kiteaudio/AudioContainer.WAV|null[0]
+    enum entry WAVE64 // io.github.yuroyami.kiteaudio/AudioContainer.WAVE64|null[0]
+    enum entry WAVPACK // io.github.yuroyami.kiteaudio/AudioContainer.WAVPACK|null[0]
+
+    final val displayName // io.github.yuroyami.kiteaudio/AudioContainer.displayName|{}displayName[0]
+        final fun <get-displayName>(): kotlin/String // io.github.yuroyami.kiteaudio/AudioContainer.displayName.<get-displayName>|<get-displayName>(){}[0]
+    final val entries // io.github.yuroyami.kiteaudio/AudioContainer.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.kiteaudio/AudioContainer> // io.github.yuroyami.kiteaudio/AudioContainer.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val extension // io.github.yuroyami.kiteaudio/AudioContainer.extension|{}extension[0]
+        final fun <get-extension>(): kotlin/String // io.github.yuroyami.kiteaudio/AudioContainer.extension.<get-extension>|<get-extension>(){}[0]
+    final val isDecodable // io.github.yuroyami.kiteaudio/AudioContainer.isDecodable|{}isDecodable[0]
+        final fun <get-isDecodable>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/AudioContainer.isDecodable.<get-isDecodable>|<get-isDecodable>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.kiteaudio/AudioContainer // io.github.yuroyami.kiteaudio/AudioContainer.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.kiteaudio/AudioContainer> // io.github.yuroyami.kiteaudio/AudioContainer.values|values#static(){}[0]
+}
+
+abstract interface io.github.yuroyami.kiteaudio/AudioDecoder : kotlin/AutoCloseable { // io.github.yuroyami.kiteaudio/AudioDecoder|null[0]
+    abstract val durationFrames // io.github.yuroyami.kiteaudio/AudioDecoder.durationFrames|{}durationFrames[0]
+        abstract fun <get-durationFrames>(): kotlin/Long? // io.github.yuroyami.kiteaudio/AudioDecoder.durationFrames.<get-durationFrames>|<get-durationFrames>(){}[0]
+    abstract val format // io.github.yuroyami.kiteaudio/AudioDecoder.format|{}format[0]
+        abstract fun <get-format>(): io.github.yuroyami.kiteaudio/AudioFormat // io.github.yuroyami.kiteaudio/AudioDecoder.format.<get-format>|<get-format>(){}[0]
+    abstract val info // io.github.yuroyami.kiteaudio/AudioDecoder.info|{}info[0]
+        abstract fun <get-info>(): io.github.yuroyami.kiteaudio/AudioInfo // io.github.yuroyami.kiteaudio/AudioDecoder.info.<get-info>|<get-info>(){}[0]
+    abstract val positionFrames // io.github.yuroyami.kiteaudio/AudioDecoder.positionFrames|{}positionFrames[0]
+        abstract fun <get-positionFrames>(): kotlin/Long // io.github.yuroyami.kiteaudio/AudioDecoder.positionFrames.<get-positionFrames>|<get-positionFrames>(){}[0]
+
+    abstract fun close() // io.github.yuroyami.kiteaudio/AudioDecoder.close|close(){}[0]
+    abstract fun nextFrame(): io.github.yuroyami.kiteaudio/AudioFrame? // io.github.yuroyami.kiteaudio/AudioDecoder.nextFrame|nextFrame(){}[0]
+    abstract fun seek(kotlin/Long): kotlin/Long // io.github.yuroyami.kiteaudio/AudioDecoder.seek|seek(kotlin.Long){}[0]
+}
+
+abstract interface io.github.yuroyami.kiteaudio/AudioSink : kotlin/AutoCloseable { // io.github.yuroyami.kiteaudio/AudioSink|null[0]
+    abstract val canPatch // io.github.yuroyami.kiteaudio/AudioSink.canPatch|{}canPatch[0]
+        abstract fun <get-canPatch>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/AudioSink.canPatch.<get-canPatch>|<get-canPatch>(){}[0]
+    abstract val position // io.github.yuroyami.kiteaudio/AudioSink.position|{}position[0]
+        abstract fun <get-position>(): kotlin/Long // io.github.yuroyami.kiteaudio/AudioSink.position.<get-position>|<get-position>(){}[0]
+
+    abstract fun close() // io.github.yuroyami.kiteaudio/AudioSink.close|close(){}[0]
+    abstract fun patchAt(kotlin/Long, kotlin/ByteArray, kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.kiteaudio/AudioSink.patchAt|patchAt(kotlin.Long;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+    abstract fun write(kotlin/ByteArray, kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.kiteaudio/AudioSink.write|write(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+abstract interface io.github.yuroyami.kiteaudio/AudioSource : kotlin/AutoCloseable { // io.github.yuroyami.kiteaudio/AudioSource|null[0]
+    abstract val size // io.github.yuroyami.kiteaudio/AudioSource.size|{}size[0]
+        abstract fun <get-size>(): kotlin/Long // io.github.yuroyami.kiteaudio/AudioSource.size.<get-size>|<get-size>(){}[0]
+
+    abstract fun close() // io.github.yuroyami.kiteaudio/AudioSource.close|close(){}[0]
+    abstract fun readAt(kotlin/Long, kotlin/ByteArray, kotlin/Int, kotlin/Int): kotlin/Int // io.github.yuroyami.kiteaudio/AudioSource.readAt|readAt(kotlin.Long;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+abstract interface io.github.yuroyami.kiteaudio/IntPcmAccess { // io.github.yuroyami.kiteaudio/IntPcmAccess|null[0]
+    abstract val bitDepth // io.github.yuroyami.kiteaudio/IntPcmAccess.bitDepth|{}bitDepth[0]
+        abstract fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.kiteaudio/IntPcmAccess.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+
+    abstract fun nextIntFrame(): io.github.yuroyami.kiteaudio/IntAudioFrame? // io.github.yuroyami.kiteaudio/IntPcmAccess.nextIntFrame|nextIntFrame(){}[0]
+}
+
+abstract interface io.github.yuroyami.kiteaudio/PcmSource { // io.github.yuroyami.kiteaudio/PcmSource|null[0]
+    abstract val format // io.github.yuroyami.kiteaudio/PcmSource.format|{}format[0]
+        abstract fun <get-format>(): io.github.yuroyami.kiteaudio/AudioFormat // io.github.yuroyami.kiteaudio/PcmSource.format.<get-format>|<get-format>(){}[0]
+    abstract val frameCount // io.github.yuroyami.kiteaudio/PcmSource.frameCount|{}frameCount[0]
+        abstract fun <get-frameCount>(): kotlin/Long? // io.github.yuroyami.kiteaudio/PcmSource.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+
+    abstract fun read(kotlin/FloatArray, kotlin/Int, kotlin/Int): kotlin/Int // io.github.yuroyami.kiteaudio/PcmSource.read|read(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+sealed interface io.github.yuroyami.kiteaudio/Dither { // io.github.yuroyami.kiteaudio/Dither|null[0]
+    final class Tpdf : io.github.yuroyami.kiteaudio/Dither { // io.github.yuroyami.kiteaudio/Dither.Tpdf|null[0]
+        constructor <init>(kotlin/Int = ...) // io.github.yuroyami.kiteaudio/Dither.Tpdf.<init>|<init>(kotlin.Int){}[0]
+    }
+
+    final object None : io.github.yuroyami.kiteaudio/Dither { // io.github.yuroyami.kiteaudio/Dither.None|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.yuroyami.kiteaudio/Dither.None.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.yuroyami.kiteaudio/Dither.None.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio/Dither.None.toString|toString(){}[0]
+    }
+}
+
+final class io.github.yuroyami.kiteaudio.tag/RawTagBlock { // io.github.yuroyami.kiteaudio.tag/RawTagBlock|null[0]
+    constructor <init>(io.github.yuroyami.kiteaudio.tag/TagFormat, kotlin/Long, kotlin/Long, kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/RawTagEntry>) // io.github.yuroyami.kiteaudio.tag/RawTagBlock.<init>|<init>(io.github.yuroyami.kiteaudio.tag.TagFormat;kotlin.Long;kotlin.Long;kotlin.collections.List<io.github.yuroyami.kiteaudio.tag.RawTagEntry>){}[0]
+
+    final val entries // io.github.yuroyami.kiteaudio.tag/RawTagBlock.entries|{}entries[0]
+        final fun <get-entries>(): kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/RawTagEntry> // io.github.yuroyami.kiteaudio.tag/RawTagBlock.entries.<get-entries>|<get-entries>(){}[0]
+    final val format // io.github.yuroyami.kiteaudio.tag/RawTagBlock.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.kiteaudio.tag/TagFormat // io.github.yuroyami.kiteaudio.tag/RawTagBlock.format.<get-format>|<get-format>(){}[0]
+    final val offset // io.github.yuroyami.kiteaudio.tag/RawTagBlock.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Long // io.github.yuroyami.kiteaudio.tag/RawTagBlock.offset.<get-offset>|<get-offset>(){}[0]
+    final val size // io.github.yuroyami.kiteaudio.tag/RawTagBlock.size|{}size[0]
+        final fun <get-size>(): kotlin/Long // io.github.yuroyami.kiteaudio.tag/RawTagBlock.size.<get-size>|<get-size>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio.tag/RawTagBlock.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio.tag/RawTagEntry { // io.github.yuroyami.kiteaudio.tag/RawTagEntry|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/ByteArray? = ..., kotlin/String? = ..., kotlin/String? = ...) // io.github.yuroyami.kiteaudio.tag/RawTagEntry.<init>|<init>(kotlin.String;kotlin.String?;kotlin.ByteArray?;kotlin.String?;kotlin.String?){}[0]
+
+    final val binary // io.github.yuroyami.kiteaudio.tag/RawTagEntry.binary|{}binary[0]
+        final fun <get-binary>(): kotlin/ByteArray? // io.github.yuroyami.kiteaudio.tag/RawTagEntry.binary.<get-binary>|<get-binary>(){}[0]
+    final val description // io.github.yuroyami.kiteaudio.tag/RawTagEntry.description|{}description[0]
+        final fun <get-description>(): kotlin/String? // io.github.yuroyami.kiteaudio.tag/RawTagEntry.description.<get-description>|<get-description>(){}[0]
+    final val key // io.github.yuroyami.kiteaudio.tag/RawTagEntry.key|{}key[0]
+        final fun <get-key>(): kotlin/String // io.github.yuroyami.kiteaudio.tag/RawTagEntry.key.<get-key>|<get-key>(){}[0]
+    final val language // io.github.yuroyami.kiteaudio.tag/RawTagEntry.language|{}language[0]
+        final fun <get-language>(): kotlin/String? // io.github.yuroyami.kiteaudio.tag/RawTagEntry.language.<get-language>|<get-language>(){}[0]
+    final val text // io.github.yuroyami.kiteaudio.tag/RawTagEntry.text|{}text[0]
+        final fun <get-text>(): kotlin/String? // io.github.yuroyami.kiteaudio.tag/RawTagEntry.text.<get-text>|<get-text>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio.tag/RawTagEntry.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio.tag/RawTags { // io.github.yuroyami.kiteaudio.tag/RawTags|null[0]
+    constructor <init>(kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/RawTagBlock>) // io.github.yuroyami.kiteaudio.tag/RawTags.<init>|<init>(kotlin.collections.List<io.github.yuroyami.kiteaudio.tag.RawTagBlock>){}[0]
+
+    final val blocks // io.github.yuroyami.kiteaudio.tag/RawTags.blocks|{}blocks[0]
+        final fun <get-blocks>(): kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/RawTagBlock> // io.github.yuroyami.kiteaudio.tag/RawTags.blocks.<get-blocks>|<get-blocks>(){}[0]
+    final val formats // io.github.yuroyami.kiteaudio.tag/RawTags.formats|{}formats[0]
+        final fun <get-formats>(): kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagFormat> // io.github.yuroyami.kiteaudio.tag/RawTags.formats.<get-formats>|<get-formats>(){}[0]
+
+    final fun blocksOf(io.github.yuroyami.kiteaudio.tag/TagFormat): kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/RawTagBlock> // io.github.yuroyami.kiteaudio.tag/RawTags.blocksOf|blocksOf(io.github.yuroyami.kiteaudio.tag.TagFormat){}[0]
+
+    final object Companion { // io.github.yuroyami.kiteaudio.tag/RawTags.Companion|null[0]
+        final val EMPTY // io.github.yuroyami.kiteaudio.tag/RawTags.Companion.EMPTY|{}EMPTY[0]
+            final fun <get-EMPTY>(): io.github.yuroyami.kiteaudio.tag/RawTags // io.github.yuroyami.kiteaudio.tag/RawTags.Companion.EMPTY.<get-EMPTY>|<get-EMPTY>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.kiteaudio.tag/ReplayGain { // io.github.yuroyami.kiteaudio.tag/ReplayGain|null[0]
+    constructor <init>(kotlin/Double? = ..., kotlin/Double? = ..., kotlin/Double? = ..., kotlin/Double? = ..., kotlin/Boolean = ...) // io.github.yuroyami.kiteaudio.tag/ReplayGain.<init>|<init>(kotlin.Double?;kotlin.Double?;kotlin.Double?;kotlin.Double?;kotlin.Boolean){}[0]
+
+    final val albumGainDb // io.github.yuroyami.kiteaudio.tag/ReplayGain.albumGainDb|{}albumGainDb[0]
+        final fun <get-albumGainDb>(): kotlin/Double? // io.github.yuroyami.kiteaudio.tag/ReplayGain.albumGainDb.<get-albumGainDb>|<get-albumGainDb>(){}[0]
+    final val albumPeak // io.github.yuroyami.kiteaudio.tag/ReplayGain.albumPeak|{}albumPeak[0]
+        final fun <get-albumPeak>(): kotlin/Double? // io.github.yuroyami.kiteaudio.tag/ReplayGain.albumPeak.<get-albumPeak>|<get-albumPeak>(){}[0]
+    final val isEmpty // io.github.yuroyami.kiteaudio.tag/ReplayGain.isEmpty|{}isEmpty[0]
+        final fun <get-isEmpty>(): kotlin/Boolean // io.github.yuroyami.kiteaudio.tag/ReplayGain.isEmpty.<get-isEmpty>|<get-isEmpty>(){}[0]
+    final val isR128 // io.github.yuroyami.kiteaudio.tag/ReplayGain.isR128|{}isR128[0]
+        final fun <get-isR128>(): kotlin/Boolean // io.github.yuroyami.kiteaudio.tag/ReplayGain.isR128.<get-isR128>|<get-isR128>(){}[0]
+    final val trackGainDb // io.github.yuroyami.kiteaudio.tag/ReplayGain.trackGainDb|{}trackGainDb[0]
+        final fun <get-trackGainDb>(): kotlin/Double? // io.github.yuroyami.kiteaudio.tag/ReplayGain.trackGainDb.<get-trackGainDb>|<get-trackGainDb>(){}[0]
+    final val trackPeak // io.github.yuroyami.kiteaudio.tag/ReplayGain.trackPeak|{}trackPeak[0]
+        final fun <get-trackPeak>(): kotlin/Double? // io.github.yuroyami.kiteaudio.tag/ReplayGain.trackPeak.<get-trackPeak>|<get-trackPeak>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio.tag/ReplayGain.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio.tag/TagBundle { // io.github.yuroyami.kiteaudio.tag/TagBundle|null[0]
+    constructor <init>(kotlin.collections/Map<io.github.yuroyami.kiteaudio.tag/TagField, kotlin.collections/List<kotlin/String>>, kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagPicture> = ..., kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagChapter> = ..., io.github.yuroyami.kiteaudio.tag/ReplayGain? = ..., io.github.yuroyami.kiteaudio.tag/RawTags = ...) // io.github.yuroyami.kiteaudio.tag/TagBundle.<init>|<init>(kotlin.collections.Map<io.github.yuroyami.kiteaudio.tag.TagField,kotlin.collections.List<kotlin.String>>;kotlin.collections.List<io.github.yuroyami.kiteaudio.tag.TagPicture>;kotlin.collections.List<io.github.yuroyami.kiteaudio.tag.TagChapter>;io.github.yuroyami.kiteaudio.tag.ReplayGain?;io.github.yuroyami.kiteaudio.tag.RawTags){}[0]
+
+    final val chapters // io.github.yuroyami.kiteaudio.tag/TagBundle.chapters|{}chapters[0]
+        final fun <get-chapters>(): kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagChapter> // io.github.yuroyami.kiteaudio.tag/TagBundle.chapters.<get-chapters>|<get-chapters>(){}[0]
+    final val cover // io.github.yuroyami.kiteaudio.tag/TagBundle.cover|{}cover[0]
+        final fun <get-cover>(): io.github.yuroyami.kiteaudio.tag/TagPicture? // io.github.yuroyami.kiteaudio.tag/TagBundle.cover.<get-cover>|<get-cover>(){}[0]
+    final val fields // io.github.yuroyami.kiteaudio.tag/TagBundle.fields|{}fields[0]
+        final fun <get-fields>(): kotlin.collections/Map<io.github.yuroyami.kiteaudio.tag/TagField, kotlin.collections/List<kotlin/String>> // io.github.yuroyami.kiteaudio.tag/TagBundle.fields.<get-fields>|<get-fields>(){}[0]
+    final val isEmpty // io.github.yuroyami.kiteaudio.tag/TagBundle.isEmpty|{}isEmpty[0]
+        final fun <get-isEmpty>(): kotlin/Boolean // io.github.yuroyami.kiteaudio.tag/TagBundle.isEmpty.<get-isEmpty>|<get-isEmpty>(){}[0]
+    final val pictures // io.github.yuroyami.kiteaudio.tag/TagBundle.pictures|{}pictures[0]
+        final fun <get-pictures>(): kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagPicture> // io.github.yuroyami.kiteaudio.tag/TagBundle.pictures.<get-pictures>|<get-pictures>(){}[0]
+    final val raw // io.github.yuroyami.kiteaudio.tag/TagBundle.raw|{}raw[0]
+        final fun <get-raw>(): io.github.yuroyami.kiteaudio.tag/RawTags // io.github.yuroyami.kiteaudio.tag/TagBundle.raw.<get-raw>|<get-raw>(){}[0]
+    final val replayGain // io.github.yuroyami.kiteaudio.tag/TagBundle.replayGain|{}replayGain[0]
+        final fun <get-replayGain>(): io.github.yuroyami.kiteaudio.tag/ReplayGain? // io.github.yuroyami.kiteaudio.tag/TagBundle.replayGain.<get-replayGain>|<get-replayGain>(){}[0]
+
+    final fun all(io.github.yuroyami.kiteaudio.tag/TagField): kotlin.collections/List<kotlin/String> // io.github.yuroyami.kiteaudio.tag/TagBundle.all|all(io.github.yuroyami.kiteaudio.tag.TagField){}[0]
+    final fun edit(kotlin/Function1<io.github.yuroyami.kiteaudio.tag/TagEditor, kotlin/Unit>): io.github.yuroyami.kiteaudio.tag/TagBundle // io.github.yuroyami.kiteaudio.tag/TagBundle.edit|edit(kotlin.Function1<io.github.yuroyami.kiteaudio.tag.TagEditor,kotlin.Unit>){}[0]
+    final fun get(io.github.yuroyami.kiteaudio.tag/TagField): kotlin/String? // io.github.yuroyami.kiteaudio.tag/TagBundle.get|get(io.github.yuroyami.kiteaudio.tag.TagField){}[0]
+    final fun number(io.github.yuroyami.kiteaudio.tag/TagField): kotlin/Int? // io.github.yuroyami.kiteaudio.tag/TagBundle.number|number(io.github.yuroyami.kiteaudio.tag.TagField){}[0]
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio.tag/TagBundle.toString|toString(){}[0]
+
+    final object Companion { // io.github.yuroyami.kiteaudio.tag/TagBundle.Companion|null[0]
+        final val EMPTY // io.github.yuroyami.kiteaudio.tag/TagBundle.Companion.EMPTY|{}EMPTY[0]
+            final fun <get-EMPTY>(): io.github.yuroyami.kiteaudio.tag/TagBundle // io.github.yuroyami.kiteaudio.tag/TagBundle.Companion.EMPTY.<get-EMPTY>|<get-EMPTY>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.kiteaudio.tag/TagChapter { // io.github.yuroyami.kiteaudio.tag/TagChapter|null[0]
+    constructor <init>(kotlin/String, kotlin/Long, kotlin/Long = ..., kotlin/String? = ..., kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagPicture> = ...) // io.github.yuroyami.kiteaudio.tag/TagChapter.<init>|<init>(kotlin.String;kotlin.Long;kotlin.Long;kotlin.String?;kotlin.collections.List<io.github.yuroyami.kiteaudio.tag.TagPicture>){}[0]
+
+    final val endMillis // io.github.yuroyami.kiteaudio.tag/TagChapter.endMillis|{}endMillis[0]
+        final fun <get-endMillis>(): kotlin/Long // io.github.yuroyami.kiteaudio.tag/TagChapter.endMillis.<get-endMillis>|<get-endMillis>(){}[0]
+    final val id // io.github.yuroyami.kiteaudio.tag/TagChapter.id|{}id[0]
+        final fun <get-id>(): kotlin/String // io.github.yuroyami.kiteaudio.tag/TagChapter.id.<get-id>|<get-id>(){}[0]
+    final val pictures // io.github.yuroyami.kiteaudio.tag/TagChapter.pictures|{}pictures[0]
+        final fun <get-pictures>(): kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagPicture> // io.github.yuroyami.kiteaudio.tag/TagChapter.pictures.<get-pictures>|<get-pictures>(){}[0]
+    final val startMillis // io.github.yuroyami.kiteaudio.tag/TagChapter.startMillis|{}startMillis[0]
+        final fun <get-startMillis>(): kotlin/Long // io.github.yuroyami.kiteaudio.tag/TagChapter.startMillis.<get-startMillis>|<get-startMillis>(){}[0]
+    final val title // io.github.yuroyami.kiteaudio.tag/TagChapter.title|{}title[0]
+        final fun <get-title>(): kotlin/String? // io.github.yuroyami.kiteaudio.tag/TagChapter.title.<get-title>|<get-title>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio.tag/TagChapter.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio.tag/TagEditor { // io.github.yuroyami.kiteaudio.tag/TagEditor|null[0]
+    final fun add(io.github.yuroyami.kiteaudio.tag/TagField, kotlin/String) // io.github.yuroyami.kiteaudio.tag/TagEditor.add|add(io.github.yuroyami.kiteaudio.tag.TagField;kotlin.String){}[0]
+    final fun addPicture(io.github.yuroyami.kiteaudio.tag/TagPicture) // io.github.yuroyami.kiteaudio.tag/TagEditor.addPicture|addPicture(io.github.yuroyami.kiteaudio.tag.TagPicture){}[0]
+    final fun clear() // io.github.yuroyami.kiteaudio.tag/TagEditor.clear|clear(){}[0]
+    final fun remove(io.github.yuroyami.kiteaudio.tag/TagField) // io.github.yuroyami.kiteaudio.tag/TagEditor.remove|remove(io.github.yuroyami.kiteaudio.tag.TagField){}[0]
+    final fun removePictures(io.github.yuroyami.kiteaudio.tag/PictureType? = ...) // io.github.yuroyami.kiteaudio.tag/TagEditor.removePictures|removePictures(io.github.yuroyami.kiteaudio.tag.PictureType?){}[0]
+    final fun set(io.github.yuroyami.kiteaudio.tag/TagField, kotlin.collections/List<kotlin/String>) // io.github.yuroyami.kiteaudio.tag/TagEditor.set|set(io.github.yuroyami.kiteaudio.tag.TagField;kotlin.collections.List<kotlin.String>){}[0]
+    final fun set(io.github.yuroyami.kiteaudio.tag/TagField, kotlin/Int) // io.github.yuroyami.kiteaudio.tag/TagEditor.set|set(io.github.yuroyami.kiteaudio.tag.TagField;kotlin.Int){}[0]
+    final fun set(io.github.yuroyami.kiteaudio.tag/TagField, kotlin/String) // io.github.yuroyami.kiteaudio.tag/TagEditor.set|set(io.github.yuroyami.kiteaudio.tag.TagField;kotlin.String){}[0]
+    final fun setChapters(kotlin.collections/List<io.github.yuroyami.kiteaudio.tag/TagChapter>) // io.github.yuroyami.kiteaudio.tag/TagEditor.setChapters|setChapters(kotlin.collections.List<io.github.yuroyami.kiteaudio.tag.TagChapter>){}[0]
+    final fun setReplayGain(io.github.yuroyami.kiteaudio.tag/ReplayGain?) // io.github.yuroyami.kiteaudio.tag/TagEditor.setReplayGain|setReplayGain(io.github.yuroyami.kiteaudio.tag.ReplayGain?){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio.tag/TagPicture { // io.github.yuroyami.kiteaudio.tag/TagPicture|null[0]
+    constructor <init>(io.github.yuroyami.kiteaudio.tag/PictureType = ..., kotlin/String, kotlin/String = ..., kotlin/ByteArray, kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.kiteaudio.tag/TagPicture.<init>|<init>(io.github.yuroyami.kiteaudio.tag.PictureType;kotlin.String;kotlin.String;kotlin.ByteArray;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val bytes // io.github.yuroyami.kiteaudio.tag/TagPicture.bytes|{}bytes[0]
+        final fun <get-bytes>(): kotlin/ByteArray // io.github.yuroyami.kiteaudio.tag/TagPicture.bytes.<get-bytes>|<get-bytes>(){}[0]
+    final val colourCount // io.github.yuroyami.kiteaudio.tag/TagPicture.colourCount|{}colourCount[0]
+        final fun <get-colourCount>(): kotlin/Int // io.github.yuroyami.kiteaudio.tag/TagPicture.colourCount.<get-colourCount>|<get-colourCount>(){}[0]
+    final val colourDepth // io.github.yuroyami.kiteaudio.tag/TagPicture.colourDepth|{}colourDepth[0]
+        final fun <get-colourDepth>(): kotlin/Int // io.github.yuroyami.kiteaudio.tag/TagPicture.colourDepth.<get-colourDepth>|<get-colourDepth>(){}[0]
+    final val description // io.github.yuroyami.kiteaudio.tag/TagPicture.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.github.yuroyami.kiteaudio.tag/TagPicture.description.<get-description>|<get-description>(){}[0]
+    final val height // io.github.yuroyami.kiteaudio.tag/TagPicture.height|{}height[0]
+        final fun <get-height>(): kotlin/Int // io.github.yuroyami.kiteaudio.tag/TagPicture.height.<get-height>|<get-height>(){}[0]
+    final val mimeType // io.github.yuroyami.kiteaudio.tag/TagPicture.mimeType|{}mimeType[0]
+        final fun <get-mimeType>(): kotlin/String // io.github.yuroyami.kiteaudio.tag/TagPicture.mimeType.<get-mimeType>|<get-mimeType>(){}[0]
+    final val type // io.github.yuroyami.kiteaudio.tag/TagPicture.type|{}type[0]
+        final fun <get-type>(): io.github.yuroyami.kiteaudio.tag/PictureType // io.github.yuroyami.kiteaudio.tag/TagPicture.type.<get-type>|<get-type>(){}[0]
+    final val width // io.github.yuroyami.kiteaudio.tag/TagPicture.width|{}width[0]
+        final fun <get-width>(): kotlin/Int // io.github.yuroyami.kiteaudio.tag/TagPicture.width.<get-width>|<get-width>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio.tag/TagPicture.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio.tag/TagWriteOptions { // io.github.yuroyami.kiteaudio.tag/TagWriteOptions|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin.collections/Set<io.github.yuroyami.kiteaudio.tag/TagFormat>? = ...) // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Boolean;kotlin.collections.Set<io.github.yuroyami.kiteaudio.tag.TagFormat>?){}[0]
+
+    final val formats // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.formats|{}formats[0]
+        final fun <get-formats>(): kotlin.collections/Set<io.github.yuroyami.kiteaudio.tag/TagFormat>? // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.formats.<get-formats>|<get-formats>(){}[0]
+    final val id3Version // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.id3Version|{}id3Version[0]
+        final fun <get-id3Version>(): kotlin/Int // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.id3Version.<get-id3Version>|<get-id3Version>(){}[0]
+    final val keepId3v1 // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.keepId3v1|{}keepId3v1[0]
+        final fun <get-keepId3v1>(): kotlin/Boolean // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.keepId3v1.<get-keepId3v1>|<get-keepId3v1>(){}[0]
+    final val padding // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.padding|{}padding[0]
+        final fun <get-padding>(): kotlin/Int // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.padding.<get-padding>|<get-padding>(){}[0]
+
+    final object Companion { // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.Companion|null[0]
+        final val DEFAULT // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): io.github.yuroyami.kiteaudio.tag/TagWriteOptions // io.github.yuroyami.kiteaudio.tag/TagWriteOptions.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.kiteaudio/AllocationGuardException : io.github.yuroyami.kiteaudio/KiteAudioException { // io.github.yuroyami.kiteaudio/AllocationGuardException|null[0]
+    constructor <init>(kotlin/String, kotlin/Long, kotlin/Long) // io.github.yuroyami.kiteaudio/AllocationGuardException.<init>|<init>(kotlin.String;kotlin.Long;kotlin.Long){}[0]
+
+    final val limit // io.github.yuroyami.kiteaudio/AllocationGuardException.limit|{}limit[0]
+        final fun <get-limit>(): kotlin/Long // io.github.yuroyami.kiteaudio/AllocationGuardException.limit.<get-limit>|<get-limit>(){}[0]
+    final val requested // io.github.yuroyami.kiteaudio/AllocationGuardException.requested|{}requested[0]
+        final fun <get-requested>(): kotlin/Long // io.github.yuroyami.kiteaudio/AllocationGuardException.requested.<get-requested>|<get-requested>(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/AudioFormat { // io.github.yuroyami.kiteaudio/AudioFormat|null[0]
+    constructor <init>(kotlin/Int, io.github.yuroyami.kiteaudio/ChannelLayout) // io.github.yuroyami.kiteaudio/AudioFormat.<init>|<init>(kotlin.Int;io.github.yuroyami.kiteaudio.ChannelLayout){}[0]
+    constructor <init>(kotlin/Int, kotlin/Int) // io.github.yuroyami.kiteaudio/AudioFormat.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+    final val channelLayout // io.github.yuroyami.kiteaudio/AudioFormat.channelLayout|{}channelLayout[0]
+        final fun <get-channelLayout>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/AudioFormat.channelLayout.<get-channelLayout>|<get-channelLayout>(){}[0]
+    final val channels // io.github.yuroyami.kiteaudio/AudioFormat.channels|{}channels[0]
+        final fun <get-channels>(): kotlin/Int // io.github.yuroyami.kiteaudio/AudioFormat.channels.<get-channels>|<get-channels>(){}[0]
+    final val floatFrameBytes // io.github.yuroyami.kiteaudio/AudioFormat.floatFrameBytes|{}floatFrameBytes[0]
+        final fun <get-floatFrameBytes>(): kotlin/Int // io.github.yuroyami.kiteaudio/AudioFormat.floatFrameBytes.<get-floatFrameBytes>|<get-floatFrameBytes>(){}[0]
+    final val sampleRate // io.github.yuroyami.kiteaudio/AudioFormat.sampleRate|{}sampleRate[0]
+        final fun <get-sampleRate>(): kotlin/Int // io.github.yuroyami.kiteaudio/AudioFormat.sampleRate.<get-sampleRate>|<get-sampleRate>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.yuroyami.kiteaudio/AudioFormat.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.yuroyami.kiteaudio/AudioFormat.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio/AudioFormat.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/AudioFrame { // io.github.yuroyami.kiteaudio/AudioFrame|null[0]
+    constructor <init>(io.github.yuroyami.kiteaudio/AudioFormat, kotlin/FloatArray, kotlin/Int, kotlin/Long) // io.github.yuroyami.kiteaudio/AudioFrame.<init>|<init>(io.github.yuroyami.kiteaudio.AudioFormat;kotlin.FloatArray;kotlin.Int;kotlin.Long){}[0]
+
+    final val format // io.github.yuroyami.kiteaudio/AudioFrame.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.kiteaudio/AudioFormat // io.github.yuroyami.kiteaudio/AudioFrame.format.<get-format>|<get-format>(){}[0]
+    final val frameCount // io.github.yuroyami.kiteaudio/AudioFrame.frameCount|{}frameCount[0]
+        final fun <get-frameCount>(): kotlin/Int // io.github.yuroyami.kiteaudio/AudioFrame.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+    final val positionFrames // io.github.yuroyami.kiteaudio/AudioFrame.positionFrames|{}positionFrames[0]
+        final fun <get-positionFrames>(): kotlin/Long // io.github.yuroyami.kiteaudio/AudioFrame.positionFrames.<get-positionFrames>|<get-positionFrames>(){}[0]
+    final val sampleCount // io.github.yuroyami.kiteaudio/AudioFrame.sampleCount|{}sampleCount[0]
+        final fun <get-sampleCount>(): kotlin/Int // io.github.yuroyami.kiteaudio/AudioFrame.sampleCount.<get-sampleCount>|<get-sampleCount>(){}[0]
+    final val samples // io.github.yuroyami.kiteaudio/AudioFrame.samples|{}samples[0]
+        final fun <get-samples>(): kotlin/FloatArray // io.github.yuroyami.kiteaudio/AudioFrame.samples.<get-samples>|<get-samples>(){}[0]
+
+    final fun copySamples(): kotlin/FloatArray // io.github.yuroyami.kiteaudio/AudioFrame.copySamples|copySamples(){}[0]
+    final fun get(kotlin/Int, kotlin/Int): kotlin/Float // io.github.yuroyami.kiteaudio/AudioFrame.get|get(kotlin.Int;kotlin.Int){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/AudioInfo { // io.github.yuroyami.kiteaudio/AudioInfo|null[0]
+    constructor <init>(io.github.yuroyami.kiteaudio/AudioContainer, io.github.yuroyami.kiteaudio/AudioCodec, io.github.yuroyami.kiteaudio/AudioFormat, kotlin/Long?, kotlin/Int?, kotlin/Int?, kotlin/Boolean, kotlin/Long, kotlin/Long) // io.github.yuroyami.kiteaudio/AudioInfo.<init>|<init>(io.github.yuroyami.kiteaudio.AudioContainer;io.github.yuroyami.kiteaudio.AudioCodec;io.github.yuroyami.kiteaudio.AudioFormat;kotlin.Long?;kotlin.Int?;kotlin.Int?;kotlin.Boolean;kotlin.Long;kotlin.Long){}[0]
+
+    final val bitDepth // io.github.yuroyami.kiteaudio/AudioInfo.bitDepth|{}bitDepth[0]
+        final fun <get-bitDepth>(): kotlin/Int? // io.github.yuroyami.kiteaudio/AudioInfo.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    final val bitrate // io.github.yuroyami.kiteaudio/AudioInfo.bitrate|{}bitrate[0]
+        final fun <get-bitrate>(): kotlin/Int? // io.github.yuroyami.kiteaudio/AudioInfo.bitrate.<get-bitrate>|<get-bitrate>(){}[0]
+    final val codec // io.github.yuroyami.kiteaudio/AudioInfo.codec|{}codec[0]
+        final fun <get-codec>(): io.github.yuroyami.kiteaudio/AudioCodec // io.github.yuroyami.kiteaudio/AudioInfo.codec.<get-codec>|<get-codec>(){}[0]
+    final val container // io.github.yuroyami.kiteaudio/AudioInfo.container|{}container[0]
+        final fun <get-container>(): io.github.yuroyami.kiteaudio/AudioContainer // io.github.yuroyami.kiteaudio/AudioInfo.container.<get-container>|<get-container>(){}[0]
+    final val dataOffset // io.github.yuroyami.kiteaudio/AudioInfo.dataOffset|{}dataOffset[0]
+        final fun <get-dataOffset>(): kotlin/Long // io.github.yuroyami.kiteaudio/AudioInfo.dataOffset.<get-dataOffset>|<get-dataOffset>(){}[0]
+    final val dataSize // io.github.yuroyami.kiteaudio/AudioInfo.dataSize|{}dataSize[0]
+        final fun <get-dataSize>(): kotlin/Long // io.github.yuroyami.kiteaudio/AudioInfo.dataSize.<get-dataSize>|<get-dataSize>(){}[0]
+    final val durationFrames // io.github.yuroyami.kiteaudio/AudioInfo.durationFrames|{}durationFrames[0]
+        final fun <get-durationFrames>(): kotlin/Long? // io.github.yuroyami.kiteaudio/AudioInfo.durationFrames.<get-durationFrames>|<get-durationFrames>(){}[0]
+    final val durationSeconds // io.github.yuroyami.kiteaudio/AudioInfo.durationSeconds|{}durationSeconds[0]
+        final fun <get-durationSeconds>(): kotlin/Double? // io.github.yuroyami.kiteaudio/AudioInfo.durationSeconds.<get-durationSeconds>|<get-durationSeconds>(){}[0]
+    final val format // io.github.yuroyami.kiteaudio/AudioInfo.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.kiteaudio/AudioFormat // io.github.yuroyami.kiteaudio/AudioInfo.format.<get-format>|<get-format>(){}[0]
+    final val isVariableBitrate // io.github.yuroyami.kiteaudio/AudioInfo.isVariableBitrate|{}isVariableBitrate[0]
+        final fun <get-isVariableBitrate>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/AudioInfo.isVariableBitrate.<get-isVariableBitrate>|<get-isVariableBitrate>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio/AudioInfo.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/ByteArrayAudioSink : io.github.yuroyami.kiteaudio/AudioSink { // io.github.yuroyami.kiteaudio/ByteArrayAudioSink|null[0]
+    constructor <init>(kotlin/Int = ...) // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.<init>|<init>(kotlin.Int){}[0]
+
+    final val canPatch // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.canPatch|{}canPatch[0]
+        final fun <get-canPatch>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.canPatch.<get-canPatch>|<get-canPatch>(){}[0]
+    final val position // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.position|{}position[0]
+        final fun <get-position>(): kotlin/Long // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.position.<get-position>|<get-position>(){}[0]
+
+    final fun close() // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.close|close(){}[0]
+    final fun patchAt(kotlin/Long, kotlin/ByteArray, kotlin/Int, kotlin/Int) // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.patchAt|patchAt(kotlin.Long;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+    final fun toByteArray(): kotlin/ByteArray // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.toByteArray|toByteArray(){}[0]
+    final fun write(kotlin/ByteArray, kotlin/Int, kotlin/Int) // io.github.yuroyami.kiteaudio/ByteArrayAudioSink.write|write(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/ChannelLayout { // io.github.yuroyami.kiteaudio/ChannelLayout|null[0]
+    final val channels // io.github.yuroyami.kiteaudio/ChannelLayout.channels|{}channels[0]
+        final fun <get-channels>(): kotlin.collections/List<io.github.yuroyami.kiteaudio/AudioChannel> // io.github.yuroyami.kiteaudio/ChannelLayout.channels.<get-channels>|<get-channels>(){}[0]
+    final val count // io.github.yuroyami.kiteaudio/ChannelLayout.count|{}count[0]
+        final fun <get-count>(): kotlin/Int // io.github.yuroyami.kiteaudio/ChannelLayout.count.<get-count>|<get-count>(){}[0]
+    final val isPositional // io.github.yuroyami.kiteaudio/ChannelLayout.isPositional|{}isPositional[0]
+        final fun <get-isPositional>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/ChannelLayout.isPositional.<get-isPositional>|<get-isPositional>(){}[0]
+    final val waveMask // io.github.yuroyami.kiteaudio/ChannelLayout.waveMask|{}waveMask[0]
+        final fun <get-waveMask>(): kotlin/Int // io.github.yuroyami.kiteaudio/ChannelLayout.waveMask.<get-waveMask>|<get-waveMask>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.yuroyami.kiteaudio/ChannelLayout.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.yuroyami.kiteaudio/ChannelLayout.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio/ChannelLayout.toString|toString(){}[0]
+
+    final object Companion { // io.github.yuroyami.kiteaudio/ChannelLayout.Companion|null[0]
+        final val MONO // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.MONO|{}MONO[0]
+            final fun <get-MONO>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.MONO.<get-MONO>|<get-MONO>(){}[0]
+        final val QUAD // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.QUAD|{}QUAD[0]
+            final fun <get-QUAD>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.QUAD.<get-QUAD>|<get-QUAD>(){}[0]
+        final val STEREO // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.STEREO|{}STEREO[0]
+            final fun <get-STEREO>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.STEREO.<get-STEREO>|<get-STEREO>(){}[0]
+        final val SURROUND_3_0 // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_3_0|{}SURROUND_3_0[0]
+            final fun <get-SURROUND_3_0>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_3_0.<get-SURROUND_3_0>|<get-SURROUND_3_0>(){}[0]
+        final val SURROUND_5_0 // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_5_0|{}SURROUND_5_0[0]
+            final fun <get-SURROUND_5_0>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_5_0.<get-SURROUND_5_0>|<get-SURROUND_5_0>(){}[0]
+        final val SURROUND_5_1 // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_5_1|{}SURROUND_5_1[0]
+            final fun <get-SURROUND_5_1>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_5_1.<get-SURROUND_5_1>|<get-SURROUND_5_1>(){}[0]
+        final val SURROUND_7_1 // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_7_1|{}SURROUND_7_1[0]
+            final fun <get-SURROUND_7_1>(): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.SURROUND_7_1.<get-SURROUND_7_1>|<get-SURROUND_7_1>(){}[0]
+
+        final fun canonical(kotlin/Int): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.canonical|canonical(kotlin.Int){}[0]
+        final fun fromWaveMask(kotlin/Int, kotlin/Int): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.fromWaveMask|fromWaveMask(kotlin.Int;kotlin.Int){}[0]
+        final fun of(kotlin.collections/List<io.github.yuroyami.kiteaudio/AudioChannel>): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.of|of(kotlin.collections.List<io.github.yuroyami.kiteaudio.AudioChannel>){}[0]
+        final fun of(kotlin/Array<out io.github.yuroyami.kiteaudio/AudioChannel>...): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.of|of(kotlin.Array<out|io.github.yuroyami.kiteaudio.AudioChannel>...){}[0]
+        final fun unknown(kotlin/Int): io.github.yuroyami.kiteaudio/ChannelLayout // io.github.yuroyami.kiteaudio/ChannelLayout.Companion.unknown|unknown(kotlin.Int){}[0]
+    }
+}
+
+final class io.github.yuroyami.kiteaudio/CorruptStreamException : io.github.yuroyami.kiteaudio/KiteAudioException { // io.github.yuroyami.kiteaudio/CorruptStreamException|null[0]
+    constructor <init>(kotlin/String, kotlin/Long = ...) // io.github.yuroyami.kiteaudio/CorruptStreamException.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+
+    final val offset // io.github.yuroyami.kiteaudio/CorruptStreamException.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Long // io.github.yuroyami.kiteaudio/CorruptStreamException.offset.<get-offset>|<get-offset>(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/DecodeOptions { // io.github.yuroyami.kiteaudio/DecodeOptions|null[0]
+    constructor <init>(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ...) // io.github.yuroyami.kiteaudio/DecodeOptions.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+
+    final val allowSlowSeek // io.github.yuroyami.kiteaudio/DecodeOptions.allowSlowSeek|{}allowSlowSeek[0]
+        final fun <get-allowSlowSeek>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/DecodeOptions.allowSlowSeek.<get-allowSlowSeek>|<get-allowSlowSeek>(){}[0]
+    final val maxAllocationBytes // io.github.yuroyami.kiteaudio/DecodeOptions.maxAllocationBytes|{}maxAllocationBytes[0]
+        final fun <get-maxAllocationBytes>(): kotlin/Long // io.github.yuroyami.kiteaudio/DecodeOptions.maxAllocationBytes.<get-maxAllocationBytes>|<get-maxAllocationBytes>(){}[0]
+    final val maxChannels // io.github.yuroyami.kiteaudio/DecodeOptions.maxChannels|{}maxChannels[0]
+        final fun <get-maxChannels>(): kotlin/Int // io.github.yuroyami.kiteaudio/DecodeOptions.maxChannels.<get-maxChannels>|<get-maxChannels>(){}[0]
+    final val maxSampleRate // io.github.yuroyami.kiteaudio/DecodeOptions.maxSampleRate|{}maxSampleRate[0]
+        final fun <get-maxSampleRate>(): kotlin/Int // io.github.yuroyami.kiteaudio/DecodeOptions.maxSampleRate.<get-maxSampleRate>|<get-maxSampleRate>(){}[0]
+    final val reuseBuffers // io.github.yuroyami.kiteaudio/DecodeOptions.reuseBuffers|{}reuseBuffers[0]
+        final fun <get-reuseBuffers>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/DecodeOptions.reuseBuffers.<get-reuseBuffers>|<get-reuseBuffers>(){}[0]
+    final val tolerant // io.github.yuroyami.kiteaudio/DecodeOptions.tolerant|{}tolerant[0]
+        final fun <get-tolerant>(): kotlin/Boolean // io.github.yuroyami.kiteaudio/DecodeOptions.tolerant.<get-tolerant>|<get-tolerant>(){}[0]
+
+    final fun checkAllocation(kotlin/Long, kotlin/String) // io.github.yuroyami.kiteaudio/DecodeOptions.checkAllocation|checkAllocation(kotlin.Long;kotlin.String){}[0]
+    final fun checkStreamShape(kotlin/Int, kotlin/Int, kotlin/Long = ...) // io.github.yuroyami.kiteaudio/DecodeOptions.checkStreamShape|checkStreamShape(kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+    final fun copy(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ...): io.github.yuroyami.kiteaudio/DecodeOptions // io.github.yuroyami.kiteaudio/DecodeOptions.copy|copy(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+
+    final object Companion { // io.github.yuroyami.kiteaudio/DecodeOptions.Companion|null[0]
+        final val DEFAULT // io.github.yuroyami.kiteaudio/DecodeOptions.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): io.github.yuroyami.kiteaudio/DecodeOptions // io.github.yuroyami.kiteaudio/DecodeOptions.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.kiteaudio/DecodedAudio : io.github.yuroyami.kiteaudio/PcmSource { // io.github.yuroyami.kiteaudio/DecodedAudio|null[0]
+    constructor <init>(io.github.yuroyami.kiteaudio/AudioFormat, kotlin/FloatArray, kotlin/Int, io.github.yuroyami.kiteaudio/AudioInfo) // io.github.yuroyami.kiteaudio/DecodedAudio.<init>|<init>(io.github.yuroyami.kiteaudio.AudioFormat;kotlin.FloatArray;kotlin.Int;io.github.yuroyami.kiteaudio.AudioInfo){}[0]
+
+    final val durationSeconds // io.github.yuroyami.kiteaudio/DecodedAudio.durationSeconds|{}durationSeconds[0]
+        final fun <get-durationSeconds>(): kotlin/Double // io.github.yuroyami.kiteaudio/DecodedAudio.durationSeconds.<get-durationSeconds>|<get-durationSeconds>(){}[0]
+    final val format // io.github.yuroyami.kiteaudio/DecodedAudio.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.kiteaudio/AudioFormat // io.github.yuroyami.kiteaudio/DecodedAudio.format.<get-format>|<get-format>(){}[0]
+    final val frameCount // io.github.yuroyami.kiteaudio/DecodedAudio.frameCount|{}frameCount[0]
+        final fun <get-frameCount>(): kotlin/Long // io.github.yuroyami.kiteaudio/DecodedAudio.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+    final val frames // io.github.yuroyami.kiteaudio/DecodedAudio.frames|{}frames[0]
+        final fun <get-frames>(): kotlin/Int // io.github.yuroyami.kiteaudio/DecodedAudio.frames.<get-frames>|<get-frames>(){}[0]
+    final val info // io.github.yuroyami.kiteaudio/DecodedAudio.info|{}info[0]
+        final fun <get-info>(): io.github.yuroyami.kiteaudio/AudioInfo // io.github.yuroyami.kiteaudio/DecodedAudio.info.<get-info>|<get-info>(){}[0]
+    final val samples // io.github.yuroyami.kiteaudio/DecodedAudio.samples|{}samples[0]
+        final fun <get-samples>(): kotlin/FloatArray // io.github.yuroyami.kiteaudio/DecodedAudio.samples.<get-samples>|<get-samples>(){}[0]
+
+    final fun read(kotlin/FloatArray, kotlin/Int, kotlin/Int): kotlin/Int // io.github.yuroyami.kiteaudio/DecodedAudio.read|read(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+    final fun rewind() // io.github.yuroyami.kiteaudio/DecodedAudio.rewind|rewind(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/EncodeTarget { // io.github.yuroyami.kiteaudio/EncodeTarget|null[0]
+    final val bitDepth // io.github.yuroyami.kiteaudio/EncodeTarget.bitDepth|{}bitDepth[0]
+        final fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.kiteaudio/EncodeTarget.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    final val blockAlign // io.github.yuroyami.kiteaudio/EncodeTarget.blockAlign|{}blockAlign[0]
+        final fun <get-blockAlign>(): kotlin/Int // io.github.yuroyami.kiteaudio/EncodeTarget.blockAlign.<get-blockAlign>|<get-blockAlign>(){}[0]
+    final val codec // io.github.yuroyami.kiteaudio/EncodeTarget.codec|{}codec[0]
+        final fun <get-codec>(): io.github.yuroyami.kiteaudio/AudioCodec // io.github.yuroyami.kiteaudio/EncodeTarget.codec.<get-codec>|<get-codec>(){}[0]
+    final val container // io.github.yuroyami.kiteaudio/EncodeTarget.container|{}container[0]
+        final fun <get-container>(): io.github.yuroyami.kiteaudio/AudioContainer // io.github.yuroyami.kiteaudio/EncodeTarget.container.<get-container>|<get-container>(){}[0]
+    final val dither // io.github.yuroyami.kiteaudio/EncodeTarget.dither|{}dither[0]
+        final fun <get-dither>(): io.github.yuroyami.kiteaudio/Dither // io.github.yuroyami.kiteaudio/EncodeTarget.dither.<get-dither>|<get-dither>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.kiteaudio/EncodeTarget.toString|toString(){}[0]
+
+    final object Companion { // io.github.yuroyami.kiteaudio/EncodeTarget.Companion|null[0]
+        final fun aiff(kotlin/Int = ..., io.github.yuroyami.kiteaudio/Dither = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.aiff|aiff(kotlin.Int;io.github.yuroyami.kiteaudio.Dither){}[0]
+        final fun aiffALaw(): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.aiffALaw|aiffALaw(){}[0]
+        final fun aiffFloat(kotlin/Int = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.aiffFloat|aiffFloat(kotlin.Int){}[0]
+        final fun aiffMuLaw(): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.aiffMuLaw|aiffMuLaw(){}[0]
+        final fun au(kotlin/Int = ..., io.github.yuroyami.kiteaudio/Dither = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.au|au(kotlin.Int;io.github.yuroyami.kiteaudio.Dither){}[0]
+        final fun auALaw(): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.auALaw|auALaw(){}[0]
+        final fun auFloat(kotlin/Int = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.auFloat|auFloat(kotlin.Int){}[0]
+        final fun auMuLaw(): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.auMuLaw|auMuLaw(){}[0]
+        final fun flac(kotlin/Int = ..., kotlin/Int = ..., io.github.yuroyami.kiteaudio/Dither = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.flac|flac(kotlin.Int;kotlin.Int;io.github.yuroyami.kiteaudio.Dither){}[0]
+        final fun wav(kotlin/Int = ..., io.github.yuroyami.kiteaudio/Dither = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.wav|wav(kotlin.Int;io.github.yuroyami.kiteaudio.Dither){}[0]
+        final fun wavALaw(): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.wavALaw|wavALaw(){}[0]
+        final fun wavFloat(kotlin/Int = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.wavFloat|wavFloat(kotlin.Int){}[0]
+        final fun wavImaAdpcm(kotlin/Int = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.wavImaAdpcm|wavImaAdpcm(kotlin.Int){}[0]
+        final fun wavMsAdpcm(kotlin/Int = ...): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.wavMsAdpcm|wavMsAdpcm(kotlin.Int){}[0]
+        final fun wavMuLaw(): io.github.yuroyami.kiteaudio/EncodeTarget // io.github.yuroyami.kiteaudio/EncodeTarget.Companion.wavMuLaw|wavMuLaw(){}[0]
+    }
+}
+
+final class io.github.yuroyami.kiteaudio/IntAudioFrame { // io.github.yuroyami.kiteaudio/IntAudioFrame|null[0]
+    constructor <init>(io.github.yuroyami.kiteaudio/AudioFormat, kotlin/IntArray, kotlin/Int, kotlin/Long, kotlin/Int) // io.github.yuroyami.kiteaudio/IntAudioFrame.<init>|<init>(io.github.yuroyami.kiteaudio.AudioFormat;kotlin.IntArray;kotlin.Int;kotlin.Long;kotlin.Int){}[0]
+
+    final val bitDepth // io.github.yuroyami.kiteaudio/IntAudioFrame.bitDepth|{}bitDepth[0]
+        final fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.kiteaudio/IntAudioFrame.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    final val format // io.github.yuroyami.kiteaudio/IntAudioFrame.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.kiteaudio/AudioFormat // io.github.yuroyami.kiteaudio/IntAudioFrame.format.<get-format>|<get-format>(){}[0]
+    final val frameCount // io.github.yuroyami.kiteaudio/IntAudioFrame.frameCount|{}frameCount[0]
+        final fun <get-frameCount>(): kotlin/Int // io.github.yuroyami.kiteaudio/IntAudioFrame.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+    final val positionFrames // io.github.yuroyami.kiteaudio/IntAudioFrame.positionFrames|{}positionFrames[0]
+        final fun <get-positionFrames>(): kotlin/Long // io.github.yuroyami.kiteaudio/IntAudioFrame.positionFrames.<get-positionFrames>|<get-positionFrames>(){}[0]
+    final val sampleCount // io.github.yuroyami.kiteaudio/IntAudioFrame.sampleCount|{}sampleCount[0]
+        final fun <get-sampleCount>(): kotlin/Int // io.github.yuroyami.kiteaudio/IntAudioFrame.sampleCount.<get-sampleCount>|<get-sampleCount>(){}[0]
+    final val samples // io.github.yuroyami.kiteaudio/IntAudioFrame.samples|{}samples[0]
+        final fun <get-samples>(): kotlin/IntArray // io.github.yuroyami.kiteaudio/IntAudioFrame.samples.<get-samples>|<get-samples>(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/TruncatedStreamException : io.github.yuroyami.kiteaudio/KiteAudioException { // io.github.yuroyami.kiteaudio/TruncatedStreamException|null[0]
+    constructor <init>(kotlin/String, kotlin/Long = ...) // io.github.yuroyami.kiteaudio/TruncatedStreamException.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+
+    final val offset // io.github.yuroyami.kiteaudio/TruncatedStreamException.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Long // io.github.yuroyami.kiteaudio/TruncatedStreamException.offset.<get-offset>|<get-offset>(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/UnsupportedFeatureException : io.github.yuroyami.kiteaudio/KiteAudioException { // io.github.yuroyami.kiteaudio/UnsupportedFeatureException|null[0]
+    constructor <init>(kotlin/String, kotlin/String = ...) // io.github.yuroyami.kiteaudio/UnsupportedFeatureException.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val feature // io.github.yuroyami.kiteaudio/UnsupportedFeatureException.feature|{}feature[0]
+        final fun <get-feature>(): kotlin/String // io.github.yuroyami.kiteaudio/UnsupportedFeatureException.feature.<get-feature>|<get-feature>(){}[0]
+}
+
+final class io.github.yuroyami.kiteaudio/UnsupportedFormatException : io.github.yuroyami.kiteaudio/KiteAudioException { // io.github.yuroyami.kiteaudio/UnsupportedFormatException|null[0]
+    constructor <init>(io.github.yuroyami.kiteaudio/AudioContainer?, kotlin/String) // io.github.yuroyami.kiteaudio/UnsupportedFormatException.<init>|<init>(io.github.yuroyami.kiteaudio.AudioContainer?;kotlin.String){}[0]
+
+    final val format // io.github.yuroyami.kiteaudio/UnsupportedFormatException.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.kiteaudio/AudioContainer? // io.github.yuroyami.kiteaudio/UnsupportedFormatException.format.<get-format>|<get-format>(){}[0]
+}
+
+open class io.github.yuroyami.kiteaudio/KiteAudioException : kotlin/Exception { // io.github.yuroyami.kiteaudio/KiteAudioException|null[0]
+    constructor <init>(kotlin/String, kotlin/Throwable? = ...) // io.github.yuroyami.kiteaudio/KiteAudioException.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+}
+
+final object io.github.yuroyami.kiteaudio/KiteAudio { // io.github.yuroyami.kiteaudio/KiteAudio|null[0]
+    final const val SNIFF_HEADER_BYTES // io.github.yuroyami.kiteaudio/KiteAudio.SNIFF_HEADER_BYTES|{}SNIFF_HEADER_BYTES[0]
+        final fun <get-SNIFF_HEADER_BYTES>(): kotlin/Int // io.github.yuroyami.kiteaudio/KiteAudio.SNIFF_HEADER_BYTES.<get-SNIFF_HEADER_BYTES>|<get-SNIFF_HEADER_BYTES>(){}[0]
+
+    final fun decode(io.github.yuroyami.kiteaudio/AudioSource, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio/DecodedAudio // io.github.yuroyami.kiteaudio/KiteAudio.decode|decode(io.github.yuroyami.kiteaudio.AudioSource;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun decode(kotlin/ByteArray, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio/DecodedAudio // io.github.yuroyami.kiteaudio/KiteAudio.decode|decode(kotlin.ByteArray;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun encode(io.github.yuroyami.kiteaudio/PcmSource, io.github.yuroyami.kiteaudio/EncodeTarget, io.github.yuroyami.kiteaudio.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.kiteaudio/KiteAudio.encode|encode(io.github.yuroyami.kiteaudio.PcmSource;io.github.yuroyami.kiteaudio.EncodeTarget;io.github.yuroyami.kiteaudio.tag.TagBundle?){}[0]
+    final fun encode(io.github.yuroyami.kiteaudio/PcmSource, io.github.yuroyami.kiteaudio/EncodeTarget, io.github.yuroyami.kiteaudio/AudioSink, io.github.yuroyami.kiteaudio.tag/TagBundle? = ...) // io.github.yuroyami.kiteaudio/KiteAudio.encode|encode(io.github.yuroyami.kiteaudio.PcmSource;io.github.yuroyami.kiteaudio.EncodeTarget;io.github.yuroyami.kiteaudio.AudioSink;io.github.yuroyami.kiteaudio.tag.TagBundle?){}[0]
+    final fun encode(kotlin/FloatArray, io.github.yuroyami.kiteaudio/AudioFormat, io.github.yuroyami.kiteaudio/EncodeTarget, io.github.yuroyami.kiteaudio.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.kiteaudio/KiteAudio.encode|encode(kotlin.FloatArray;io.github.yuroyami.kiteaudio.AudioFormat;io.github.yuroyami.kiteaudio.EncodeTarget;io.github.yuroyami.kiteaudio.tag.TagBundle?){}[0]
+    final fun open(io.github.yuroyami.kiteaudio/AudioSource, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio/AudioDecoder // io.github.yuroyami.kiteaudio/KiteAudio.open|open(io.github.yuroyami.kiteaudio.AudioSource;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun open(kotlin/ByteArray, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio/AudioDecoder // io.github.yuroyami.kiteaudio/KiteAudio.open|open(kotlin.ByteArray;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun probe(io.github.yuroyami.kiteaudio/AudioSource, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio/AudioInfo // io.github.yuroyami.kiteaudio/KiteAudio.probe|probe(io.github.yuroyami.kiteaudio.AudioSource;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun probe(kotlin/ByteArray, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio/AudioInfo // io.github.yuroyami.kiteaudio/KiteAudio.probe|probe(kotlin.ByteArray;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun readTags(io.github.yuroyami.kiteaudio/AudioSource, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio.tag/TagBundle // io.github.yuroyami.kiteaudio/KiteAudio.readTags|readTags(io.github.yuroyami.kiteaudio.AudioSource;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun readTags(kotlin/ByteArray, io.github.yuroyami.kiteaudio/DecodeOptions = ...): io.github.yuroyami.kiteaudio.tag/TagBundle // io.github.yuroyami.kiteaudio/KiteAudio.readTags|readTags(kotlin.ByteArray;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun sniff(kotlin/ByteArray): io.github.yuroyami.kiteaudio/AudioContainer? // io.github.yuroyami.kiteaudio/KiteAudio.sniff|sniff(kotlin.ByteArray){}[0]
+    final fun verifyFlacMd5(io.github.yuroyami.kiteaudio/AudioSource, io.github.yuroyami.kiteaudio/DecodeOptions = ...): kotlin/Boolean? // io.github.yuroyami.kiteaudio/KiteAudio.verifyFlacMd5|verifyFlacMd5(io.github.yuroyami.kiteaudio.AudioSource;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun verifyFlacMd5(kotlin/ByteArray, io.github.yuroyami.kiteaudio/DecodeOptions = ...): kotlin/Boolean? // io.github.yuroyami.kiteaudio/KiteAudio.verifyFlacMd5|verifyFlacMd5(kotlin.ByteArray;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun writeTags(io.github.yuroyami.kiteaudio/AudioSource, io.github.yuroyami.kiteaudio.tag/TagBundle, io.github.yuroyami.kiteaudio/AudioSink, io.github.yuroyami.kiteaudio.tag/TagWriteOptions = ..., io.github.yuroyami.kiteaudio/DecodeOptions = ...) // io.github.yuroyami.kiteaudio/KiteAudio.writeTags|writeTags(io.github.yuroyami.kiteaudio.AudioSource;io.github.yuroyami.kiteaudio.tag.TagBundle;io.github.yuroyami.kiteaudio.AudioSink;io.github.yuroyami.kiteaudio.tag.TagWriteOptions;io.github.yuroyami.kiteaudio.DecodeOptions){}[0]
+    final fun writeTags(kotlin/ByteArray, io.github.yuroyami.kiteaudio.tag/TagBundle, io.github.yuroyami.kiteaudio.tag/TagWriteOptions = ...): kotlin/ByteArray // io.github.yuroyami.kiteaudio/KiteAudio.writeTags|writeTags(kotlin.ByteArray;io.github.yuroyami.kiteaudio.tag.TagBundle;io.github.yuroyami.kiteaudio.tag.TagWriteOptions){}[0]
+}
+
+final object io.github.yuroyami.kiteaudio/Pcm { // io.github.yuroyami.kiteaudio/Pcm|null[0]
+    final fun clampInPlace(kotlin/FloatArray, kotlin/Int = ...): kotlin/FloatArray // io.github.yuroyami.kiteaudio/Pcm.clampInPlace|clampInPlace(kotlin.FloatArray;kotlin.Int){}[0]
+    final fun deinterleave(kotlin/FloatArray, kotlin/Int, kotlin/Int): kotlin/Array<kotlin/FloatArray> // io.github.yuroyami.kiteaudio/Pcm.deinterleave|deinterleave(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+    final fun floatFromInt(kotlin/IntArray, kotlin/Int, kotlin/Int = ..., kotlin/FloatArray? = ...): kotlin/FloatArray // io.github.yuroyami.kiteaudio/Pcm.floatFromInt|floatFromInt(kotlin.IntArray;kotlin.Int;kotlin.Int;kotlin.FloatArray?){}[0]
+    final fun intFromFloat(kotlin/FloatArray, kotlin/Int, kotlin/Int = ..., kotlin/IntArray? = ..., io.github.yuroyami.kiteaudio/Dither = ...): kotlin/IntArray // io.github.yuroyami.kiteaudio/Pcm.intFromFloat|intFromFloat(kotlin.FloatArray;kotlin.Int;kotlin.Int;kotlin.IntArray?;io.github.yuroyami.kiteaudio.Dither){}[0]
+    final fun interleave(kotlin/Array<kotlin/FloatArray>, kotlin/Int, kotlin/FloatArray? = ...): kotlin/FloatArray // io.github.yuroyami.kiteaudio/Pcm.interleave|interleave(kotlin.Array<kotlin.FloatArray>;kotlin.Int;kotlin.FloatArray?){}[0]
+    final fun maxValueOf(kotlin/Int): kotlin/Int // io.github.yuroyami.kiteaudio/Pcm.maxValueOf|maxValueOf(kotlin.Int){}[0]
+    final fun minValueOf(kotlin/Int): kotlin/Int // io.github.yuroyami.kiteaudio/Pcm.minValueOf|minValueOf(kotlin.Int){}[0]
+    final fun remapChannels(kotlin/FloatArray, kotlin/Int, io.github.yuroyami.kiteaudio/ChannelLayout, io.github.yuroyami.kiteaudio/ChannelLayout, kotlin/FloatArray? = ...): kotlin/FloatArray // io.github.yuroyami.kiteaudio/Pcm.remapChannels|remapChannels(kotlin.FloatArray;kotlin.Int;io.github.yuroyami.kiteaudio.ChannelLayout;io.github.yuroyami.kiteaudio.ChannelLayout;kotlin.FloatArray?){}[0]
+    final fun scaleOf(kotlin/Int): kotlin/Double // io.github.yuroyami.kiteaudio/Pcm.scaleOf|scaleOf(kotlin.Int){}[0]
+}
+
+final fun (kotlin/ByteArray).io.github.yuroyami.kiteaudio/asAudioSource(): io.github.yuroyami.kiteaudio/AudioSource // io.github.yuroyami.kiteaudio/asAudioSource|asAudioSource@kotlin.ByteArray(){}[0]
+final fun (kotlin/FloatArray).io.github.yuroyami.kiteaudio/asPcmSource(io.github.yuroyami.kiteaudio/AudioFormat, kotlin/Int = ...): io.github.yuroyami.kiteaudio/PcmSource // io.github.yuroyami.kiteaudio/asPcmSource|asPcmSource@kotlin.FloatArray(io.github.yuroyami.kiteaudio.AudioFormat;kotlin.Int){}[0]

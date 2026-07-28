@@ -1,0 +1,167 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx5g -Dorg.gradle.daemon=false
+
+jobs:
+  # The JVM, JS, wasm and Linux native targets. This is the job that runs the
+  # full suite: the codecs are pure computation, so a pass here covers them
+  # everywhere.
+  linux:
+    name: JVM / JS / wasm / native (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The oracle suite skips itself when ffmpeg is missing, and a skipped
+      # test reads exactly like a passing one, so it is installed rather than
+      # left to chance. The tests find it on PATH.
+      - name: Install the codec oracles
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg flac
+          for t in ffmpeg ffprobe flac metaflac; do
+            command -v "$t" >/dev/null || echo "::warning::oracle tool $t is not on PATH; its suite will skip"
+          done
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Core tests (JVM)
+        run: ./gradlew :kiteaudio:jvmTest :kiteaudio-io:jvmTest --stacktrace
+
+      - name: Core tests (JS + wasm)
+        run: >-
+          ./gradlew
+          :kiteaudio:jsNodeTest
+          :kiteaudio:wasmJsNodeTest
+          :kiteaudio:wasmWasiNodeTest
+          :kiteaudio-io:wasmJsNodeTest
+          :kiteaudio-io:wasmWasiNodeTest
+          --stacktrace
+
+      - name: Core tests (native)
+        run: ./gradlew :kiteaudio:linuxX64Test :kiteaudio-io:linuxX64Test --stacktrace
+
+      - name: Public API check
+        run: ./gradlew checkKotlinAbi --stacktrace
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-linux
+          path: '**/build/reports/tests/**'
+
+  # MinGW binaries cross-compile elsewhere, but their tests can only execute
+  # on Windows. Keep this separate from the JVM oracle suite so native failures
+  # cannot hide behind a successful cross-compilation.
+  windows:
+    name: Kotlin/Native (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: MinGW x64 tests
+        run: .\gradlew.bat :kiteaudio:mingwX64Test :kiteaudio-io:mingwX64Test --stacktrace
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-windows
+          path: '**/build/reports/tests/**'
+
+  # Apple targets can only be built on a Mac, and they are a large part of why
+  # this library exists, so they get their own job rather than riding along as
+  # a compile-only check.
+  apple:
+    name: Apple targets (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Native tests
+        run: >-
+          ./gradlew
+          :kiteaudio:macosArm64Test
+          :kiteaudio:iosSimulatorArm64Test
+          :kiteaudio-io:macosArm64Test
+          :kiteaudio-io:iosSimulatorArm64Test
+          --stacktrace
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-apple
+          path: '**/build/reports/tests/**'
+
+  # The Android variants build through AGP, which neither job above exercises.
+  android:
+    name: Android library
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Android host tests
+        run: ./gradlew :kiteaudio:testAndroidHostTest :kiteaudio-io:testAndroidHostTest --stacktrace
+
+      - name: Assemble every target
+        run: ./gradlew :kiteaudio:assemble :kiteaudio-io:assemble --stacktrace
+
+  docs:
+    name: API documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the Dokka site
+        run: ./gradlew dokkaGenerate --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: build/dokka/html
