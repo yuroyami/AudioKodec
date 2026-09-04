@@ -18,11 +18,35 @@ C.
    ones need a stated numeric bound and a comment explaining the number.
 2. Malformed-input coverage: truncation at every interesting boundary, and
    mutation of the header fields. No input may produce a throwable outside
-   `KiteAudioException`, and none may hang.
+   `KiteAudioException`, and none may hang. A new container goes into the
+   shared sweep in `HostileInputTest` rather than getting its own hand-written
+   cases.
 3. Seeking and duration tests where the format supports them.
-4. An entry in [PORTING_STATUS.md](PORTING_STATUS.md), and a README update if
+4. Tag round-trips where the format carries tags, with the audio payload
+   proved byte-identical across a tag write.
+5. An entry in [PORTING_STATUS.md](PORTING_STATUS.md), and a README update if
    the README's claims change.
-5. `./gradlew updateLegacyAbi` run and the result committed.
+6. A page in `docs/` for anything a caller would have to guess at.
+7. `./gradlew updateLegacyAbi` run and the result committed.
+
+A decoder ships before its encoder, always. The decoder is the encoder's first
+test harness, and an encoder whose output nothing can read is untestable.
+
+## Order of work
+
+Finish what is started before starting the next thing. A group of related
+issues is a label, and the tracking issue inside it, where one exists, holds
+the order and the hazards. Do not open work in the next group while the
+current one has a failing test on any target.
+
+The library uses `0.x` versions with an honest feature table. `1.0.0` waits for
+the container and codec set the README lists to be complete, with no known
+conformance failure open against any of it.
+
+## Dependencies
+
+Latest versions are fine, including alpha and beta ones, as long as every
+target still builds and the suite still passes on all of them.
 
 ## Style
 
@@ -41,5 +65,8 @@ repository.
 ./gradlew :kiteaudio:macosArm64Test
 ```
 
-The oracle suite needs ffmpeg on the path and skips itself without it. Install
-it before trusting a green run.
+The oracle suites compare against three outside tools: `ffmpeg` and `ffprobe`
+for most formats, the reference `flac` tools for FLAC, and Apple's `afconvert`
+for Core Audio Format files on macOS. Each suite skips itself when its tool is
+missing, so a green run on a machine without them is proving less than it
+looks. Install all three before trusting one.

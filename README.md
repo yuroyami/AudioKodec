@@ -14,8 +14,9 @@ the audio; and run the same code on every target.
 KiteAudio is at an early version. Audio covers MPEG Layers I, II and III,
 Vorbis, FLAC both native and inside Ogg, and the uncompressed family. Tag
 reading and editing covers ID3, APE, Vorbis comments and the metadata chunks of
-RIFF, AIFF and Ogg, on any file. [What it reads and writes](#formats) is the whole list, and
-[PORTING_STATUS.md](PORTING_STATUS.md) is where the rest of the plan lives.
+RIFF, AIFF and Ogg, on any file. [What it reads and writes](#formats) is the whole list,
+[PORTING_STATUS.md](PORTING_STATUS.md) has the detail behind it, and the
+[open issues](https://github.com/yuroyami/KiteAudio/issues) are what comes next.
 Nothing below is aspirational: every format in the tables has tests, and most
 are checked against ffmpeg.
 

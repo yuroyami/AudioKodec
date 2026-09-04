@@ -88,13 +88,13 @@ them.
 | **Microsoft ADPCM** | ✅ | ✅ | Seven standard coefficient sets, plus a table carried by the file. Bit-identical to ffmpeg |
 | **FLAC** | ✅ | ✅ | Constant, verbatim, fixed and linear predictors up to order 32; Rice and Rice2 residuals with escaped partitions; all four stereo arrangements; wasted-bits subframes; 8 to 32-bit decode and 8, 16 and 24-bit encode. Decodes inside Ogg as well as natively |
 | **Vorbis** | ✅ | ❌ | Floor type 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into KiteAudio's channel order. Floor type 0 is parsed and refused: no encoder has emitted it since the format's 2001 betas, and none exists to make a file to test one against |
-| Opus, Speex | ❌ | ❌ | Their Ogg carriage is done: headers, length and comments are read. The codecs themselves are the next tier |
-| ALAC, WavPack, APE, TTA | ❌ | ❌ | Tier 4 and tier 7 |
+| Opus, Speex | ❌ | ❌ | Their Ogg carriage is done: headers, length and comments are read. The codecs themselves are #1 and #18 |
+| ALAC, WavPack, APE, TTA | ❌ | ❌ | #10, #14, #15 and #16 |
 | MP3 (Layer III) | ✅ | ❌ | MPEG-1, 2 and 2.5. Bit reservoir, all four block shapes including mixed, mid-side and intensity stereo for both versions, alias reduction, sample-accurate seeking. Agrees with ffmpeg to about 1e-6 |
 | MP2 (Layer II) | ✅ | ❌ | All five bit allocation tables, grouped quantisation, scalefactor selection, joint stereo. Agrees with ffmpeg's float decoder to about 1e-6 |
 | MP1 (Layer I) | ✅ | ❌ | Agrees with ffmpeg's float decoder to about 1e-6 |
-| Opus | ❌ | ❌ | Tier 3 |
-| AAC, AC-3, and the rest | ❌ | ❌ | Tier 5 and later |
+| Opus | ❌ | ❌ | #1 |
+| AAC, AC-3, and the rest | ❌ | ❌ | #13 and #42 |
 
 ## Tags
 
@@ -118,8 +118,8 @@ inspected and edited.
 | **Vorbis comments** | ✅ | ✅ | In FLAC, and in Ogg for every mapping it carries |
 | **FLAC metadata blocks** | ✅ | ✅ | Comment and picture blocks are rewritten; seek tables, cue sheets and application blocks are carried across untouched; padding is regenerated so the next edit need not move the audio |
 | **Ogg comment headers** | ✅ | ✅ | Vorbis, Opus, FLAC and Speex. Writing rebuilds the header pages and renumbers the pages after them, leaving the audio packets untouched. A file interleaving several logical streams is refused rather than repaginated |
-| MP4 `ilst` | ❌ | ❌ | Next, with the MP4 container |
-| Matroska tags | ❌ | ❌ | Tier 6 |
+| MP4 `ilst` | ❌ | ❌ | #8, once the container in #7 is read |
+| Matroska tags | ❌ | ❌ | #41 |
 
 ### The merged view
 
@@ -159,7 +159,7 @@ keys, so nothing is lost by the merge and an unusual entry is still reachable.
 | Interleave and split | ✅ |
 | Channel remapping between layouts | ✅ |
 | WAV channel mask to layout and back | ✅ |
-| Resampling, mixdown, loudness, peaks | ❌ tier 8 |
+| Resampling, mixdown, loudness, peaks | ❌ #25, #26, #27 and #28 |
 
 ## Decoding
 
@@ -227,9 +227,9 @@ use, which means a comment can arrive as a `TXXX` called `comment` rather than
 as a `COMM` frame. KiteAudio understands both, because reading only the first
 loses fields from files that are perfectly ordinary.
 
-## Deviations from the plan
+## Where the code went its own way
 
-Recorded here as [PLANMAXXING.md](PLANMAXXING.md) requires.
+Settled decisions, kept here so nobody has to work out the reasons again.
 
 1. **`AudioSource` and `AudioSink`, not `KiteAudioSource` and
    `KiteAudioSink`.** The plan used both naming styles in different sections.
@@ -251,7 +251,7 @@ Recorded here as [PLANMAXXING.md](PLANMAXXING.md) requires.
 
 ## What comes next
 
-Vorbis closes the larger half of the lossy tier, and it leaves behind an
+Vorbis closes the larger half of the lossy work, and it leaves behind an
 inverse MDCT and a complex FFT that Opus, AAC and AC-3 all need, so the next
 transform codec starts further along than this one did.
 
@@ -270,14 +270,15 @@ MPEG-2, where a start or stop block needs 54 and only a short block needs 36. It
 is the kind of mistake that shows up nowhere except on the few frames either
 side of a transient.
 
-The last part of tier 3 is Opus, the largest single port in the plan because
-it is two codecs in one. Speex is a tier 7 item and stays there. After that,
-tier 4 is MP4 and ALAC, which also closes the last tag gap.
+Opus is next, and it is the largest single port here because it is two codecs
+in one: #1 holds it. Speex stays further out, at #18. After that comes MP4 and
+ALAC, #6, which also closes the last tag gap.
 
 Four small leftovers, all refused today rather than done wrong: writing the
-Broadcast Wave `bext` chunk, writing tags into an Ogg file that interleaves
-several logical streams, Vorbis floor type 0, and free format MPEG audio.
+Broadcast Wave `bext` chunk (#43), writing tags into an Ogg file that
+interleaves several logical streams (#44), Vorbis floor type 0 (#45), and free
+format MPEG audio (#46).
 
-This is past the point the plan marks as publishable. WAV, AIFF, AU, Wave64,
+This is past the point at which the library is worth publishing. WAV, AIFF, AU, Wave64,
 CAF, FLAC, Vorbis, Ogg and the tag set are a coherent product, and `0.1.0` can
 go to Maven Central without the README having to apologise for anything.
