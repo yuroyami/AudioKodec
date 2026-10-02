@@ -84,135 +84,148 @@ internal object WaveReader {
         }
 
         while (true) {
-            // A chunk header is eight bytes. Stopping when exactly eight are
-            // left would skip a final zero-length chunk, and an empty 'data'
-            // chunk is exactly that.
-            if (riffEnd in 1 until reader.position + 8) break
-            if (sourceSize in 1 until reader.position + 8) break
-            val chunkId = try {
-                reader.readFourCc()
-            } catch (_: TruncatedStreamException) {
-                break
-            }
-            val chunkStart = reader.position - 4
-            var chunkSize = try {
-                reader.readU32Le()
-            } catch (_: TruncatedStreamException) {
-                break
-            }
-            // RF64 marks the oversized chunks with -1 and puts the real size
-            // in ds64, which by specification comes before them.
-            if (isRf64 && chunkSize == 0xFFFF_FFFFL) {
-                val table = ds64 ?: throw CorruptStreamException(
-                    "RF64 chunk '$chunkId' has a placeholder size but no 'ds64' came before it",
-                    chunkStart,
-                )
-                chunkSize = if (chunkId == "data") {
-                    table.dataSize
-                } else {
-                    table.take(chunkId) ?: throw CorruptStreamException(
-                        "RF64 chunk '$chunkId' has no matching entry in the ds64 table",
+            // Once the format and the payload are found, the rest of the form
+            // is only read for what it adds, such as a `fact` chunk written
+            // after the audio. Damage out there ends the walk rather than
+            // costing a file whose audio was already found.
+            val audioFound = dataOffset >= 0 && fmt != null
+            try {
+                // A chunk header is eight bytes. Stopping when exactly eight are
+                // left would skip a final zero-length chunk, and an empty 'data'
+                // chunk is exactly that.
+                if (riffEnd in 1 until reader.position + 8) break
+                if (sourceSize in 1 until reader.position + 8) break
+                val chunkId = try {
+                    reader.readFourCc()
+                } catch (_: TruncatedStreamException) {
+                    break
+                }
+                val chunkStart = reader.position - 4
+                var chunkSize = try {
+                    reader.readU32Le()
+                } catch (_: TruncatedStreamException) {
+                    break
+                }
+                // RF64 marks the oversized chunks with -1 and puts the real size
+                // in ds64, which by specification comes before them.
+                if (isRf64 && chunkSize == 0xFFFF_FFFFL) {
+                    val table = ds64 ?: throw CorruptStreamException(
+                        "RF64 chunk '$chunkId' has a placeholder size but no 'ds64' came before it",
                         chunkStart,
                     )
-                }
-            }
-            val bodyStart = reader.position
-            if (isRf64 && chunkIndex == 0 && chunkId != "ds64") {
-                throw CorruptStreamException(
-                    "an RF64 or BW64 file must put its 'ds64' chunk first",
-                    chunkStart,
-                )
-            }
-
-            // Validate the complete chunk before parsing anything from its
-            // body. Physical EOF is left for the decoder so tolerant mode can
-            // salvage a truncated payload, but no chunk may escape the form
-            // boundary stated by the container itself.
-            val unknownDataSize =
-                !isRf64 && chunkId == "data" && chunkSize == 0xFFFF_FFFFL
-            if (!unknownDataSize && chunkSize > Long.MAX_VALUE - bodyStart) {
-                throw CorruptStreamException("chunk '$chunkId' size overflows 64 bits", chunkStart)
-            }
-            val bodyEnd = if (unknownDataSize) bodyStart else bodyStart + chunkSize
-            var next = bodyEnd
-            if (!unknownDataSize && chunkSize % 2 == 1L) {
-                if (next == Long.MAX_VALUE) {
-                    throw CorruptStreamException(
-                        "chunk '$chunkId' padding overflows 64 bits",
-                        chunkStart,
-                    )
-                }
-                next++
-            }
-            if (next <= chunkStart) {
-                throw CorruptStreamException("chunk '$chunkId' does not advance", chunkStart)
-            }
-            if (!unknownDataSize && declaredRiffEnd >= 0 && next > declaredRiffEnd) {
-                throw CorruptStreamException(
-                    "RIFF chunk '$chunkId' extends past the end of its enclosing form",
-                    chunkStart,
-                )
-            }
-
-            when (chunkId) {
-                "ds64" -> {
-                    if (!isRf64) {
-                        throw CorruptStreamException(
-                            "a RIFF WAVE file contains an RF64 'ds64' chunk",
-                            chunkStart,
-                        )
-                    }
-                    if (ds64 != null) {
-                        throw CorruptStreamException(
-                            "an RF64 file may contain only one 'ds64' chunk",
-                            chunkStart,
-                        )
-                    }
-                    ds64 = readDs64(reader, chunkSize, options, chunkStart)
-                    declaredRiffEnd = ds64.riffSize + 8L
-                    if (next > declaredRiffEnd) {
-                        throw CorruptStreamException(
-                            "the RF64 ds64 chunk extends past its declared RIFF size",
-                            chunkStart,
-                        )
-                    }
-                    riffEnd = if (sourceSize in 1 until declaredRiffEnd) {
-                        sourceSize
+                    chunkSize = if (chunkId == "data") {
+                        table.dataSize
                     } else {
-                        declaredRiffEnd
-                    }
-                }
-                "fmt " -> {
-                    if (fmt != null) {
-                        throw CorruptStreamException(
-                            "a WAV file may contain only one 'fmt ' chunk",
+                        table.take(chunkId) ?: throw CorruptStreamException(
+                            "RF64 chunk '$chunkId' has no matching entry in the ds64 table",
                             chunkStart,
                         )
                     }
-                    if (chunkSize > Int.MAX_VALUE) {
+                }
+                val bodyStart = reader.position
+                if (isRf64 && chunkIndex == 0 && chunkId != "ds64") {
+                    throw CorruptStreamException(
+                        "an RF64 or BW64 file must put its 'ds64' chunk first",
+                        chunkStart,
+                    )
+                }
+
+                // Validate the complete chunk before parsing anything from its
+                // body. Physical EOF is left for the decoder so tolerant mode can
+                // salvage a truncated payload, but no chunk may escape the form
+                // boundary stated by the container itself.
+                val unknownDataSize =
+                    !isRf64 && chunkId == "data" && chunkSize == 0xFFFF_FFFFL
+                if (!unknownDataSize && chunkSize > Long.MAX_VALUE - bodyStart) {
+                    throw CorruptStreamException("chunk '$chunkId' size overflows 64 bits", chunkStart)
+                }
+                val bodyEnd = if (unknownDataSize) bodyStart else bodyStart + chunkSize
+                var next = bodyEnd
+                if (!unknownDataSize && chunkSize % 2 == 1L) {
+                    if (next == Long.MAX_VALUE) {
                         throw CorruptStreamException(
-                            "a WAV format chunk cannot be $chunkSize bytes", chunkStart,
+                            "chunk '$chunkId' padding overflows 64 bits",
+                            chunkStart,
                         )
                     }
-                    fmt = readFormat(reader, chunkSize.toInt(), options)
+                    next++
                 }
-                "data" -> {
-                    dataOffset = bodyStart
-                    dataBytes = chunkSize
+                if (next <= chunkStart) {
+                    throw CorruptStreamException("chunk '$chunkId' does not advance", chunkStart)
                 }
-                "fact" -> if (chunkSize >= 4) factFrames = reader.readU32Le()
-            }
+                if (!unknownDataSize && declaredRiffEnd >= 0 && next > declaredRiffEnd) {
+                    throw CorruptStreamException(
+                        "RIFF chunk '$chunkId' extends past the end of its enclosing form",
+                        chunkStart,
+                    )
+                }
 
-            if (chunkId != "data" && reader.position > bodyEnd) {
-                throw CorruptStreamException(
-                    "the '$chunkId' parser read past its declared chunk body",
-                    chunkStart,
-                )
+                when (chunkId) {
+                    "ds64" -> {
+                        if (!isRf64) {
+                            throw CorruptStreamException(
+                                "a RIFF WAVE file contains an RF64 'ds64' chunk",
+                                chunkStart,
+                            )
+                        }
+                        if (ds64 != null) {
+                            throw CorruptStreamException(
+                                "an RF64 file may contain only one 'ds64' chunk",
+                                chunkStart,
+                            )
+                        }
+                        ds64 = readDs64(reader, chunkSize, options, chunkStart)
+                        declaredRiffEnd = ds64.riffSize + 8L
+                        if (next > declaredRiffEnd) {
+                            throw CorruptStreamException(
+                                "the RF64 ds64 chunk extends past its declared RIFF size",
+                                chunkStart,
+                            )
+                        }
+                        riffEnd = if (sourceSize in 1 until declaredRiffEnd) {
+                            sourceSize
+                        } else {
+                            declaredRiffEnd
+                        }
+                    }
+                    "fmt " -> {
+                        if (fmt != null) {
+                            throw CorruptStreamException(
+                                "a WAV file may contain only one 'fmt ' chunk",
+                                chunkStart,
+                            )
+                        }
+                        if (chunkSize > Int.MAX_VALUE) {
+                            throw CorruptStreamException(
+                                "a WAV format chunk cannot be $chunkSize bytes", chunkStart,
+                            )
+                        }
+                        fmt = readFormat(reader, chunkSize.toInt(), options)
+                    }
+                    // Only the first payload is the audio.
+                    "data" -> if (dataOffset < 0) {
+                        dataOffset = bodyStart
+                        dataBytes = chunkSize
+                    }
+                    "fact" -> if (chunkSize >= 4 && factFrames == null) factFrames = reader.readU32Le()
+                }
+
+                if (chunkId != "data" && reader.position > bodyEnd) {
+                    throw CorruptStreamException(
+                        "the '$chunkId' parser read past its declared chunk body",
+                        chunkStart,
+                    )
+                }
+                reader.seek(next)
+                chunkIndex++
+                if (sourceSize in 1..next) break
+                // A payload whose length was never written runs to the end, so
+                // there is no chunk after it to find.
+                if (unknownDataSize) break
+            } catch (damage: CorruptStreamException) {
+                if (!audioFound) throw damage
+                break
             }
-            reader.seek(next)
-            chunkIndex++
-            if (sourceSize in 1..next) break
-            if (dataOffset >= 0 && fmt != null) break
         }
 
         if (isRf64 && ds64 == null) {
