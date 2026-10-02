@@ -34,7 +34,7 @@ internal object TagAssembler {
         val claimedBy = HashMap<TagField, Int>()
         val pictures = ArrayList<TagPicture>()
         val chapters = ArrayList<TagChapter>()
-        var gain = ReplayGainReader()
+        val gain = ReplayGainReader()
 
         // Highest precedence first, so the first block to state a field is the
         // one that keeps it. A stable sort keeps file order among equals,
@@ -44,7 +44,7 @@ internal object TagAssembler {
         for (block in ordered) {
             val precedence = block.format.precedence
             for (entry in block.entries) {
-                gain = gain.consider(block.format, entry)
+                gain.consider(block.format, entry)
 
                 val pair = TagMapping.numberAndTotalFor(block.format, entry.key)
                 if (pair != null) {
@@ -269,57 +269,76 @@ internal object TagAssembler {
  * The two conventions do not mix. ReplayGain 2 writes decibels against
  * -18 LUFS in text fields, and Opus writes a whole number of Q7.8 decibels
  * against -23 LUFS in `R128_TRACK_GAIN`. Reading one as the other is a 5 dB
- * error, so which was found is remembered along with the values.
+ * error, so each gain remembers which reference it was found in.
+ *
+ * Blocks arrive highest precedence first, and the first block to state a
+ * value keeps it, exactly as for ordinary fields. Two blocks of equal
+ * precedence are taken in file order, so the earlier one wins.
  */
-internal class ReplayGainReader(
-    private val trackGain: Double? = null,
-    private val trackPeak: Double? = null,
-    private val albumGain: Double? = null,
-    private val albumPeak: Double? = null,
-    private val r128: Boolean = false,
-) {
-    fun consider(format: TagFormat, entry: RawTagEntry): ReplayGainReader {
+internal class ReplayGainReader {
+    private var trackGain: Double? = null
+    private var trackGainIsR128 = false
+    private var trackPeak: Double? = null
+    private var albumGain: Double? = null
+    private var albumGainIsR128 = false
+    private var albumPeak: Double? = null
+
+    fun consider(format: TagFormat, entry: RawTagEntry) {
         val key = when (format) {
             TagFormat.ID3V2_2, TagFormat.ID3V2_3, TagFormat.ID3V2_4 ->
-                entry.description?.uppercase() ?: return this
+                entry.description?.uppercase() ?: return
             else -> entry.key.uppercase()
         }
-        val text = entry.text ?: return this
-        return when (key) {
-            "REPLAYGAIN_TRACK_GAIN" ->
-                parseDecibels(text)?.let { copy(trackGain = it) } ?: this
-            "REPLAYGAIN_TRACK_PEAK" ->
-                parsePeak(text)?.let { copy(trackPeak = it) } ?: this
-            "REPLAYGAIN_ALBUM_GAIN" ->
-                parseDecibels(text)?.let { copy(albumGain = it) } ?: this
-            "REPLAYGAIN_ALBUM_PEAK" ->
-                parsePeak(text)?.let { copy(albumPeak = it) } ?: this
+        val text = entry.text ?: return
+        when (key) {
+            "REPLAYGAIN_TRACK_GAIN" -> if (trackGain == null) {
+                trackGain = parseDecibels(text)
+            }
+            "REPLAYGAIN_TRACK_PEAK" -> if (trackPeak == null) trackPeak = parsePeak(text)
+            "REPLAYGAIN_ALBUM_GAIN" -> if (albumGain == null) {
+                albumGain = parseDecibels(text)
+            }
+            "REPLAYGAIN_ALBUM_PEAK" -> if (albumPeak == null) albumPeak = parsePeak(text)
             // The Opus fields hold a whole number of 256ths of a decibel.
-            "R128_TRACK_GAIN" -> text.trim().toIntOrNull()?.let {
-                copy(trackGain = it / 256.0, r128 = true)
-            } ?: this
-            "R128_ALBUM_GAIN" -> text.trim().toIntOrNull()?.let {
-                copy(albumGain = it / 256.0, r128 = true)
-            } ?: this
-            else -> this
+            "R128_TRACK_GAIN" -> if (trackGain == null) {
+                trackGain = parseQ78(text)
+                trackGainIsR128 = trackGain != null
+            }
+            "R128_ALBUM_GAIN" -> if (albumGain == null) {
+                albumGain = parseQ78(text)
+                albumGainIsR128 = albumGain != null
+            }
         }
     }
 
-    fun build(): ReplayGain = ReplayGain(
-        trackGainDb = trackGain,
-        trackPeak = trackPeak,
-        albumGainDb = albumGain,
-        albumPeak = albumPeak,
-        isR128 = r128,
-    )
-
-    private fun copy(
-        trackGain: Double? = this.trackGain,
-        trackPeak: Double? = this.trackPeak,
-        albumGain: Double? = this.albumGain,
-        albumPeak: Double? = this.albumPeak,
-        r128: Boolean = this.r128,
-    ) = ReplayGainReader(trackGain, trackPeak, albumGain, albumPeak, r128)
+    /**
+     * The values found, against one reference.
+     *
+     * When the track and album gains were found in different conventions the
+     * Opus one is converted to the ReplayGain reference, rather than one flag
+     * being made to describe two values it is only true of one of.
+     */
+    fun build(): ReplayGain {
+        val track = trackGain
+        val album = albumGain
+        val mixed = track != null && album != null && trackGainIsR128 != albumGainIsR128
+        if (mixed) {
+            return ReplayGain(
+                trackGainDb = if (trackGainIsR128) track!! + R128_TO_REPLAYGAIN_DB else track,
+                trackPeak = trackPeak,
+                albumGainDb = if (albumGainIsR128) album!! + R128_TO_REPLAYGAIN_DB else album,
+                albumPeak = albumPeak,
+                isR128 = false,
+            )
+        }
+        return ReplayGain(
+            trackGainDb = track,
+            trackPeak = trackPeak,
+            albumGainDb = album,
+            albumPeak = albumPeak,
+            isR128 = (track != null && trackGainIsR128) || (album != null && albumGainIsR128),
+        )
+    }
 
     /** Reads `-7.35 dB`, `+2.1`, or anything of that shape. */
     private fun parseDecibels(text: String): Double? {
@@ -329,6 +348,32 @@ internal class ReplayGainReader(
 
     private fun parsePeak(text: String): Double? =
         text.trim().toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 }
+
+    private fun parseQ78(text: String): Double? = text.trim().toIntOrNull()?.let { it / 256.0 }
+}
+
+/**
+ * Decibels to add to a gain measured against the Opus reference of -23 LUFS
+ * to state it against ReplayGain's -18 LUFS. A quieter target needs less
+ * gain, so the ReplayGain value is the larger by the 5 dB between them.
+ */
+internal const val R128_TO_REPLAYGAIN_DB: Double = 5.0
+
+/**
+ * [this] restated against the ReplayGain reference, for a tag format that has
+ * no way to say a gain is relative to -23 LUFS. Peaks are sample values and do
+ * not depend on the reference.
+ */
+internal fun ReplayGain.inReplayGainReference(): ReplayGain = if (!isR128) {
+    this
+} else {
+    ReplayGain(
+        trackGainDb = trackGainDb?.plus(R128_TO_REPLAYGAIN_DB),
+        trackPeak = trackPeak,
+        albumGainDb = albumGainDb?.plus(R128_TO_REPLAYGAIN_DB),
+        albumPeak = albumPeak,
+        isR128 = false,
+    )
 }
 
 /** Base64, which the picture comment of a Vorbis tag is wrapped in. */

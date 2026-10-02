@@ -337,7 +337,8 @@ internal object ApeTag {
             }
         }
 
-        tags.replayGain?.let { gain ->
+        // APE has no Opus loudness convention either.
+        tags.replayGain?.inReplayGainReference()?.let { gain ->
             gain.trackGainDb?.let { addText("REPLAYGAIN_TRACK_GAIN", Id3v2Writer.formatDecibels(it)) }
             gain.trackPeak?.let { addText("REPLAYGAIN_TRACK_PEAK", it.toString()) }
             gain.albumGainDb?.let { addText("REPLAYGAIN_ALBUM_GAIN", Id3v2Writer.formatDecibels(it)) }

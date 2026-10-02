@@ -7,6 +7,7 @@ import io.github.yuroyami.audiokodecs.tag.RawTagEntry
 import io.github.yuroyami.audiokodecs.tag.TagBundle
 import io.github.yuroyami.audiokodecs.tag.TagField
 import io.github.yuroyami.audiokodecs.tag.TagFormat
+import kotlin.math.roundToInt
 
 /**
  * Vorbis comments, the tag format Ogg and FLAC share.
@@ -163,11 +164,16 @@ internal object VorbisComment {
         tags.replayGain?.let { gain ->
             if (gain.isR128) {
                 gain.trackGainDb?.let {
-                    items.add("R128_TRACK_GAIN=${(it * 256).toInt()}")
+                    items.add("R128_TRACK_GAIN=${(it * 256).roundToInt()}")
                 }
                 gain.albumGainDb?.let {
-                    items.add("R128_ALBUM_GAIN=${(it * 256).toInt()}")
+                    items.add("R128_ALBUM_GAIN=${(it * 256).roundToInt()}")
                 }
+                // The Opus convention has no peak fields. A peak is a sample
+                // value rather than a level against a reference, so the
+                // ReplayGain field states it correctly alongside R128 gains.
+                gain.trackPeak?.let { items.add("REPLAYGAIN_TRACK_PEAK=$it") }
+                gain.albumPeak?.let { items.add("REPLAYGAIN_ALBUM_PEAK=$it") }
             } else {
                 gain.trackGainDb?.let {
                     items.add("REPLAYGAIN_TRACK_GAIN=${Id3v2Writer.formatDecibels(it)}")

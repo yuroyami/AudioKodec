@@ -79,7 +79,9 @@ internal object Id3v2Writer {
             }
         }
 
-        tags.replayGain?.let { gain ->
+        // ID3 has no Opus loudness convention, so an R128 gain is restated
+        // against the ReplayGain reference rather than relabelled.
+        tags.replayGain?.inReplayGainReference()?.let { gain ->
             gain.trackGainDb?.let {
                 frames.add(userTextFrame("replaygain_track_gain", formatDecibels(it), major))
             }
