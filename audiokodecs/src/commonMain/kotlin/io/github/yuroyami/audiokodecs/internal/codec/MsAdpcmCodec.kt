@@ -121,9 +121,7 @@ internal class MsAdpcmCodec(
 
                 sample2[c] = sample1[c]
                 sample1[c] = predictor
-                var nextDelta = (ADAPTATION[nibble] * delta[c]) shr 8
-                if (nextDelta < 16) nextDelta = 16
-                delta[c] = nextDelta
+                delta[c] = adaptDelta(delta[c], nibble)
 
                 out[write++] = predictor * (1f / 32_768f)
             }
@@ -195,9 +193,7 @@ internal class MsAdpcmCodec(
                 sample1[c] = predictor
 
                 val code = nibble and 0x0F
-                var nextDelta = (ADAPTATION[code] * delta[c]) shr 8
-                if (nextDelta < 16) nextDelta = 16
-                delta[c] = nextDelta
+                delta[c] = adaptDelta(delta[c], code)
 
                 if (pendingHigh) {
                     pending = code shl 4
@@ -270,6 +266,30 @@ private fun roundedDivide(numerator: Int, denominator: Int): Int {
         -((-numerator + denominator / 2) / denominator)
     }
 }
+
+/**
+ * The step size for the next sample, from the current one and the code just
+ * read.
+ *
+ * The specification multiplies by the adaptation factor and then divides by
+ * 256, with a floor of 16. Nothing in it stops a run of large codes from
+ * tripling the step every sample, and a 32-bit product then wraps negative and
+ * the floor turns a huge step into a tiny one. The product is formed in 64
+ * bits, and the step is held to the largest value whose next product still
+ * fits in 32, which is also what ffmpeg's decoder does sample for sample. A
+ * step that large already drives every nonzero code to full scale, so the
+ * bound changes nothing a real encoder could produce. It also keeps the
+ * predictor correction, at most eight steps, inside an `Int`.
+ */
+private fun adaptDelta(delta: Int, code: Int): Int {
+    val next = (MsAdpcmCodec.ADAPTATION[code].toLong() * delta) shr 8
+    return next.coerceIn(MIN_DELTA.toLong(), MAX_DELTA.toLong()).toInt()
+}
+
+private const val MIN_DELTA: Int = 16
+
+/** The largest step whose product with the largest adaptation factor fits in 32 bits. */
+private const val MAX_DELTA: Int = Int.MAX_VALUE / 768
 
 private fun predict(sample1: Int, sample2: Int, coefficient1: Int, coefficient2: Int): Int {
     val value =
