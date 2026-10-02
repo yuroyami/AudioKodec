@@ -92,7 +92,10 @@ internal class MpegStream(
             }
 
             val samplesPerFrame = header.samplesPerFrame.toLong()
-            val scan = if (vbr == null || size < 0) {
+            // A Xing or VBRI header may leave its frame count out, and then
+            // only walking the frames can say how long the stream is.
+            val countedByHeader = vbr != null && vbr.frameCount > 0
+            val scan = if (!countedByHeader || size < 0) {
                 scanFrames(reader, audioOffset, declaredEnd, header)
             } else {
                 null
@@ -101,7 +104,7 @@ internal class MpegStream(
             val frames: Long
             val constant: Boolean
             when {
-                vbr != null && vbr.frameCount > 0 -> {
+                countedByHeader -> {
                     frames = vbr.frameCount.toLong()
                     constant = vbr.isConstantBitrate
                 }
@@ -112,7 +115,8 @@ internal class MpegStream(
                     // reliable duration nor a reliable CBR test. Walk the frame
                     // headers instead; this reads four bytes per frame and does
                     // not decode the payload.
-                    val measured = checkNotNull(scan)
+                    val measured = scan
+                        ?: throw CorruptStreamException("the MPEG stream length could not be measured", audioOffset)
                     frames = measured.count
                     constant = measured.constantBitrate
                 }

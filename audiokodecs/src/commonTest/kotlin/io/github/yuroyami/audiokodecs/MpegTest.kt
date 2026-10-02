@@ -21,6 +21,24 @@ import kotlin.test.assertTrue
  */
 class MpegTest {
 
+    @Test
+    fun aXingHeaderWithoutAFrameCountFallsBackToCountingFrames() {
+        // Four 417-byte MPEG-1 Layer III frames at 128 kbit/s and 44.1 kHz.
+        // The first carries a Xing header whose flags state nothing at all.
+        val frames = List(4) {
+            ByteArray(417).also { frame ->
+                frame[0] = 0xFF.toByte()
+                frame[1] = 0xFB.toByte()
+                frame[2] = 0x90.toByte()
+            }
+        }
+        "Xing".encodeToByteArray().copyInto(frames[0], 36)
+        val bytes = frames.reduce { all, frame -> all + frame }
+        val info = AudioKodecs.probe(bytes)
+        // The Xing frame is bookkeeping rather than audio.
+        assertEquals(3L * 1152, info.durationFrames)
+    }
+
     /** Builds an MPEG audio frame with a silent payload. */
     private fun frame(
         version: Int = 1,
