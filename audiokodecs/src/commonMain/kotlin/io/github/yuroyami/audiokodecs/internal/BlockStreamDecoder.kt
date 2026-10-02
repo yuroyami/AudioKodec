@@ -150,6 +150,9 @@ internal open class BlockStreamDecoder(
 
     private var closed = false
 
+    /** Set once tolerant decoding has stopped at a corrupt block. */
+    private var corruptionReached = false
+
     private val encoded: ByteArray = run {
         val bytes = blockBytes.toLong() * blocksPerRead
         options.checkAllocation(bytes, "reading $blocksPerRead encoded audio blocks")
@@ -167,11 +170,54 @@ internal open class BlockStreamDecoder(
 
     override fun nextFrame(): AudioFrame? {
         val read = readBlocks() ?: return null
-        val decodedFrames = read.blocks * framesPerBlock
-        val samples = decodedFrames * channels
-        val buffer = floatBufferOf(samples)
-        codec.decode(encoded, 0, read.blocks, buffer, 0)
-        return finishFloat(buffer, decodedFrames, read.limitFrames)
+        val buffer = floatBufferOf(read.blocks * framesPerBlock * channels)
+        val blocks = decodeCheckingBlocks(read) { first, count ->
+            codec.decode(encoded, first * blockBytes, count, buffer, first * framesPerBlock * channels)
+        }
+        if (blocks == 0) return null
+        val decodedFrames = blocks * framesPerBlock
+        return finishFloat(buffer, decodedFrames, minOf(read.limitFrames, decodedFrames))
+    }
+
+    /**
+     * Decodes the run of blocks [read] holds, through [decodeRun], and returns
+     * how many decoded cleanly.
+     *
+     * A codec that finds a block corrupt throws. Strictly, that failure is
+     * passed on with the position of the bad byte in the source rather than
+     * in the read buffer. Tolerantly, every complete block before the bad one
+     * is kept and the stream ends there, unless nothing usable was ever
+     * decoded, in which case there is nothing to be tolerant about and the
+     * failure is thrown after all.
+     */
+    private inline fun decodeCheckingBlocks(read: ReadResult, decodeRun: (first: Int, count: Int) -> Unit): Int {
+        try {
+            decodeRun(0, read.blocks)
+            return read.blocks
+        } catch (failure: CorruptStreamException) {
+            if (!options.tolerant) throw locate(failure, read.at)
+        }
+        var good = 0
+        var failure: CorruptStreamException? = null
+        while (good < read.blocks) {
+            try {
+                decodeRun(good, 1)
+            } catch (corrupt: CorruptStreamException) {
+                failure = corrupt
+                break
+            }
+            good++
+        }
+        corruptionReached = true
+        if (good == 0 && !decodedAny && failure != null) throw locate(failure, read.at)
+        return good
+    }
+
+    /** [failure] with its offset moved from the read buffer to the source. */
+    private fun locate(failure: CorruptStreamException, bufferStart: Long): CorruptStreamException {
+        if (failure.offset < 0) return failure
+        val message = failure.message.orEmpty().removeSuffix(" (at byte ${failure.offset})")
+        return CorruptStreamException(message, reader.absoluteOffset(bufferStart) + failure.offset)
     }
 
     /** Reads and decodes the next run of blocks as stored integers. */
@@ -179,10 +225,12 @@ internal open class BlockStreamDecoder(
         val bitDepth = codec.storedBitDepth
             ?: throw UnsupportedOperationException("this codec has no exact integer form")
         val read = readBlocks() ?: return null
-        val decodedFrames = read.blocks * framesPerBlock
-        val samples = decodedFrames * channels
-        val buffer = intBufferOf(samples)
-        codec.decodeInt(encoded, 0, read.blocks, buffer, 0)
+        val buffer = intBufferOf(read.blocks * framesPerBlock * channels)
+        val blocks = decodeCheckingBlocks(read) { first, count ->
+            codec.decodeInt(encoded, first * blockBytes, count, buffer, first * framesPerBlock * channels)
+        }
+        if (blocks == 0) return null
+        val decodedFrames = blocks * framesPerBlock
         val skip = pendingSkip
         pendingSkip = 0
         val usable = (decodedFrames - skip).coerceAtMost(read.limitFrames)
@@ -230,6 +278,7 @@ internal open class BlockStreamDecoder(
      */
     private fun readBlocks(): ReadResult? {
         checkOpen()
+        if (corruptionReached) return null
         if (nextBlock >= blockCount) return null
         if (totalFrames != Long.MAX_VALUE && positionFrames >= totalFrames) return null
 
@@ -282,7 +331,7 @@ internal open class BlockStreamDecoder(
         } else {
             (totalFrames - positionFrames).coerceAtLeast(0L)
         }
-        return ReadResult(whole, minOf(decodedFrames, limit).toInt())
+        return ReadResult(whole, minOf(decodedFrames, limit).toInt(), at)
     }
 
     override fun seek(frameIndex: Long): Long {
@@ -295,6 +344,8 @@ internal open class BlockStreamDecoder(
         val codedTarget = trimStartFrames + target
         nextBlock = codedTarget / framesPerBlock
         pendingSkip = (codedTarget % framesPerBlock).toInt()
+        // A corrupt block ended the stream where it was; elsewhere may be fine.
+        corruptionReached = false
         positionFrames = target
         return target
     }
@@ -329,7 +380,12 @@ internal open class BlockStreamDecoder(
         return fresh
     }
 
-    private class ReadResult(val blocks: Int, val limitFrames: Int)
+    private class ReadResult(
+        val blocks: Int,
+        val limitFrames: Int,
+        /** Where the first block of the run starts, relative to the reader. */
+        val at: Long,
+    )
 }
 
 /**
