@@ -106,4 +106,66 @@ class TagPreservationTest {
         assertEquals(-6.0, gain.trackGainDb!!, 0.005)
         assertEquals(0.75, gain.trackPeak!!, 0.0005)
     }
+
+    @Test
+    fun anUnrelatedEditKeepsTheLanguageAndDescriptionOfEveryCommentAndLyric() {
+        fun commentLike(language: String, description: String, text: String): ByteArray =
+            byteArrayOf(0) + language.encodeToByteArray() + description.encodeToByteArray() +
+                byteArrayOf(0) + text.encodeToByteArray()
+        val original = id3v24(
+            listOf(
+                Frame("COMM", commentLike("fra", "review", "bonjour")),
+                Frame("COMM", commentLike("eng", "", "hello")),
+                // Equal text, told apart only by the description.
+                Frame("COMM", commentLike("deu", "a", "gleich")),
+                Frame("COMM", commentLike("deu", "b", "gleich")),
+                Frame("USLT", commentLike("eng", "verse", "la la")),
+                Frame("USLT", commentLike("fra", "verse", "la la")),
+            ),
+        ) + stream
+        val before = AudioKodecs.readTags(original)
+        val written = AudioKodecs.writeTags(original, before.edit { set(TagField.TITLE, "Changed") })
+        val after = AudioKodecs.readTags(written)
+
+        fun identities(tags: TagBundle) = tags.raw.blocks
+            .flatMap { it.entries }
+            .filter { it.key == "COMM" || it.key == "USLT" }
+            .map { listOf(it.key, it.language, it.description, it.text) }
+            .toSet()
+        assertEquals(6, identities(before).size)
+        assertEquals(identities(before), identities(after))
+        assertEquals("Changed", after[TagField.TITLE])
+
+        // A new comment added beside them takes an identity no other frame has.
+        val added = AudioKodecs.writeTags(
+            original,
+            before.edit { add(TagField.COMMENT, "new"); add(TagField.COMMENT, "newer") },
+        )
+        val comments = AudioKodecs.readTags(added).raw.blocks.flatMap { it.entries }.filter { it.key == "COMM" }
+        assertEquals(6, comments.size)
+        assertEquals(comments.size, comments.map { it.language to it.description }.toSet().size)
+    }
+
+    private class Frame(val id: String, val body: ByteArray, val flags: Int = 0)
+
+    /** An ID3v2.4 block holding [frames] exactly as given, with no padding. */
+    private fun id3v24(frames: List<Frame>): ByteArray {
+        var body = byteArrayOf()
+        for (frame in frames) {
+            val header = ByteArray(10)
+            frame.id.encodeToByteArray().copyInto(header)
+            syncsafe(frame.body.size).copyInto(header, 4)
+            header[8] = (frame.flags ushr 8).toByte()
+            header[9] = frame.flags.toByte()
+            body += header + frame.body
+        }
+        return "ID3".encodeToByteArray() + byteArrayOf(4, 0, 0) + syncsafe(body.size) + body
+    }
+
+    private fun syncsafe(value: Int): ByteArray = byteArrayOf(
+        ((value shr 21) and 0x7F).toByte(),
+        ((value shr 14) and 0x7F).toByte(),
+        ((value shr 7) and 0x7F).toByte(),
+        (value and 0x7F).toByte(),
+    )
 }

@@ -1,5 +1,6 @@
 package io.github.yuroyami.audiokodecs.internal.tag
 
+import io.github.yuroyami.audiokodecs.tag.RawTagEntry
 import io.github.yuroyami.audiokodecs.tag.TagBundle
 import io.github.yuroyami.audiokodecs.tag.TagChapter
 import io.github.yuroyami.audiokodecs.tag.TagField
@@ -46,12 +47,8 @@ internal object Id3v2Writer {
                         major,
                     ),
                 )
-                TagField.COMMENT -> for (value in values) {
-                    frames.add(commentFrame("COMM", value, major))
-                }
-                TagField.LYRICS -> for (value in values) {
-                    frames.add(commentFrame("USLT", value, major))
-                }
+                TagField.COMMENT -> frames.addAll(commentLikeFrames("COMM", "COM", values, tags, major))
+                TagField.LYRICS -> frames.addAll(commentLikeFrames("USLT", "ULT", values, tags, major))
                 else -> {
                     val frameId = TagMapping.id3FrameFor(field, major)
                     if (frameId != null && frameId.startsWith("W")) {
@@ -202,25 +199,82 @@ internal object Id3v2Writer {
         return frame("TXXX", body, major)
     }
 
-    private fun commentFrame(id: String, value: String, major: Int): ByteArray {
-        val encoding = encodingFor(listOf(value), major)
+    /**
+     * Comment or lyric frames for [values], keeping the identity each one had.
+     *
+     * ID3 tells these frames apart by language and description, and the
+     * merged view keeps only their text. So every original frame whose text is
+     * still one of the values is written back with its own language and
+     * description, including several frames that share one text. A value no
+     * original frame held is new, and gets the undetermined language and an
+     * empty description, or a numbered description when that identity is
+     * already taken, because two frames may not share one.
+     */
+    private fun commentLikeFrames(
+        id: String,
+        version22Id: String,
+        values: List<String>,
+        tags: TagBundle,
+        major: Int,
+    ): List<ByteArray> {
+        val originals = ArrayList<RawTagEntry>()
+        for (block in tags.raw.blocks) {
+            if (!isId3(block.format)) continue
+            for (entry in block.entries) {
+                if ((entry.key == id || entry.key == version22Id) && entry.text in values) {
+                    originals.add(entry)
+                }
+            }
+        }
+        val frames = ArrayList<ByteArray>()
+        val used = HashSet<Pair<String, String>>()
+        for (entry in originals) {
+            val language = entry.language?.takeIf { it.length == 3 && TagText.isLatin1(it) } ?: UNDETERMINED
+            val identity = language to (entry.description ?: "")
+            if (!used.add(identity)) continue
+            frames.add(commentFrame(id, entry.text!!, identity.first, identity.second, major))
+        }
+        for (value in values) {
+            if (originals.any { it.text == value }) continue
+            var description = ""
+            var next = 2
+            while ((UNDETERMINED to description) in used) description = (next++).toString()
+            used.add(UNDETERMINED to description)
+            frames.add(commentFrame(id, value, UNDETERMINED, description, major))
+        }
+        return frames
+    }
+
+    private fun commentFrame(
+        id: String,
+        value: String,
+        language: String,
+        description: String,
+        major: Int,
+    ): ByteArray {
+        val encoding = encodingFor(listOf(description, value), major)
+        val descriptionBytes = encodeText(description, encoding)
         val valueBytes = encodeText(value, encoding)
         val terminator = TagText.terminatorSize(encoding)
-        // Language, then an empty description, then the text. The language is
-        // undetermined rather than guessed at.
+        // Encoding, the three-letter language, the description, then the text.
         val body = ByteArray(
             checkedArraySize(
-                4L + terminator + valueBytes.size,
+                4L + descriptionBytes.size + terminator + valueBytes.size,
                 "an ID3 comment frame",
             ),
         )
         body[0] = encoding.toByte()
-        body[1] = 'x'.code.toByte()
-        body[2] = 'x'.code.toByte()
-        body[3] = 'x'.code.toByte()
-        valueBytes.copyInto(body, 4 + terminator)
+        for (i in 0 until 3) body[1 + i] = language[i].code.toByte()
+        descriptionBytes.copyInto(body, 4)
+        valueBytes.copyInto(body, 4 + descriptionBytes.size + terminator)
         return frame(id, body, major)
     }
+
+    /** The language code ID3 writers use when nobody stated one. */
+    private const val UNDETERMINED = "xxx"
+
+    private fun isId3(format: TagFormat): Boolean =
+        format == TagFormat.ID3V2_2 || format == TagFormat.ID3V2_3 || format == TagFormat.ID3V2_4
 
     private fun pictureFrame(picture: TagPicture, major: Int): ByteArray {
         val encoding = encodingFor(listOf(picture.description), major)
