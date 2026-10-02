@@ -185,6 +185,53 @@ class TagPreservationTest {
         }
     }
 
+    @Test
+    fun anUnrelatedEditKeepsUnknownRiffInfoEntries() {
+        val wav = AudioKodecs.encode(
+            TestSignals.quantise(TestSignals.sine(500, 1), 16),
+            AudioFormat(44_100, 1),
+            EncodeTarget.wav(16),
+        )
+        fun entry(key: String, value: String): ByteArray {
+            val text = value.encodeToByteArray() + byteArrayOf(0)
+            val padded = if (text.size % 2 == 1) text + byteArrayOf(0) else text
+            return key.encodeToByteArray() + u32Le(text.size) + padded
+        }
+        val infoBody = "INFO".encodeToByteArray() +
+            entry("INAM", "Old") + entry("IART", "Someone") + entry("IXXX", "secret")
+        val original = wav + "LIST".encodeToByteArray() + u32Le(infoBody.size) + infoBody
+        u32Le(original.size - 8).copyInto(original, 4)
+
+        val before = AudioKodecs.readTags(original)
+        assertTrue(before.raw.blocks.flatMap { it.entries }.any { it.key == "IXXX" })
+        val edited = before.edit {
+            set(TagField.TITLE, "Changed")
+            remove(TagField.ARTIST)
+        }
+        val written = AudioKodecs.writeTags(original, edited)
+        val after = AudioKodecs.readTags(written)
+        assertEquals("Changed", after[TagField.TITLE])
+        assertEquals(null, after[TagField.ARTIST])
+        val unknown = after.raw.blocks.flatMap { it.entries }.filter { it.key == "IXXX" }
+        assertEquals(listOf("secret"), unknown.map { it.text })
+
+        // The audio payload is copied, not rebuilt.
+        fun payload(file: ByteArray): ByteArray {
+            val at = file.indexOfBytes("data".encodeToByteArray())
+            val size = (file[at + 4].toInt() and 0xFF) or ((file[at + 5].toInt() and 0xFF) shl 8) or
+                ((file[at + 6].toInt() and 0xFF) shl 16) or ((file[at + 7].toInt() and 0xFF) shl 24)
+            return file.copyOfRange(at + 8, at + 8 + size)
+        }
+        assertContentEquals(payload(original), payload(written))
+
+        // Choosing formats that leave INFO out is still a way to remove it.
+        val removed = AudioKodecs.writeTags(original, edited, TagWriteOptions(formats = emptySet()))
+        assertTrue(AudioKodecs.readTags(removed).raw.blocksOf(TagFormat.RIFF_INFO).isEmpty())
+    }
+
+    private fun u32Le(value: Int): ByteArray =
+        byteArrayOf(value.toByte(), (value ushr 8).toByte(), (value ushr 16).toByte(), (value ushr 24).toByte())
+
     private class Frame(val id: String, val body: ByteArray, val flags: Int = 0)
 
     /** An ID3v2.4 block holding [frames] exactly as given, with no padding. */

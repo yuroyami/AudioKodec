@@ -610,7 +610,14 @@ internal object TagWriter {
         )
     }
 
-    /** Builds a `LIST INFO` chunk, or returns null when there is nothing to say. */
+    /**
+     * Builds a `LIST INFO` chunk, or returns null when there is nothing to say.
+     *
+     * Modelled fields come from the edited view. Entries AudioKodecs has no
+     * field for are carried over from the INFO list the file already had, the
+     * way the other writers carry their unknown entries, so an unrelated edit
+     * does not delete them.
+     */
     internal fun buildRiffInfo(tags: TagBundle): ByteArray? {
         val entries = ArrayList<Pair<String, ByteArray>>()
         for ((field, values) in tags.fields) {
@@ -618,6 +625,16 @@ internal object TagWriter {
             val value = values.firstOrNull() ?: continue
             if (value.isEmpty()) continue
             entries.add(key to TagText.encodeLatin1(value))
+        }
+        for (block in tags.raw.blocksOf(TagFormat.RIFF_INFO)) {
+            for (entry in block.entries) {
+                if (TagMapping.fieldFor(TagFormat.RIFF_INFO, entry) != null) continue
+                val key = entry.key
+                if (key.length != 4 || key.any { it.code !in 0x20..0x7E }) continue
+                if (entries.any { it.first == key }) continue
+                val value = entry.text?.takeIf { it.isNotEmpty() } ?: continue
+                entries.add(key to TagText.encodeLatin1(value))
+            }
         }
         if (entries.isEmpty()) return null
 
