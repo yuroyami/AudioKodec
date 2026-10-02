@@ -449,10 +449,11 @@ public final class io/github/yuroyami/audiokodecs/tag/RawTagBlock {
 }
 
 public final class io/github/yuroyami/audiokodecs/tag/RawTagEntry {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;[BLjava/lang/String;Ljava/lang/String;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getBinary ()[B
 	public final fun getDescription ()Ljava/lang/String;
+	public final fun getId3FrameFlags ()Ljava/lang/Integer;
 	public final fun getKey ()Ljava/lang/String;
 	public final fun getLanguage ()Ljava/lang/String;
 	public final fun getText ()Ljava/lang/String;

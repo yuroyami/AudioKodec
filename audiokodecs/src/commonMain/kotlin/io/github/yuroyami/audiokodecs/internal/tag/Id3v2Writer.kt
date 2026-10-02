@@ -100,6 +100,7 @@ internal object Id3v2Writer {
             frames.add(chapterFrame(chapter, major))
         }
         frames.addAll(unmodelledFrames(tags, major))
+        frames.addAll(opaqueFrames(tags, major, frames))
 
         var body = 0L
         for (frame in frames) body += frame.size
@@ -347,6 +348,7 @@ internal object Id3v2Writer {
                 block.format == TagFormat.ID3V2_4
             if (!isId3) continue
             for (entry in block.entries) {
+                if (entry.id3FrameFlags != null) continue
                 if (TagMapping.fieldFor(block.format, entry) != null) continue
                 if (TagMapping.numberAndTotalFor(block.format, entry.key) != null) continue
                 if (entry.key == "APIC" || entry.key == "PIC" || entry.key == "CHAP") continue
@@ -362,6 +364,49 @@ internal object Id3v2Writer {
                     )
                 }
                 rawFrame(key, entry, major)?.let { frames.add(it) }
+            }
+        }
+        return frames
+    }
+
+    /**
+     * Writes back the frames the reader kept as stored because they are
+     * compressed or encrypted.
+     *
+     * Their payload is never interpreted, so it can only be copied. That is
+     * safe within one ID3 version and not across two: versions 2.3 and 2.4 put
+     * these flags in different bits and the bytes they announce in a different
+     * order. A rewrite that would change the version is refused rather than
+     * written without the frames. A frame flagged to be discarded when the
+     * tag is altered is discarded, as the specification asks, and one whose
+     * identifier this writer has just written from the caller's values is
+     * superseded by it.
+     */
+    private fun opaqueFrames(tags: TagBundle, major: Int, written: List<ByteArray>): List<ByteArray> {
+        val writtenIds = written.mapTo(HashSet()) { it.decodeToString(0, 4) }
+        val frames = ArrayList<ByteArray>()
+        for (block in tags.raw.blocks) {
+            if (!isId3(block.format)) continue
+            val sourceMajor = when (block.format) {
+                TagFormat.ID3V2_3 -> 3
+                TagFormat.ID3V2_4 -> 4
+                else -> continue
+            }
+            for (entry in block.entries) {
+                val flags = entry.id3FrameFlags ?: continue
+                val payload = entry.binary ?: continue
+                val discardOnTagAlter = if (sourceMajor == 4) 0x4000 else 0x8000
+                if (flags and discardOnTagAlter != 0) continue
+                if (entry.key in writtenIds) continue
+                if (sourceMajor != major) {
+                    throw UnsupportedFeatureException(
+                        "converting a compressed or encrypted ID3 frame between versions",
+                        "this tag holds a compressed or encrypted ID3v2.$sourceMajor '${entry.key}' " +
+                            "frame, which cannot be rewritten as ID3v2.$major without decoding it; " +
+                            "write ID3v2.$sourceMajor to keep it",
+                    )
+                }
+                frames.add(frame(entry.key, payload, major, flags))
             }
         }
         return frames
@@ -421,7 +466,7 @@ internal object Id3v2Writer {
         return key.startsWith("REPLAYGAIN_") || key.startsWith("R128_")
     }
 
-    private fun frame(id: String, body: ByteArray, major: Int): ByteArray {
+    private fun frame(id: String, body: ByteArray, major: Int, flags: Int = 0): ByteArray {
         require(id.length == 4 && id.all { it in 'A'..'Z' || it in '0'..'9' }) {
             "an ID3v2.3/2.4 frame id must be four uppercase ASCII letters or digits, was '$id'"
         }
@@ -440,6 +485,8 @@ internal object Id3v2Writer {
             out[6] = (body.size ushr 8).toByte()
             out[7] = body.size.toByte()
         }
+        out[8] = (flags ushr 8).toByte()
+        out[9] = flags.toByte()
         body.copyInto(out, 10)
         return out
     }

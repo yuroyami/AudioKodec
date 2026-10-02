@@ -6,7 +6,9 @@ import io.github.yuroyami.audiokodecs.tag.TagField
 import io.github.yuroyami.audiokodecs.tag.TagFormat
 import io.github.yuroyami.audiokodecs.tag.TagWriteOptions
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -144,6 +146,43 @@ class TagPreservationTest {
         val comments = AudioKodecs.readTags(added).raw.blocks.flatMap { it.entries }.filter { it.key == "COMM" }
         assertEquals(6, comments.size)
         assertEquals(comments.size, comments.map { it.language to it.description }.toSet().size)
+    }
+
+    @Test
+    fun compressedAndEncryptedFramesSurviveAnUnrelatedEdit() {
+        // An encryption-method byte and four bytes of ciphertext.
+        val payload = byteArrayOf(0x80.toByte(), 1, 2, 3, 4)
+        val original = id3v24(
+            listOf(
+                Frame("TIT2", byteArrayOf(0) + "Old".encodeToByteArray()),
+                Frame("PRIV", payload, flags = 0x0004),
+                // Encrypted artwork is ciphertext, not a picture.
+                Frame("APIC", payload, flags = 0x0004),
+                // Asked to be discarded whenever the tag is altered.
+                Frame("GEOB", payload, flags = 0x4004),
+            ),
+        ) + stream
+        val before = AudioKodecs.readTags(original)
+        assertTrue(before.pictures.isEmpty())
+        val kept = before.raw.blocks.flatMap { it.entries }.filter { it.id3FrameFlags != null }
+        assertEquals(listOf("PRIV", "APIC", "GEOB"), kept.map { it.key })
+
+        val written = AudioKodecs.writeTags(original, before.edit { set(TagField.TITLE, "Changed") })
+        val after = AudioKodecs.readTags(written)
+        assertEquals("Changed", after[TagField.TITLE])
+        val opaque = after.raw.blocks.flatMap { it.entries }.filter { it.id3FrameFlags != null }
+        assertEquals(listOf("PRIV", "APIC"), opaque.map { it.key })
+        for (entry in opaque) {
+            assertEquals(0x0004, entry.id3FrameFlags)
+            assertContentEquals(payload, entry.binary)
+        }
+        assertTrue(after.pictures.isEmpty())
+
+        // Version 2.3 lays the same flags out differently, so changing version
+        // would have to drop the frames. That is refused instead.
+        assertFailsWith<UnsupportedFeatureException> {
+            AudioKodecs.writeTags(original, before, TagWriteOptions(id3Version = 3))
+        }
     }
 
     private class Frame(val id: String, val body: ByteArray, val flags: Int = 0)

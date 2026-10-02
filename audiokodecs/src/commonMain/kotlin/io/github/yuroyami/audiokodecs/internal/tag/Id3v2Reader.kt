@@ -203,8 +203,22 @@ internal object Id3v2Reader {
 
                 if (compressed || encrypted) {
                     // These need inflate or a format-specific decryptor, which
-                    // this module does not carry. Parsing their payload as if
-                    // it were clear text would be worse than losing one frame.
+                    // this module does not carry, and parsing their payload as
+                    // clear text would be wrong. They are kept exactly as
+                    // stored instead, so rewriting the tag does not lose them.
+                    // A version 2.4 frame under the tag-wide unsynchronisation
+                    // flag is still unsynchronised, which its own flag then
+                    // records, because the tag it is written into may not be.
+                    if (name.isNotEmpty()) {
+                        val keptFlags = if (globalUnsynchronised) frameFlags or 0x0002 else frameFlags
+                        entries.add(
+                            RawTagEntry(
+                                name,
+                                binary = body.copyOfRange(dataStart, dataEnd),
+                                id3FrameFlags = keptFlags,
+                            ),
+                        )
+                    }
                     position = dataEnd
                     continue
                 }
@@ -675,6 +689,8 @@ internal object Id3v2Reader {
         val pictures = ArrayList<TagPicture>()
         for (entry in block.entries) {
             if (entry.key != "APIC" && entry.key != "PIC") continue
+            // A compressed or encrypted picture frame is not an image.
+            if (entry.id3FrameFlags != null) continue
             val data = entry.binary ?: continue
             pictures.add(
                 TagPicture(

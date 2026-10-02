@@ -226,9 +226,21 @@ public class RawTagEntry(
      * ID3v2 comments and `TXXX` frames need.
      */
     public val description: String? = null,
+    /**
+     * The two flag bytes of an ID3v2 frame kept exactly as stored because it
+     * is compressed or encrypted, or null for every other entry.
+     *
+     * [binary] then holds the frame's stored payload, including the extra
+     * bytes its flags announce, and nothing of it is interpreted. Writing the
+     * tag back in the same ID3 version keeps the frame unchanged.
+     */
+    public val id3FrameFlags: Int? = null,
 ) {
     init {
         require(key.isNotEmpty()) { "a raw tag entry key must not be empty" }
+        require(id3FrameFlags == null || id3FrameFlags in 0..0xFFFF) {
+            "ID3 frame flags are two bytes, was $id3FrameFlags"
+        }
     }
 
     override fun toString(): String = "RawTagEntry($key=${text ?: "${binary?.size ?: 0} bytes"})"

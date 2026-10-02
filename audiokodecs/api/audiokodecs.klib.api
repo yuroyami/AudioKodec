@@ -312,12 +312,14 @@ final class io.github.yuroyami.audiokodecs.tag/RawTagBlock { // io.github.yuroya
 }
 
 final class io.github.yuroyami.audiokodecs.tag/RawTagEntry { // io.github.yuroyami.audiokodecs.tag/RawTagEntry|null[0]
-    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/ByteArray? = ..., kotlin/String? = ..., kotlin/String? = ...) // io.github.yuroyami.audiokodecs.tag/RawTagEntry.<init>|<init>(kotlin.String;kotlin.String?;kotlin.ByteArray?;kotlin.String?;kotlin.String?){}[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/ByteArray? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/Int? = ...) // io.github.yuroyami.audiokodecs.tag/RawTagEntry.<init>|<init>(kotlin.String;kotlin.String?;kotlin.ByteArray?;kotlin.String?;kotlin.String?;kotlin.Int?){}[0]
 
     final val binary // io.github.yuroyami.audiokodecs.tag/RawTagEntry.binary|{}binary[0]
         final fun <get-binary>(): kotlin/ByteArray? // io.github.yuroyami.audiokodecs.tag/RawTagEntry.binary.<get-binary>|<get-binary>(){}[0]
     final val description // io.github.yuroyami.audiokodecs.tag/RawTagEntry.description|{}description[0]
         final fun <get-description>(): kotlin/String? // io.github.yuroyami.audiokodecs.tag/RawTagEntry.description.<get-description>|<get-description>(){}[0]
+    final val id3FrameFlags // io.github.yuroyami.audiokodecs.tag/RawTagEntry.id3FrameFlags|{}id3FrameFlags[0]
+        final fun <get-id3FrameFlags>(): kotlin/Int? // io.github.yuroyami.audiokodecs.tag/RawTagEntry.id3FrameFlags.<get-id3FrameFlags>|<get-id3FrameFlags>(){}[0]
     final val key // io.github.yuroyami.audiokodecs.tag/RawTagEntry.key|{}key[0]
         final fun <get-key>(): kotlin/String // io.github.yuroyami.audiokodecs.tag/RawTagEntry.key.<get-key>|<get-key>(){}[0]
     final val language // io.github.yuroyami.audiokodecs.tag/RawTagEntry.language|{}language[0]

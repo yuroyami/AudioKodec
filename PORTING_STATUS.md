@@ -146,6 +146,7 @@ keys, so nothing is lost by the merge and an unusual entry is still reachable.
 | ReplayGain 2 and the Opus R128 convention, kept apart | ✅ |
 | Audio payload byte-identical after a tag write | ✅ checked with a full decode comparison |
 | Padding after the frames, so the next edit need not move the audio | ✅ |
+| Compressed and encrypted ID3v2 frames kept as stored across an edit in the same version, and a version change that would lose them refused | ✅ |
 | Encoding chosen to be the narrowest that fits, for old-player compatibility | ✅ |
 
 ## PCM model
