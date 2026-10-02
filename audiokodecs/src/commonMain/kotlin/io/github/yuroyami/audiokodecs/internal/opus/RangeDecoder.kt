@@ -184,6 +184,14 @@ internal class RangeDecoder(
     }
 
     /**
+     * Counts [bits] as consumed without reading them, which CELT does for a
+     * silent frame so that nothing after the silence flag is decoded.
+     */
+    fun addBits(bits: Int) {
+        bitsTotal += bits
+    }
+
+    /**
      * Stops the decoder reading past [bytes], as when a packet's last bytes
      * belong to a redundant frame rather than to this one.
      */

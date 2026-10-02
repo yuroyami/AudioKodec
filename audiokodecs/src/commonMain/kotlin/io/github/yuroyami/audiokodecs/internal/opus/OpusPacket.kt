@@ -37,6 +37,20 @@ internal class OpusPacket(
 
     val channels: Int get() = if (stereo) 2 else 1
 
+    /**
+     * `opus_packet_has_lbrr`: whether the first frame carries a low bitrate
+     * copy of the frame before it, which a decoder that lost that frame can
+     * decode instead of concealing it. Only SILK frames carry one.
+     */
+    fun hasLbrr(data: ByteArray): Boolean {
+        if (mode == Mode.CELT) return false
+        val nbFrames = if (frameSize > 960) frameSize / 960 else 1
+        val first = data[frames[0].first].toInt() and 0xFF
+        var lbrr = (first shr (7 - nbFrames)) and 1
+        if (stereo) lbrr = lbrr or ((first shr (6 - 2 * nbFrames)) and 1)
+        return lbrr != 0
+    }
+
     enum class Mode { SILK, HYBRID, CELT }
 
     /** How wide a band the frame codes, named for the rate it corresponds to. */
@@ -52,6 +66,9 @@ internal class OpusPacket(
 
         /** The longest a packet may decode to, which is 120 ms at 48 kHz. */
         const val MAX_SAMPLES = 5_760
+
+        /** The most bytes one frame may hold. */
+        const val MAX_FRAME_BYTES = 1275
 
         fun parse(data: ByteArray, offset: Int, length: Int): OpusPacket {
             if (length < 1) {
@@ -188,6 +205,16 @@ internal class OpusPacket(
                 if (frame.first > frame.last + 1 || frame.last >= end) {
                     throw CorruptStreamException("an Opus frame runs past its packet", offset.toLong())
                 }
+            }
+            // Every other frame's length is coded in at most two bytes, which
+            // cannot exceed 1275. The last frame's is implied by what is left,
+            // so it has to be checked against the same limit.
+            val last = frames.last()
+            if (last.last - last.first + 1 > MAX_FRAME_BYTES) {
+                throw CorruptStreamException(
+                    "an Opus frame of ${last.last - last.first + 1} bytes exceeds the $MAX_FRAME_BYTES the format allows",
+                    offset.toLong(),
+                )
             }
             return OpusPacket(config, stereo, frames, padding)
         }
