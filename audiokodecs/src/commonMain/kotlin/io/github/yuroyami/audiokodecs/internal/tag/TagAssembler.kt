@@ -70,7 +70,7 @@ internal object TagAssembler {
             when (block.format) {
                 TagFormat.ID3V2_2, TagFormat.ID3V2_3, TagFormat.ID3V2_4 -> {
                     pictures.addAll(Id3v2Reader.picturesOf(block))
-                    chapters.addAll(Id3v2Reader.chaptersOf(block))
+                    chapters.addAll(Id3v2Reader.chaptersOf(block, options))
                 }
                 TagFormat.VORBIS_COMMENT -> pictures.addAll(vorbisPicturesOf(block, options))
                 TagFormat.APEV1, TagFormat.APEV2 -> pictures.addAll(apePicturesOf(block, options))

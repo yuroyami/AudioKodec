@@ -142,7 +142,7 @@ keys, so nothing is lost by the merge and an unusual entry is still reachable.
 | `3/12` split into a number and a total, and joined again on write | ✅ |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
 | Media type sniffed when a format stores a picture without naming one | ✅ |
-| Chapters from ID3v2 `CHAP`, with their nested titles | ✅ read |
+| Chapters from ID3v2 `CHAP`, with their nested titles and artwork | ✅ |
 | ReplayGain 2 and the Opus R128 convention, kept apart | ✅ |
 | Audio payload byte-identical after a tag write | ✅ checked with a full decode comparison |
 | Padding after the frames, so the next edit need not move the audio | ✅ |

@@ -2,8 +2,10 @@ package io.github.yuroyami.audiokodecs
 
 import io.github.yuroyami.audiokodecs.tag.ReplayGain
 import io.github.yuroyami.audiokodecs.tag.TagBundle
+import io.github.yuroyami.audiokodecs.tag.TagChapter
 import io.github.yuroyami.audiokodecs.tag.TagField
 import io.github.yuroyami.audiokodecs.tag.TagFormat
+import io.github.yuroyami.audiokodecs.tag.TagPicture
 import io.github.yuroyami.audiokodecs.tag.TagWriteOptions
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -227,6 +229,42 @@ class TagPreservationTest {
         // Choosing formats that leave INFO out is still a way to remove it.
         val removed = AudioKodecs.writeTags(original, edited, TagWriteOptions(formats = emptySet()))
         assertTrue(AudioKodecs.readTags(removed).raw.blocksOf(TagFormat.RIFF_INFO).isEmpty())
+    }
+
+    @Test
+    fun chapterArtworkSurvivesWritingReadingAndEditing() {
+        val image = byteArrayOf(-1, -40, 1, 2)
+        val tags = TagBundle(
+            emptyMap(),
+            chapters = listOf(
+                TagChapter(
+                    id = "chapter1",
+                    startMillis = 0,
+                    endMillis = 1000,
+                    title = "Chapter",
+                    pictures = listOf(TagPicture(mimeType = "image/jpeg", description = "art", bytes = image)),
+                ),
+            ),
+        )
+        for (version in listOf(3, 4)) {
+            val written = AudioKodecs.writeTags(stream, tags, TagWriteOptions(id3Version = version))
+            val read = AudioKodecs.readTags(written)
+            val edited = AudioKodecs.writeTags(
+                written,
+                read.edit { set(TagField.TITLE, "Changed") },
+                TagWriteOptions(id3Version = version),
+            )
+            for (bundle in listOf(read, AudioKodecs.readTags(edited))) {
+                val chapter = bundle.chapters.single()
+                assertEquals("Chapter", chapter.title, "ID3v2.$version")
+                val picture = chapter.pictures.single()
+                assertEquals("image/jpeg", picture.mimeType, "ID3v2.$version")
+                assertEquals("art", picture.description, "ID3v2.$version")
+                assertContentEquals(image, picture.bytes, "ID3v2.$version")
+            }
+            // Chapter artwork belongs to its chapter, not to the file.
+            assertTrue(read.pictures.isEmpty(), "ID3v2.$version")
+        }
     }
 
     private fun u32Le(value: Int): ByteArray =

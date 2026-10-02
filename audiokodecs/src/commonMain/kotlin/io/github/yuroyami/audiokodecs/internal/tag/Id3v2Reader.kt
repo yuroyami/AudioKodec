@@ -561,6 +561,35 @@ internal object Id3v2Reader {
         position += 16
 
         val nested = EntryList((into as? EntryList)?.budget ?: EntryBudget(options.maxAllocationBytes))
+        readNestedFrames(body, position, end, major, nested, chapterDepth, options)
+
+        val title = nested.firstOrNull { it.key == "TIT2" || it.key == "TT2" }?.text
+        // Chapters are carried as one entry whose text is the title and whose
+        // language holds the timing, so the raw view stays flat. The frame
+        // body is kept as well, because the frames nested in it carry more
+        // than a title, chapter artwork among them.
+        into.add(
+            RawTagEntry(
+                name,
+                text = title,
+                binary = body.copyOfRange(start, end),
+                description = id,
+                language = "$startTime..$endTime",
+            ),
+        )
+    }
+
+    /** Reads the frames nested inside a chapter, from [from] to [end]. */
+    private fun readNestedFrames(
+        body: ByteArray,
+        from: Int,
+        end: Int,
+        major: Int,
+        into: MutableList<RawTagEntry>,
+        chapterDepth: Int,
+        options: DecodeOptions,
+    ) {
+        var position = from
         while (position <= end - 10) {
             if (body[position].toInt() == 0) break
             val nestedName = frameName(body, position, 4)
@@ -573,30 +602,25 @@ internal object Id3v2Reader {
             val nestedStart = position + 10
             if (size < 0 || size > end - nestedStart) break
             val nestedEnd = nestedStart + size
-            parseFrame(
-                nestedName,
-                body,
-                nestedStart,
-                nestedEnd,
-                major,
-                nested,
-                chapterDepth + 1,
-                options,
-            )
+            parseFrame(nestedName, body, nestedStart, nestedEnd, major, into, chapterDepth + 1, options)
             position = nestedEnd
         }
+    }
 
-        val title = nested.firstOrNull { it.key == "TIT2" || it.key == "TT2" }?.text
-        // Chapters are carried as one entry whose text is the title and whose
-        // description holds the timing, so the raw view stays flat.
-        into.add(
-            RawTagEntry(
-                name,
-                text = title,
-                description = id,
-                language = "$startTime..$endTime",
-            ),
-        )
+    /** The pictures nested in a chapter entry's stored frame body. */
+    private fun chapterPicturesOf(entry: RawTagEntry, format: TagFormat, options: DecodeOptions): List<TagPicture> {
+        val body = entry.binary ?: return emptyList()
+        val major = when (format) {
+            TagFormat.ID3V2_3 -> 3
+            TagFormat.ID3V2_4 -> 4
+            else -> return emptyList()
+        }
+        val idEnd = TagText.findTerminator(body, 0, body.size, TagText.LATIN1)
+        val framesStart = idEnd + 1 + 16
+        if (framesStart > body.size) return emptyList()
+        val nested = EntryList(EntryBudget(options.maxAllocationBytes))
+        readNestedFrames(body, framesStart, body.size, major, nested, 0, options)
+        return picturesOf(RawTagBlock(format, 0, 0, nested.snapshot()))
     }
 
     /**
@@ -658,7 +682,7 @@ internal object Id3v2Reader {
     }
 
     /** Turns the chapter entries of a block into the modelled form. */
-    fun chaptersOf(block: RawTagBlock): List<TagChapter> {
+    fun chaptersOf(block: RawTagBlock, options: DecodeOptions = DecodeOptions.DEFAULT): List<TagChapter> {
         val chapters = ArrayList<TagChapter>()
         for (entry in block.entries) {
             if (entry.key != "CHAP") continue
@@ -678,6 +702,7 @@ internal object Id3v2Reader {
                     // largest value the field can hold, which is not a time.
                     endMillis = end,
                     title = entry.text,
+                    pictures = chapterPicturesOf(entry, block.format, options),
                 ),
             )
         }
