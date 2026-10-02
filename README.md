@@ -159,9 +159,17 @@ too, the edit list that says which part of the track plays, and chapters from
 either a chapter track or a Nero `chpl` list. Every packet is found where
 ffmpeg finds it.
 
-Opus, FLAC and QuickTime's uncompressed codings decode, seeking included. AAC,
-ALAC, MP3, AC-3 and AMR are named, with their length and chapters, and `open`
-refuses them by name.
+ALAC, Opus, FLAC and QuickTime's uncompressed codings decode, seeking
+included. AAC, MP3, AC-3 and AMR are named, with their length and chapters, and
+`open` refuses them by name.
+
+## Apple Lossless
+
+ALAC decodes from MP4 and from CAF, at 16, 20, 24 and 32 bits and with one to
+eight channels, reordered from ALAC's own speaker order into AudioKodecs's, and
+exact integers are available through `IntPcmAccess`. It is translated from
+Apple's Apache-2.0 reference, and every file that reference encodes decodes to
+exactly the samples that went in.
 
 Vorbis decodes the whole format: both floor and residue kinds an encoder emits,
 channel coupling, block switching, and up to eight channels reordered into
@@ -303,9 +311,9 @@ and `ima4`.
 | Container | Codings |
 |---|---|
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
-| CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM |
+| CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| MP4, M4A, M4B, 3GP and QuickTime | Opus, FLAC, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, ALAC, MP3, AC-3 and AMR are named and not decoded yet |
+| MP4, M4A, M4B, 3GP and QuickTime | ALAC 16/20/24/32-bit, Opus, FLAC, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, MP3, AC-3 and AMR are named and not decoded yet |
 
 ### Named but not decoded
 

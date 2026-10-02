@@ -10,6 +10,12 @@ import io.github.yuroyami.audiokodecs.DecodeOptions
 import io.github.yuroyami.audiokodecs.TruncatedStreamException
 import io.github.yuroyami.audiokodecs.UnsupportedFeatureException
 import io.github.yuroyami.audiokodecs.internal.ParsedStream
+import io.github.yuroyami.audiokodecs.AudioDecoder
+import io.github.yuroyami.audiokodecs.AudioInfo
+import io.github.yuroyami.audiokodecs.internal.PacketIndex
+import io.github.yuroyami.audiokodecs.internal.PacketStreamDecoder
+import io.github.yuroyami.audiokodecs.internal.alac.AlacConfig
+import io.github.yuroyami.audiokodecs.internal.alac.AlacPacketCodec
 import io.github.yuroyami.audiokodecs.internal.codec.ChannelReorderingCodec
 import io.github.yuroyami.audiokodecs.internal.codec.G711Codec
 import io.github.yuroyami.audiokodecs.internal.codec.ImaAdpcmQuickTimeCodec
@@ -28,16 +34,67 @@ import kotlin.math.roundToInt
  * big-endian, including the sample rate, which is stored as a 64-bit float.
  *
  * The codings this reads are the uncompressed ones and the two companding
- * laws, plus QuickTime's IMA variant. ALAC and AAC inside a CAF file are named
- * and refused, because their decoders are not here yet.
+ * laws, QuickTime's IMA variant, and Apple Lossless, whose packets vary in
+ * size and are found through the packet table. AAC inside a CAF file is named
+ * and refused, because its decoder is not here yet.
  */
 internal object CafReader {
+
+    private const val MAX_COOKIE_BYTES = 1L shl 16
+
+    /** What a CAF file holds: a coding with fixed-size blocks, or ALAC, which is indexed by its packet table. */
+    sealed class Stream {
+        class Blocks(val parsed: ParsedStream) : Stream()
+
+        class Alac(
+            val config: AlacConfig,
+            val sampleRate: Int,
+            val index: PacketIndex,
+            val primingFrames: Long,
+            val validFrames: Long,
+            val payloadBytes: Long,
+            val dataOffset: Long,
+        ) : Stream()
+    }
+
+    fun info(reader: SourceReader, options: DecodeOptions): AudioInfo = when (val stream = read(reader, options)) {
+        is Stream.Blocks -> stream.parsed.toInfo(reader)
+        is Stream.Alac -> alacInfo(reader, stream)
+    }
+
+    fun open(reader: SourceReader, options: DecodeOptions): AudioDecoder = when (val stream = read(reader, options)) {
+        is Stream.Blocks -> stream.parsed.toDecoder(reader, options)
+        is Stream.Alac -> PacketStreamDecoder.of(
+            reader, stream.index, AlacPacketCodec(stream.config, stream.sampleRate), alacInfo(reader, stream),
+            stream.primingFrames, stream.validFrames, options,
+        )
+    }
+
+    private fun alacInfo(reader: SourceReader, stream: Stream.Alac): AudioInfo {
+        val format = AlacPacketCodec(stream.config, stream.sampleRate).format
+        val bitrate = if (stream.validFrames > 0) {
+            (stream.payloadBytes.toDouble() * 8.0 * stream.sampleRate / stream.validFrames).coerceIn(0.0, Int.MAX_VALUE.toDouble()).toInt()
+        } else {
+            null
+        }
+        return AudioInfo(
+            container = AudioContainer.CAF,
+            codec = AudioCodec.ALAC,
+            format = format,
+            durationFrames = stream.validFrames,
+            bitDepth = stream.config.bitDepth,
+            bitrate = bitrate,
+            isVariableBitrate = true,
+            dataOffset = reader.absoluteOffset(stream.dataOffset),
+            dataSize = stream.payloadBytes,
+        )
+    }
 
     private const val FLAG_FLOAT = 1
     private const val FLAG_LITTLE_ENDIAN = 2
     private const val KNOWN_LINEAR_PCM_FLAGS = FLAG_FLOAT or FLAG_LITTLE_ENDIAN
 
-    fun parse(reader: SourceReader, options: DecodeOptions): ParsedStream {
+    fun read(reader: SourceReader, options: DecodeOptions): Stream {
         reader.seek(0)
         reader.expectFourCc("caff", "CAF header")
         val version = reader.readU16Be()
@@ -58,6 +115,9 @@ internal object CafReader {
         var packetTable: PacketTable? = null
         var storedChannels: List<AudioChannel>? = null
         var sawChannelLayout = false
+        var cookie: ByteArray? = null
+        var packetEntriesAt = -1L
+        var packetEntriesBytes = 0L
         var chunkIndex = 0
 
         val size = reader.size
@@ -172,6 +232,8 @@ internal object CafReader {
                             primingFrames,
                             remainderFrames,
                         )
+                        packetEntriesAt = bodyStart + 24
+                        packetEntriesBytes = bodySize - 24
                     } else {
                         throw CorruptStreamException(
                             "a CAF packet table is at least 24 bytes, this one is $bodySize",
@@ -180,7 +242,18 @@ internal object CafReader {
                     }
                 }
 
-                "chan" -> {
+                "kuki" -> {
+                    if (bodySize < 0 || bodySize > MAX_COOKIE_BYTES) {
+                        throw CorruptStreamException("a CAF magic cookie of $bodySize bytes is out of range", chunkStart)
+                    }
+                    cookie = reader.readBytes(bodySize.toInt())
+                }
+
+                // ALAC fixes its own channel order, which its layout chunk
+                // only restates, so the chunk is not needed to decode it.
+                "chan" -> if (description?.formatId == "alac") {
+                    sawChannelLayout = true
+                } else {
                     if (sawChannelLayout) {
                         throw CorruptStreamException(
                             "a CAF file may contain only one channel layout chunk",
@@ -277,6 +350,15 @@ internal object CafReader {
         val available = if (size >= 0) (size - dataOffset).coerceAtLeast(0L) else -1L
         val payload = if (dataBytes < 0) available else dataBytes
 
+        if (desc.formatId == "alac") {
+            val config = AlacConfig.parse(cookie ?: throw CorruptStreamException("an ALAC CAF file has no magic cookie"), 0)
+            if (config.channels != desc.channels) {
+                throw CorruptStreamException("the CAF description says ${desc.channels} channels and the ALAC configuration ${config.channels}")
+            }
+            val table = packetTable ?: throw CorruptStreamException("an ALAC CAF file has no packet table")
+            return alacStream(reader, options, desc, config, table, packetEntriesAt, packetEntriesBytes, dataOffset, payload)
+        }
+
         val chosen = codecFor(desc)
         // CAF assumes no order above two channels, so a file without a layout
         // chunk has channels whose speakers nobody stated. A named layout is
@@ -337,7 +419,7 @@ internal object CafReader {
             }
         }
 
-        return ParsedStream(
+        return Stream.Blocks(ParsedStream(
             container = AudioContainer.CAF,
             codec = codec.codec,
             sampleCodec = codec.sampleCodec,
@@ -347,7 +429,67 @@ internal object CafReader {
             declaredFrames = table?.validFrames,
             bitDepth = codec.storedBitDepth,
             trimStartFrames = table?.primingFrames ?: 0L,
-        )
+        ))
+    }
+
+    /**
+     * Builds the packet index of an ALAC stream from its packet table: one
+     * variable-length size per packet, and a frame count too when the
+     * description leaves frames per packet open.
+     */
+    private fun alacStream(
+        reader: SourceReader,
+        options: DecodeOptions,
+        desc: Description,
+        config: AlacConfig,
+        table: PacketTable,
+        entriesAt: Long,
+        entriesBytes: Long,
+        dataOffset: Long,
+        payload: Long,
+    ): Stream.Alac {
+        val count = table.packetCount
+        if (count > Int.MAX_VALUE - 1) throw CorruptStreamException("the CAF packet table lists $count packets")
+        if (entriesBytes > Int.MAX_VALUE) throw CorruptStreamException("the CAF packet table is too large to read")
+        options.checkAllocation(count * 20 + entriesBytes, "indexing $count ALAC packets")
+        reader.seek(entriesAt)
+        val entries = reader.readBytes(entriesBytes.toInt())
+        var at = 0
+        fun varint(): Long {
+            var value = 0L
+            while (true) {
+                if (at >= entries.size) throw CorruptStreamException("the CAF packet table ends before its last packet", entriesAt + at)
+                val b = entries[at++].toInt() and 0xFF
+                value = (value shl 7) or (b and 0x7F).toLong()
+                if (value > Int.MAX_VALUE) throw CorruptStreamException("a CAF packet table entry is out of range", entriesAt + at)
+                if (b and 0x80 == 0) return value
+            }
+        }
+        val packets = count.toInt()
+        val offsets = LongArray(packets)
+        val sizes = IntArray(packets)
+        val starts = LongArray(packets + 1)
+        var offset = dataOffset
+        for (i in 0 until packets) {
+            val bytes = if (desc.bytesPerPacket > 0) desc.bytesPerPacket.toLong() else varint()
+            val frames = if (desc.framesPerPacket > 0) desc.framesPerPacket.toLong() else varint()
+            offsets[i] = offset
+            sizes[i] = bytes.toInt()
+            starts[i + 1] = starts[i] + frames
+            offset += bytes
+        }
+        if (payload >= 0 && offset - dataOffset > payload && !options.tolerant) {
+            throw TruncatedStreamException("the CAF packet table describes ${offset - dataOffset} bytes and the data chunk holds $payload")
+        }
+        val coded = starts[packets]
+        if (table.primingFrames + table.validFrames + table.remainderFrames != coded && !options.tolerant) {
+            throw CorruptStreamException(
+                "the CAF packet table describes $coded coded frames (${table.validFrames} valid, " +
+                    "${table.primingFrames} priming, ${table.remainderFrames} remainder) and its packets hold $coded",
+            )
+        }
+        val valid = minOf(table.validFrames, (coded - table.primingFrames).coerceAtLeast(0L))
+        return Stream.Alac(config, desc.sampleRate, PacketIndex(offsets, sizes, starts), table.primingFrames, valid, offset - dataOffset, dataOffset)
     }
 
     private class PacketTable(

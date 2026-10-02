@@ -98,6 +98,11 @@ class Mp4OracleTest {
             Case("flac_24.mp4", AudioCodec.FLAC, listOf("-c:a", "flac", "-sample_fmt", "s32", "-bits_per_raw_sample", "24", "-strict", "experimental")),
             Case("opus.mp4", AudioCodec.OPUS, listOf("-c:a", "libopus", "-b:a", "96k")),
             Case("opus_51.mp4", AudioCodec.OPUS, listOf("-c:a", "libopus", "-b:a", "256k"), channels = 6),
+            Case("alac_16.m4a", AudioCodec.ALAC, listOf("-c:a", "alac")),
+            Case("alac_24.m4a", AudioCodec.ALAC, listOf("-c:a", "alac", "-sample_fmt", "s32p")),
+            Case("alac_mono.m4a", AudioCodec.ALAC, listOf("-c:a", "alac"), channels = 1),
+            Case("alac_51.m4a", AudioCodec.ALAC, listOf("-c:a", "alac", "-sample_fmt", "s32p"), channels = 6),
+            Case("alac_fragmented.m4a", AudioCodec.ALAC, listOf("-c:a", "alac", "-movflags", "frag_keyframe+empty_moov", "-frag_duration", "400000")),
         )
         for (case in decodable) {
             val file = encode(ffmpeg, case.name, case.channels, case.options)

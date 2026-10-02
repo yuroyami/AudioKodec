@@ -50,6 +50,7 @@ Run as programs, never read as source.
 | ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write |
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions |
 | afconvert (macOS) | CAF, and reserved for the ALAC work |
+| alacconvert | ALAC, built from Apple's reference at the commit the port follows |
 
 ## Permissively licensed implementations for the work still to come
 
@@ -300,6 +301,38 @@ The vectors it scores are the RFC 8251 set:
 `OpusConformanceTest` uses an unpacked copy in `reference/opus_newvectors`, or
 the archive in `reference/` or the build directory, or downloads the archive
 there and checks its digest, and skips itself when none of that is possible.
+
+## ALAC
+
+There is no published specification of Apple Lossless beyond its source code,
+which Apple released under the Apache License 2.0, the licence AudioKodecs
+ships under. The decoder is a translation of it, recorded here before the
+first line was written.
+
+| Field | Value |
+|---|---|
+| Repository | https://github.com/macosforge/alac |
+| Commit | `c38887c5c5e64a4b31108733bd79ca9b2496d987` |
+| Licence | Apache-2.0, the `LICENSE` file at that commit and the header of every source file |
+| Files | `codec/ALACDecoder.cpp`, `ag_dec.c`, `dp_dec.c`, `matrix_dec.c`, `ALACBitUtilities.c` and their headers, and `ALACMagicCookieDescription.txt` for the configuration and channel orders |
+| Not ported | The encoder, until the decoder passes; the `convert-utility` command line |
+
+The `codec` folder also holds a copy of the Apple Public Source License 2.0,
+left from the code's first release. Every source file states Apache-2.0 in its
+own header, and so does the repository, so that is the licence that applies.
+Apache-2.0 asks a redistribution to keep the copyright notices, which the
+ported files do in their headers, and to state changes, which is what a
+translation into Kotlin is.
+
+The integer arithmetic is the reference's, 32-bit and wrapping where it
+wraps. Two places in the C rely on behaviour the language leaves undefined:
+a shift of `1` by `-1` when a predictor's denominator shift is zero, and
+shifts by 32 or more when a stream's mixing shift is that large. Both are
+reproduced as x86 executes them, which masks the count to its low five bits,
+and which is also what Kotlin's shifts do.
+
+The test oracle is `alacconvert`, built from the same commit and run, which
+encodes WAV to ALAC in CAF and decodes it back.
 
 ## Never opened
 

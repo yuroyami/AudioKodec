@@ -7,6 +7,8 @@ import io.github.yuroyami.audiokodecs.ChannelLayout
 import io.github.yuroyami.audiokodecs.CorruptStreamException
 import io.github.yuroyami.audiokodecs.DecodeOptions
 import io.github.yuroyami.audiokodecs.internal.PacketCodec
+import io.github.yuroyami.audiokodecs.internal.alac.AlacConfig
+import io.github.yuroyami.audiokodecs.internal.alac.AlacPacketCodec
 import io.github.yuroyami.audiokodecs.internal.codec.G711Codec
 import io.github.yuroyami.audiokodecs.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodecs.internal.codec.PcmLayout
@@ -56,7 +58,7 @@ internal object Mp4Codecs {
             "ac-3", "ec-3" -> named(AudioCodec.AC3, if (entry.format == "ac-3") "AC-3" else "Enhanced AC-3")
             "samr" -> named(AudioCodec.AMR_NB, "AMR-NB", 1, 8_000)
             "sawb" -> named(AudioCodec.AMR_WB, "AMR-WB", 1, 16_000)
-            "alac" -> named(AudioCodec.ALAC, "ALAC")
+            "alac" -> alac(entry)
             "Opus" -> opus(entry)
             "fLaC" -> flac(entry, reader, options)
             else -> {
@@ -156,6 +158,24 @@ internal object Mp4Codecs {
 
     private val AAC_RATES = intArrayOf(96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350)
     private val AAC_CHANNELS = intArrayOf(0, 1, 2, 3, 4, 5, 6, 8)
+
+    // Apple Lossless.
+
+    private fun alac(entry: Mp4Reader.SampleEntry): Choice {
+        val box = entry.boxes["alac"] ?: throw CorruptStreamException("an ALAC track has no configuration box", entry.offset)
+        // The box is a full box, so its body opens with a version and flags
+        // before the configuration itself.
+        if (box.size < 4) throw CorruptStreamException("the ALAC configuration box is too short", entry.offset)
+        val config = AlacConfig.parse(box.copyOfRange(4, box.size), entry.offset)
+        if (entry.channels != 0 && entry.channels != config.channels) {
+            throw CorruptStreamException("the track says ${entry.channels} channels and its ALAC configuration ${config.channels}", entry.offset)
+        }
+        // A sample entry cannot state a rate past 65535 Hz; the configuration can.
+        val rate = if (config.sampleRate in 1..Int.MAX_VALUE.toLong()) config.sampleRate.toInt() else entry.sampleRate
+        if (rate < 1) throw CorruptStreamException("an ALAC track states no sample rate", entry.offset)
+        val codec = AlacPacketCodec(config, rate)
+        return Choice(AudioCodec.ALAC, "ALAC", codec.format, config.bitDepth, 0) { _ -> AlacPacketCodec(config, rate) }
+    }
 
     // Opus.
 

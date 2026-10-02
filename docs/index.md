@@ -262,7 +262,8 @@ fragmented files from each fragment's own table.
 | Opus | decodes, with seeking |
 | FLAC | decodes, with seeking, exactly |
 | Uncompressed PCM, float, A-law and mu-law | decodes, with seeking, exactly |
-| AAC, ALAC, MP3, AC-3, AMR | named, not yet decoded |
+| ALAC | decodes, with seeking, exactly |
+| AAC, MP3, AC-3, AMR | named, not yet decoded |
 
 ```kotlin
 val info = AudioKodecs.probe(m4aBytes)

@@ -42,9 +42,11 @@ audio and Ogg.
   its headers, length and comments read.
 - MP4, M4A, M4B, 3GP and QuickTime, read: the box tree, sample tables, a
   `moov` before or after the audio, fragmented files, edit lists, and
-  chapters from a chapter track or a Nero `chpl` list. Opus, FLAC and
-  uncompressed audio inside decode and seek; AAC, ALAC, MP3, AC-3 and AMR are
-  named with their length and refused.
+  chapters from a chapter track or a Nero `chpl` list. ALAC, Opus, FLAC and
+  uncompressed audio inside decode and seek; AAC, MP3, AC-3 and AMR are named
+  with their length and refused.
+- Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
+  to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames
   that smooth a change of codec, concealment of lost packets and recovery from
   the redundant copy the next packet carries, and every channel mapping,

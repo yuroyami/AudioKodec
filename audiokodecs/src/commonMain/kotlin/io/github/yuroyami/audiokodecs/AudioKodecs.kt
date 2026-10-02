@@ -71,6 +71,7 @@ public object AudioKodecs {
             AudioContainer.OGG -> oggInfo(reader, options)
             AudioContainer.MPEG_AUDIO -> mpegInfo(reader, options)
             AudioContainer.MP4 -> Mp4Container.info(reader, options)
+            AudioContainer.CAF -> CafReader.info(reader, options)
             else -> parse(reader, options, detected.container).toInfo(reader)
         }
     }
@@ -100,6 +101,7 @@ public object AudioKodecs {
             AudioContainer.OGG -> openOgg(reader, options)
             AudioContainer.MPEG_AUDIO -> openMpeg(reader, options)
             AudioContainer.MP4 -> Mp4Container.decoder(reader, options)
+            AudioContainer.CAF -> CafReader.open(reader, options)
             else -> parse(reader, options, detected.container).toDecoder(reader, options)
         }
     }
@@ -628,7 +630,6 @@ public object AudioKodecs {
             AudioContainer.WAVE64 -> Wave64Reader.parse(reader, options)
             AudioContainer.AIFF -> AiffReader.parse(reader, options)
             AudioContainer.AU -> AuReader.parse(reader, options)
-            AudioContainer.CAF -> CafReader.parse(reader, options)
             else -> throw UnsupportedFormatException(
                 container,
                 "this is a ${container.displayName} file, which AudioKodecs cannot decode yet",

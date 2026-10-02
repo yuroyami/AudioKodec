@@ -77,10 +77,10 @@ them.
 | **AIFF-C** | ✅ | ✅ | `FVER`, compression type and name. Written when the coding is not plain PCM |
 | **AU** | ✅ | ✅ | Six-field header. A data size of `0xFFFFFFFF` reads to end of input |
 | **FLAC** | ✅ | ✅ | Metadata block chain, stream information, seek table, cue sheet and application blocks carried across a tag edit, stream MD5 verification |
-| **CAF** | ✅ | ❌ | 64-bit chunk sizes, the description chunk, Apple's named channel-layout tags reordered from their stored speaker order into the canonical one, and packet-table valid/priming/remainder frame counts; codec priming and remainder are excluded from decode and seek output. Above two channels a file without a layout chunk has unknown speakers, because CAF assumes no order. Bitmap, explicit-description and unmapped layouts are named and refused rather than relabelled |
+| **CAF** | ✅ | ❌ | 64-bit chunk sizes, the description chunk, Apple's named channel-layout tags reordered from their stored speaker order into the canonical one, and packet-table valid/priming/remainder frame counts; codec priming and remainder are excluded from decode and seek output. ALAC is read through its magic cookie and its packet table of variable-size packets. Above two channels a file without a layout chunk has unknown speakers, because CAF assumes no order. Bitmap, explicit-description and unmapped layouts are named and refused rather than relabelled |
 | **Ogg** | ✅ | tags only | Pages, checksums, packet reassembly across pages, several logical streams at once, chained streams, granule positions. The Vorbis, Opus, FLAC and Speex mappings are all identified and their headers and comments read; Vorbis, Opus and FLAC decode |
 | **MPEG audio** | ✅ | ❌ | Frame headers for MPEG-1, 2 and 2.5 in all three layers, with every reserved combination rejected. A candidate sync is confirmed against the frames that follow it. `Xing`, `Info` and `VBRI` headers, LAME gapless delay and padding, tag blocks at both ends excluded from the audio. Exact durations. All three layers decode, with sample-accurate seeking. A protected frame's checksum is verified in strict mode, against ffmpeg's own checker, and decoded as stored in tolerant mode |
-| **MP4, M4A, M4B, 3GP, QuickTime** | ✅ | ❌ | The box tree, with 32 and 64-bit sizes, a `moov` before or after the audio, and fragmented files read from their `moof` boxes with `trex` and `tfhd` defaults. Sample tables `stsz`, `stz2`, `stco`, `co64`, `stsc` and `stts` expanded into packets, every one at the offset and size ffprobe lists. Edit lists that play the media straight through, including an encoder's priming, with empty edits passed over; one that skips or repeats media is refused strictly. Chapters from a QuickTime chapter track or Nero's `chpl` list. Opus, FLAC and the uncompressed QuickTime and ISO codings decode, with `chan` layouts reordered; AAC, ALAC, MP3, AC-3 and AMR are named and refused |
+| **MP4, M4A, M4B, 3GP, QuickTime** | ✅ | ❌ | The box tree, with 32 and 64-bit sizes, a `moov` before or after the audio, and fragmented files read from their `moof` boxes with `trex` and `tfhd` defaults. Sample tables `stsz`, `stz2`, `stco`, `co64`, `stsc` and `stts` expanded into packets, every one at the offset and size ffprobe lists. Edit lists that play the media straight through, including an encoder's priming, with empty edits passed over; one that skips or repeats media is refused strictly. Chapters from a QuickTime chapter track or Nero's `chpl` list. ALAC, Opus, FLAC and the uncompressed QuickTime and ISO codings decode, with `chan` layouts reordered; AAC, MP3, AC-3 and AMR are named and refused |
 | **Raw PCM** | ✅ | ✅ | Through `AudioSource` and `PcmSource` with a caller-supplied `AudioFormat` |
 | Everything else | sniff only | ❌ | See [Sniffing](#sniffing) |
 
@@ -101,7 +101,8 @@ them.
 | **Vorbis** | ✅ | ❌ | Floor type 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodecs's channel order. Floor type 0 is parsed and refused: no encoder has emitted it since the format's 2001 betas, and none exists to make a file to test one against |
 | **Opus** | ✅ | ❌ | SILK, CELT and hybrid frames, mode and bandwidth changes with their redundant frames, concealment and recovery from in-band redundancy, mapping families 0, 1, 2, 3 and 255 with surround reordered into AudioKodecs's channel order. Pre-skip, start offset, end trim and output gain applied; seeking with 80 ms of run-up. Bit-exact against libopus 1.5.2 |
 | Speex | ❌ | ❌ | Its Ogg carriage is done: headers, length and comments are read. The codec itself is #18 |
-| ALAC, WavPack, APE, TTA | ❌ | ❌ | #10, #14, #15 and #16 |
+| **ALAC** | ✅ | ❌ | Translated from Apple's Apache-2.0 reference: adaptive Golomb residues, the adaptive predictor in every order, mixed stereo pairs, shifted-off low bytes at 24 and 32 bits, uncompressed escape frames, one to eight channels reordered from ALAC's order. Every file Apple's `alacconvert` encodes at 16, 24 and 32 bits with one to eight channels decodes to exactly its input, and every ffmpeg file in MP4 to exactly ffmpeg's decode. 20-bit decoding follows the reference, but neither tool here writes a 20-bit file to check it against. Encoding is #11 |
+| WavPack, APE, TTA | ❌ | ❌ | #14, #15 and #16 |
 | MP3 (Layer III) | ✅ | ❌ | MPEG-1, 2 and 2.5. Bit reservoir, all four block shapes including mixed, mid-side and intensity stereo for both versions, alias reduction, sample-accurate seeking. Agrees with ffmpeg to about 1e-6 |
 | MP2 (Layer II) | ✅ | ❌ | All five bit allocation tables, grouped quantisation, scalefactor selection, joint stereo. Agrees with ffmpeg's float decoder to about 1e-6 |
 | MP1 (Layer I) | ✅ | ❌ | Agrees with ffmpeg's float decoder to about 1e-6 |
@@ -289,8 +290,11 @@ fixed point, as every build has it. One thing about it is worth writing down.
 libopus's own SIMD kernels sum in a different order, and concealment feeds the
 last bits of that through a long filter, so the default build drifts from its
 own plain build by tens of steps in concealed frames. The plain build is the one
-to compare a port against. Speex stays further out, at #18. After that comes MP4
-and ALAC, #6, which also closes the last tag gap.
+to compare a port against. Speex stays further out, at #18.
+
+MP4 and ALAC, #6, are under way: the container reads and ALAC decodes. The tags
+inside an MP4, its gapless trim and the ALAC encoder remain, and the first of
+those closes the last tag gap.
 
 Four small leftovers, all refused today rather than done wrong: writing the
 Broadcast Wave `bext` chunk (#43), writing tags into an Ogg file that
