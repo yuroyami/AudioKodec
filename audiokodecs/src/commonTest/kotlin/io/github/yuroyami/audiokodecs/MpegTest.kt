@@ -21,6 +21,68 @@ import kotlin.test.assertTrue
  */
 class MpegTest {
 
+    /** Serves [bytes], counting what is read and how often it is closed. */
+    private class CountingSource(private val bytes: ByteArray) : AudioSource {
+        var transferred = 0L
+        var closes = 0
+        private val inner = bytes.asAudioSource()
+        override val size: Long get() = bytes.size.toLong()
+        override fun readAt(position: Long, into: ByteArray, offset: Int, count: Int): Int =
+            inner.readAt(position, into, offset, count).also { if (it > 0) transferred += it }
+        override fun close() {
+            closes++
+        }
+    }
+
+    /** Five hundred silent 44.1 kHz frames of [layer], with no Xing or VBRI header. */
+    private fun silentFrames(layer: Int): ByteArray {
+        val header = byteArrayOf(0xFF.toByte(), (0xE0 or (3 shl 3) or ((4 - layer) shl 1) or 1).toByte(), 0x90.toByte(), 0)
+        val length = io.github.yuroyami.audiokodecs.internal.mpeg.MpegFrameHeader.parse(header, 0)!!.frameBytes
+        val frame = ByteArray(length).also { header.copyInto(it) }
+        return ByteArray(length * 500).also { all -> repeat(500) { frame.copyInto(all, it * length) } }
+    }
+
+    @Test
+    fun slowSeekingOffIsHonouredByEveryLayer() {
+        for (layer in 1..3) {
+            val source = CountingSource(silentFrames(layer))
+            AudioKodecs.open(source, DecodeOptions(allowSlowSeek = false)).use { decoder ->
+                val end = decoder.durationFrames!! - 100
+                source.transferred = 0
+                assertFailsWith<UnsupportedFeatureException>("Layer $layer") { decoder.seek(end) }
+                assertEquals(0L, source.transferred, "Layer $layer read the stream before refusing")
+
+                // A landing inside what playing has already indexed stays cheap
+                // and allowed.
+                repeat(200) { decoder.nextFrame() }
+                assertEquals(1_000L, decoder.seek(1_000), "Layer $layer")
+                assertNotNull(decoder.nextFrame(), "Layer $layer")
+                assertEquals(0L, decoder.seek(0), "Layer $layer")
+            }
+            // With slow seeking allowed, the same seek walks the stream.
+            AudioKodecs.open(silentFrames(layer)).use { decoder ->
+                val end = decoder.durationFrames!! - 100
+                assertEquals(end, decoder.seek(end), "Layer $layer")
+            }
+        }
+    }
+
+    @Test
+    fun aClosedMpegDecoderNeitherReadsNorClosesAgain() {
+        for (layer in 1..3) {
+            val source = CountingSource(silentFrames(layer))
+            val decoder = AudioKodecs.open(source)
+            assertNotNull(decoder.nextFrame(), "Layer $layer")
+            decoder.close()
+            val read = source.transferred
+            assertFailsWith<IllegalStateException>("Layer $layer") { decoder.nextFrame() }
+            assertFailsWith<IllegalStateException>("Layer $layer") { decoder.seek(0) }
+            decoder.close()
+            assertEquals(read, source.transferred, "Layer $layer read after closing")
+            assertEquals(1, source.closes, "Layer $layer")
+        }
+    }
+
     @Test
     fun aXingHeaderWithoutAFrameCountFallsBackToCountingFrames() {
         // Four 417-byte MPEG-1 Layer III frames at 128 kbit/s and 44.1 kHz.

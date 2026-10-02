@@ -7,6 +7,7 @@ import io.github.yuroyami.audiokodecs.AudioInfo
 import io.github.yuroyami.audiokodecs.ChannelLayout
 import io.github.yuroyami.audiokodecs.CorruptStreamException
 import io.github.yuroyami.audiokodecs.DecodeOptions
+import io.github.yuroyami.audiokodecs.UnsupportedFeatureException
 import io.github.yuroyami.audiokodecs.UnsupportedFormatException
 import io.github.yuroyami.audiokodecs.internal.bits.BitReaderMsb
 import io.github.yuroyami.audiokodecs.internal.io.SourceReader
@@ -92,6 +93,7 @@ internal class Mp3Decoder(
      */
     private var priming = 0
     private var decodedAny = false
+    private var closed = false
 
     init {
         if (header0.layer != 3) {
@@ -104,6 +106,7 @@ internal class Mp3Decoder(
     }
 
     override fun nextFrame(): AudioFrame? {
+        checkOpen()
         while (true) {
             if (finished) return null
             val header = readFrame()
@@ -247,6 +250,9 @@ internal class Mp3Decoder(
         val mainStart = sideInfoAt + header.sideInfoBytes
         val mainLength = header.frameBytes - mainStart
         if (mainLength <= 0) return 0
+        if (header.hasCrc) {
+            MpegCrc.verify(frameBytes, header.sideInfoBytes * 8, options, at - header.frameBytes)
+        }
 
         val sideInfo = Mp3SideInfo.parse(frameBytes, sideInfoAt, header)
 
@@ -320,6 +326,7 @@ internal class Mp3Decoder(
     }
 
     override fun seek(frameIndex: Long): Long {
+        checkOpen()
         val total = durationFrames
         val target = when {
             frameIndex < 0L -> 0L
@@ -337,6 +344,16 @@ internal class Mp3Decoder(
         // Back up far enough that the reservoir and the transform's overlap are
         // full again by the time the wanted frame arrives.
         val primeFrom = (wanted - PRIME_FRAMES).coerceAtLeast(0L)
+        // Frames are found by counting from the nearest one already seen. A
+        // landing inside the part of the stream already indexed costs a few
+        // headers; one beyond it means walking the stream, which the caller
+        // may have ruled out.
+        if (!options.allowSlowSeek && primeFrom / INDEX_STRIDE >= index.size) {
+            throw UnsupportedFeatureException(
+                "seeking an MPEG stream past what has been indexed",
+                "this stream has no seek table reaching frame $wanted, and slow seeking is off",
+            )
+        }
 
         reservoir.clear()
         synthesis.reset()
@@ -391,7 +408,13 @@ internal class Mp3Decoder(
     }
 
     override fun close() {
+        if (closed) return
+        closed = true
         reader.source.close()
+    }
+
+    private fun checkOpen() {
+        check(!closed) { "this decoder is closed" }
     }
 
     private companion object {

@@ -7,6 +7,7 @@ import io.github.yuroyami.audiokodecs.AudioInfo
 import io.github.yuroyami.audiokodecs.ChannelLayout
 import io.github.yuroyami.audiokodecs.CorruptStreamException
 import io.github.yuroyami.audiokodecs.DecodeOptions
+import io.github.yuroyami.audiokodecs.UnsupportedFeatureException
 import io.github.yuroyami.audiokodecs.internal.bits.BitReaderMsb
 import io.github.yuroyami.audiokodecs.internal.io.SourceReader
 
@@ -72,8 +73,10 @@ internal class Layer12Decoder(
     private var finished = false
     private var priming = 0
     private var decodedAny = false
+    private var closed = false
 
     override fun nextFrame(): AudioFrame? {
+        checkOpen()
         while (true) {
             if (finished) return null
             val header = readFrame()
@@ -220,6 +223,8 @@ internal class Layer12Decoder(
             }
         }
 
+        checkCrc(header, bits)
+
         for (sb in 0 until 32) {
             for (ch in 0 until channels) {
                 if (levels[ch][sb] == 0) continue
@@ -254,6 +259,23 @@ internal class Layer12Decoder(
             write += 32 * channels
         }
         return 384
+    }
+
+    /**
+     * Checks a protected frame once its protected bits, which end where the
+     * reader now is, have been read.
+     *
+     * Layer I joint stereo is read two ways. The allocation actually sent is
+     * shorter above the bound, and that is what the standard protects; ffmpeg
+     * checks four bits for every subband of every channel instead, as though
+     * there were no bound. With no encoder to settle which one files carry,
+     * either is accepted, which leaves a damaged frame almost as unlikely to
+     * pass as before.
+     */
+    private fun checkCrc(header: MpegFrameHeader, bits: BitReaderMsb) {
+        if (!header.hasCrc) return
+        val boundless = if (layer == 1 && header.channelMode == MpegFrameHeader.MODE_JOINT) 32 * channels * 4 else -1
+        MpegCrc.verify(frameBytes, bits.bitPosition, options, at - header.frameBytes, boundless)
     }
 
     private fun layer1LevelsFrom(code: Int): Int {
@@ -295,6 +317,7 @@ internal class Layer12Decoder(
                 if (levels[ch][sb] != 0) selection[ch][sb] = bits.readBits(2)
             }
         }
+        checkCrc(header, bits)
 
         for (sb in 0 until sblimit) {
             for (ch in 0 until channels) {
@@ -386,6 +409,7 @@ internal class Layer12Decoder(
     private fun sample(code: Int, count: Int): Double = Layer12Tables.dequantise(code, count)
 
     override fun seek(frameIndex: Long): Long {
+        checkOpen()
         val total = durationFrames
         val target = when {
             frameIndex < 0L -> 0L
@@ -401,6 +425,16 @@ internal class Layer12Decoder(
         // A frame carries its own audio, so only the filterbank's history has
         // to be filled again, and that takes far less than a whole frame.
         val primeFrom = (wanted - PRIME_FRAMES).coerceAtLeast(0L)
+        // Frames are found by counting from the nearest one already seen. A
+        // landing inside the part of the stream already indexed costs a few
+        // headers; one beyond it means walking the stream, which the caller
+        // may have ruled out.
+        if (!options.allowSlowSeek && primeFrom / INDEX_STRIDE >= index.size) {
+            throw UnsupportedFeatureException(
+                "seeking an MPEG stream past what has been indexed",
+                "this stream has no seek table reaching frame $wanted, and slow seeking is off",
+            )
+        }
 
         filter.reset()
         at = frameOffsetOf(primeFrom)
@@ -442,7 +476,13 @@ internal class Layer12Decoder(
     }
 
     override fun close() {
+        if (closed) return
+        closed = true
         reader.source.close()
+    }
+
+    private fun checkOpen() {
+        check(!closed) { "this decoder is closed" }
     }
 
     private companion object {
