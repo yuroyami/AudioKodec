@@ -1,12 +1,10 @@
 package io.github.yuroyami.audiokodecs
 
-import io.github.yuroyami.audiokodecs.internal.opus.OpusDecoder
 import io.github.yuroyami.audiokodecs.internal.opus.OpusPacket
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
-import kotlin.math.round
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -21,9 +19,8 @@ import kotlin.test.assertTrue
  * redundant frames an encoder adds to smooth them; and lost packets, concealed
  * or rebuilt from the redundant copy the next packet carries. Every packet's
  * final range must equal the encoder's, and the output must equal
- * `opus_demo -d` sample for sample, which means decoding the way it does:
- * deferring a loss until the next packet arrives, then concealing it for as
- * long as the last packet lasted, or rebuilding it from that packet's copy.
+ * `opus_demo -d` sample for sample, decoding the way it does
+ * ([OpusDemoDecoding]).
  *
  * The reference programs come from the libopus commit the port follows, in
  * `reference/libopus/build-plain`; `OpusDecodeOracleTest` says how to build
@@ -140,48 +137,13 @@ class OpusJoinOracleTest {
     /** Decodes [bits] as `opus_demo -d` does and compares the two, packet ranges and samples. */
     private fun checkStream(build: File, bits: File, rate: Int, channels: Int) {
         val what = "${bits.name} at $rate Hz to $channels ch"
-        val decoder = OpusDecoder(rate, channels)
-        val pcm = FloatArray(5760 * channels)
-        val out = java.io.ByteArrayOutputStream()
-        fun emit(samples: Int) {
-            val bytes = ByteBuffer.allocate(samples * channels * 2).order(ByteOrder.LITTLE_ENDIAN)
-            for (i in 0 until samples * channels) bytes.putShort(toInt16(pcm[i]))
-            out.write(bytes.array())
-        }
-        val stream = ByteBuffer.wrap(bits.readBytes()).order(ByteOrder.BIG_ENDIAN)
-        var index = 0
-        var lost = 0
-        while (stream.remaining() >= 8) {
-            val length = stream.int
-            val expectedRange = stream.int.toLong() and 0xFFFF_FFFFL
-            val packet = ByteArray(length).also { stream.get(it) }
-            index++
-            if (length == 0) {
-                lost++
-                continue
-            }
-            val redundant = OpusPacket.parse(packet, 0, length).hasLbrr(packet)
-            for (gap in 0 until lost) {
-                val duration = decoder.lastPacketDuration
-                emit(
-                    if (gap == lost - 1 && redundant) {
-                        decoder.decode(packet, 0, length, pcm, duration, decodeFec = true, softClip = true)
-                    } else {
-                        decoder.decode(null, 0, 0, pcm, duration, decodeFec = false, softClip = true)
-                    },
-                )
-            }
-            lost = 0
-            emit(decoder.decode(packet, 0, length, pcm, 5760, decodeFec = false, softClip = true))
-            assertEquals(expectedRange, decoder.finalRange, "$what: final range of packet ${index - 1}")
-        }
+        val samples = OpusDemoDecoding.decode(bits.readBytes(), rate, channels, what)
         val reference = temp(bits.name + ".$rate.$channels.pcm")
         run(listOf(File(build, "opus_demo").path, "-d", "$rate", "$channels", bits.path, reference.path))
-        val theirs = reference.readBytes()
-        val mine = out.toByteArray()
-        assertEquals(theirs.size, mine.size, "$what: decoded length")
-        val first = theirs.indices.firstOrNull { theirs[it] != mine[it] }
-        assertEquals(null, first?.let { it / (2 * channels) }, "$what: first sample frame that differs from the reference decoder")
+        val theirs = ByteBuffer.wrap(reference.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+        assertEquals(theirs.remaining() / 2, samples.size, "$what: decoded length")
+        val first = samples.indices.firstOrNull { samples[it] != theirs.getShort(2 * it) }
+        assertEquals(null, first?.let { it / channels }, "$what: first sample frame that differs from the reference decoder")
     }
 
     private fun modesOf(bits: File): Set<OpusPacket.Mode> =
@@ -218,12 +180,6 @@ class OpusJoinOracleTest {
             index++
         }
         return out.toByteArray()
-    }
-
-    /** `FLOAT2INT16`: scale, clamp, and round half to even as `lrintf` does. */
-    private fun toInt16(x: Float): Short {
-        val scaled = (x * 32768f).coerceIn(-32768f, 32767f)
-        return round(scaled.toDouble()).toInt().toShort()
     }
 
     private fun run(command: List<String>) {

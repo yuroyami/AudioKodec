@@ -277,9 +277,29 @@ layers are translated from libopus itself, so no licence beyond the one above
 applies to them.
 
 The test oracles for this work are the reference programs built from the same
-commit and run, never read: `opus_demo`, and `opus_compare`, which scores the
-RFC 8251 conformance vectors from
-https://opus-codec.org/static/testvectors/opus_testvectors-rfc8251.tar.gz.
+commit and run: `opus_demo`, `opus_compare`, and a small command line over the
+multistream and projection API written for these tests
+(`audiokodecs/src/jvmTest/resources/opus_multistream_oracle.c`).
+
+`opus_compare.c` is also translated, into the test suite as `OpusCompare.kt`,
+because its measure is part of the specification rather than a tool around it:
+RFC 6716 defines conformance by it. It is the same commit and the same licence
+as above. The translation evaluates the spectrum with an FFT where the C sums
+each bin directly, which changes only the rounding, and scores identically to
+the program on the vectors.
+
+The vectors it scores are the RFC 8251 set:
+
+| Field | Value |
+|---|---|
+| Archive | https://opus-codec.org/static/testvectors/opus_testvectors-rfc8251.tar.gz |
+| SHA-256 | `6b26a22f9ba87b2b836906a9bb7afec5f8e54d49553b1200382520ee6fedfa55` |
+| Licence | None stated in the archive |
+| Committed | No: no licence travels with them, and the references run to about 120 MB |
+
+`OpusConformanceTest` uses an unpacked copy in `reference/opus_newvectors`, or
+the archive in `reference/` or the build directory, or downloads the archive
+there and checks its digest, and skips itself when none of that is possible.
 
 ## Never opened
 

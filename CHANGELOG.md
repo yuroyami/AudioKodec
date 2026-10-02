@@ -46,7 +46,7 @@ audio and Ogg.
   surround in AudioKodecs's channel order and ambisonics with or without a
   demixing matrix. Pre-skip, end trim and the header's output gain are
   applied, and seeking runs 80 ms ahead of its target. Identical to libopus,
-  sample for sample.
+  sample for sample, and passes the RFC 8251 conformance vectors.
 - Vorbis, decoded: floor type 1, residue types 0, 1 and 2, channel coupling,
   block switching, and up to eight channels reordered into AudioKodecs's channel
   order. Checked against libvorbis sample for sample at every quality level.

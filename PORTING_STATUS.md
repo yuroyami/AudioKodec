@@ -42,6 +42,10 @@ passing one. Within them:
   every multistream mapping family wrapped in Ogg with its pre-skip, start
   offset and end trim. Ogg Opus files from ffmpeg decode to within 2e-7 of
   ffmpeg's own libopus decode, with each 5.1 and 7.1 channel in its place.
+- Opus passes the official RFC 8251 conformance vectors, all twelve, at every
+  output rate in mono and stereo, scored by the RFC's own measure, with the
+  same quality figures libopus gets: 97.4 % in mono and 99.9 % in stereo on
+  average at 48 kHz.
 - Vorbis files from libvorbis decode to within a ten-thousandth of what the
   reference decoder produces, at qualities 0, 4 and 9, in mono, stereo and 5.1,
   at 8 kHz, 44.1 kHz and 48 kHz, on a signal full of transients that makes the
