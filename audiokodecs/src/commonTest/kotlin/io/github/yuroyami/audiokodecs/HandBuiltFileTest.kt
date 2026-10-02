@@ -383,6 +383,111 @@ class HandBuiltFileTest {
         }
     }
 
+    @Test
+    fun cafNamedLayoutsDecodeIntoCanonicalOrder() {
+        // Each stored channel carries its own value, so a sample that reaches
+        // the wrong speaker is visible. Expectations are written out by hand
+        // from Apple's published speaker orders, not derived from the reader.
+        class Case(val tag: Int, val expected: IntArray, val layout: ChannelLayout)
+        val l = AudioChannel.FRONT_LEFT
+        val r = AudioChannel.FRONT_RIGHT
+        val c = AudioChannel.FRONT_CENTER
+        val lfe = AudioChannel.LOW_FREQUENCY
+        val bl = AudioChannel.BACK_LEFT
+        val br = AudioChannel.BACK_RIGHT
+        val bc = AudioChannel.BACK_CENTER
+        val cases = listOf(
+            Case(113, intArrayOf(100, 200, 300), ChannelLayout.SURROUND_3_0), // L R C
+            Case(114, intArrayOf(200, 300, 100), ChannelLayout.SURROUND_3_0), // C L R
+            Case(116, intArrayOf(200, 300, 100, 400), ChannelLayout.of(l, r, c, bc)), // C L R Cs
+            Case(117, intArrayOf(100, 200, 300, 400, 500), ChannelLayout.SURROUND_5_0), // L R C Ls Rs
+            Case(118, intArrayOf(100, 200, 500, 300, 400), ChannelLayout.SURROUND_5_0), // L R Ls Rs C
+            Case(121, intArrayOf(100, 200, 300, 400, 500, 600), ChannelLayout.SURROUND_5_1), // L R C LFE Ls Rs
+            Case(122, intArrayOf(100, 200, 500, 600, 300, 400), ChannelLayout.SURROUND_5_1), // L R Ls Rs C LFE
+            Case(124, intArrayOf(200, 300, 100, 600, 400, 500), ChannelLayout.SURROUND_5_1), // C L R Ls Rs LFE
+            Case(138, intArrayOf(100, 200, 500, 300, 400), ChannelLayout.of(l, r, lfe, bl, br)), // L R Ls Rs LFE
+        )
+        for (case in cases) {
+            val channels = case.expected.size
+            val what = "layout tag ${case.tag}"
+            // Two frames, the second offset by ten, so seeking is checked too.
+            val stored = IntArray(channels * 2) { (it % channels + 1) * 100 + (it / channels) * 10 }
+            val file = buildLayoutCaf(channels, (case.tag.toLong() shl 16) or channels.toLong(), stored)
+
+            val decoded = AudioKodecs.decode(file)
+            assertEquals(case.layout, decoded.format.channelLayout, what)
+            val floats = Pcm.intFromFloat(decoded.samples, 16)
+            for (index in 0 until channels * 2) {
+                val expected = case.expected[index % channels] + (index / channels) * 10
+                assertEquals(expected, floats[index], "$what, float sample $index")
+            }
+
+            AudioKodecs.open(file).use { decoder ->
+                val integers = assertIs<IntPcmAccess>(decoder, what)
+                val frame = integers.nextIntFrame() ?: throw AssertionError("$what produced nothing")
+                for (index in 0 until channels * 2) {
+                    val expected = case.expected[index % channels] + (index / channels) * 10
+                    assertEquals(expected, frame.samples[index], "$what, integer sample $index")
+                }
+                assertEquals(1L, decoder.seek(1))
+                val sought = integers.nextIntFrame() ?: throw AssertionError("$what produced nothing after seeking")
+                for (index in 0 until channels) {
+                    assertEquals(case.expected[index] + 10, sought.samples[index], "$what, sought sample $index")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun cafWithoutALayoutLeavesMultichannelSpeakersUnknown() {
+        val stored = intArrayOf(100, 200, 300, 400, 500, 600)
+        val info = AudioKodecs.probe(buildLayoutCaf(6, null, stored))
+        assertEquals(ChannelLayout.unknown(6), info.format.channelLayout)
+        assertEquals(ChannelLayout.STEREO, AudioKodecs.probe(buildLayoutCaf(2, null, intArrayOf(1, 2))).format.channelLayout)
+        assertEquals(ChannelLayout.MONO, AudioKodecs.probe(buildLayoutCaf(1, null, intArrayOf(1))).format.channelLayout)
+
+        // A tag naming a count that disagrees with the description is corrupt,
+        // and a layout that would need a guess about side or back speakers is
+        // refused by name.
+        assertFailsWith<CorruptStreamException> {
+            AudioKodecs.probe(buildLayoutCaf(6, (121L shl 16) or 5L, stored))
+        }
+        assertFailsWith<UnsupportedFeatureException> {
+            AudioKodecs.probe(buildLayoutCaf(8, (128L shl 16) or 8L, IntArray(8)))
+        }
+    }
+
+    private fun buildLayoutCaf(channels: Int, layoutTag: Long?, samples: IntArray): ByteArray {
+        val out = Builder()
+        out.ascii("caff")
+        out.u16Be(1)
+        out.u16Be(0)
+
+        out.ascii("desc")
+        out.i64Be(32)
+        out.f64Be(48_000.0)
+        out.ascii("lpcm")
+        out.u32Be(0)
+        out.u32Be(channels * 2L)
+        out.u32Be(1)
+        out.u32Be(channels.toLong())
+        out.u32Be(16)
+
+        if (layoutTag != null) {
+            out.ascii("chan")
+            out.i64Be(12)
+            out.u32Be(layoutTag)
+            out.u32Be(0)
+            out.u32Be(0)
+        }
+
+        out.ascii("data")
+        out.i64Be(4L + samples.size * 2L)
+        out.u32Be(0)
+        for (sample in samples) out.u16Be(sample and 0xFFFF)
+        return out.toByteArray()
+    }
+
     private data class CafPcmCase(
         val bits: Int,
         val storageBytes: Int,

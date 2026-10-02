@@ -34,7 +34,8 @@ audio and Ogg.
   sample-accurate seeking with or without a seek table, and verification against
   the MD5 the encoding program stored.
 - Apple Core Audio Format, read, including packet-table priming and remainder
-  trimming.
+  trimming, and named channel layouts reordered into AudioKodecs's channel
+  order.
 - The Ogg container, read in full: pages and checksums, packet reassembly
   across pages, several logical streams at once, chained streams and granule
   positions. Vorbis and FLAC inside Ogg both decode and seek; Opus and Speex

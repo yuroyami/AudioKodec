@@ -1,5 +1,6 @@
 package io.github.yuroyami.audiokodecs.internal.container
 
+import io.github.yuroyami.audiokodecs.AudioChannel
 import io.github.yuroyami.audiokodecs.AudioCodec
 import io.github.yuroyami.audiokodecs.AudioContainer
 import io.github.yuroyami.audiokodecs.AudioFormat
@@ -9,6 +10,7 @@ import io.github.yuroyami.audiokodecs.DecodeOptions
 import io.github.yuroyami.audiokodecs.TruncatedStreamException
 import io.github.yuroyami.audiokodecs.UnsupportedFeatureException
 import io.github.yuroyami.audiokodecs.internal.ParsedStream
+import io.github.yuroyami.audiokodecs.internal.codec.ChannelReorderingCodec
 import io.github.yuroyami.audiokodecs.internal.codec.G711Codec
 import io.github.yuroyami.audiokodecs.internal.codec.ImaAdpcmQuickTimeCodec
 import io.github.yuroyami.audiokodecs.internal.codec.LinearPcmCodec
@@ -54,7 +56,7 @@ internal object CafReader {
         var dataOffset = -1L
         var dataBytes = -1L
         var packetTable: PacketTable? = null
-        var channelLayout: ChannelLayout? = null
+        var storedChannels: List<AudioChannel>? = null
         var sawChannelLayout = false
         var chunkIndex = 0
 
@@ -230,13 +232,13 @@ internal object CafReader {
                             bodyStart,
                         )
                     }
-                    val mapped = layoutForTag(tag) ?: throw UnsupportedFeatureException(
+                    val mapped = storedOrderForTag(tag) ?: throw UnsupportedFeatureException(
                         "CAF channel layout tag 0x${tag.toString(16)}",
                         "this CAF file uses channel layout tag 0x${tag.toString(16)}, " +
                             "which AudioKodecs cannot map without guessing speaker positions",
                     )
                     val statedChannels = (tag and 0xFFFF).toInt()
-                    if (statedChannels != mapped.count ||
+                    if (statedChannels != mapped.size ||
                         statedChannels != describedChannels
                     ) {
                         throw CorruptStreamException(
@@ -245,7 +247,7 @@ internal object CafReader {
                             bodyStart,
                         )
                     }
-                    channelLayout = mapped
+                    storedChannels = mapped
                 }
             }
 
@@ -275,10 +277,24 @@ internal object CafReader {
         val available = if (size >= 0) (size - dataOffset).coerceAtLeast(0L) else -1L
         val payload = if (dataBytes < 0) available else dataBytes
 
-        val layout = channelLayout?.takeIf { it.count == desc.channels }
-            ?: ChannelLayout.canonical(desc.channels)
+        val chosen = codecFor(desc)
+        // CAF assumes no order above two channels, so a file without a layout
+        // chunk has channels whose speakers nobody stated. A named layout is
+        // stored in its own order and decoded into the canonical one.
+        val stored = storedChannels
+        val (layout, sampleCodec) = when {
+            stored != null && stored.any { it == AudioChannel.UNKNOWN } ->
+                ChannelLayout.of(stored) to chosen.sampleCodec
+            stored != null -> {
+                val (canonical, reordering) = ChannelReorderingCodec.canonicalOrder(chosen.sampleCodec, stored)
+                ChannelLayout.of(canonical) to reordering
+            }
+            desc.channels == 1 -> ChannelLayout.MONO to chosen.sampleCodec
+            desc.channels == 2 -> ChannelLayout.STEREO to chosen.sampleCodec
+            else -> ChannelLayout.unknown(desc.channels) to chosen.sampleCodec
+        }
         val format = AudioFormat(desc.sampleRate, layout)
-        val codec = codecFor(desc)
+        val codec = Chosen(chosen.codec, sampleCodec, chosen.storedBitDepth)
 
         val table = packetTable
         if (table != null) {
@@ -525,20 +541,57 @@ internal object CafReader {
     }
 
     /**
-     * The layout a Core Audio channel layout tag names.
+     * The speakers a Core Audio channel layout tag names, in the order the
+     * file interleaves them.
      *
      * The tag's high sixteen bits identify the arrangement and the low sixteen
-     * hold the channel count. Only the arrangements that map onto a layout
-     * AudioKodecs has are translated. Anything else is refused rather than
-     * silently relabelled as the default arrangement.
+     * hold the channel count. The orders are the ones Apple publishes in
+     * `CoreAudioBaseTypes.h`. Apple's left and right surround map to the back
+     * pair, matching the WAV assignment for five and six channels, and its
+     * centre surround to the back centre. Arrangements that would need
+     * a guess between side and back speakers are refused rather than
+     * relabelled. The two tags that state no positions at all give unknown
+     * channels, which is what they mean.
      */
-    private fun layoutForTag(tag: Long): ChannelLayout? = when ((tag ushr 16).toInt()) {
-        100 -> ChannelLayout.MONO
-        101 -> ChannelLayout.STEREO
-        // 113 and 114 are the two five-channel arrangements, and 121 and 122
-        // the six-channel ones, all of which start with the same speakers.
-        113, 114 -> ChannelLayout.SURROUND_5_0
-        121, 122 -> ChannelLayout.SURROUND_5_1
-        else -> null
+    private fun storedOrderForTag(tag: Long): List<AudioChannel>? {
+        val count = (tag and 0xFFFF).toInt()
+        return when ((tag ushr 16).toInt()) {
+            100 -> listOf(C)
+            101 -> listOf(L, R)
+            108, 132 -> listOf(L, R, LS, RS) // Quadraphonic, ITU 2.2
+            113 -> listOf(L, R, C) // MPEG 3.0 A
+            114 -> listOf(C, L, R) // MPEG 3.0 B
+            115 -> listOf(L, R, C, CS) // MPEG 4.0 A
+            116 -> listOf(C, L, R, CS) // MPEG 4.0 B
+            117 -> listOf(L, R, C, LS, RS) // MPEG 5.0 A
+            118 -> listOf(L, R, LS, RS, C) // MPEG 5.0 B
+            119 -> listOf(L, C, R, LS, RS) // MPEG 5.0 C
+            120 -> listOf(C, L, R, LS, RS) // MPEG 5.0 D
+            121 -> listOf(L, R, C, LFE, LS, RS) // MPEG 5.1 A
+            122 -> listOf(L, R, LS, RS, C, LFE) // MPEG 5.1 B
+            123 -> listOf(L, C, R, LS, RS, LFE) // MPEG 5.1 C
+            124 -> listOf(C, L, R, LS, RS, LFE) // MPEG 5.1 D
+            125 -> listOf(L, R, C, LFE, LS, RS, CS) // MPEG 6.1 A
+            131 -> listOf(L, R, CS) // ITU 2.1
+            133 -> listOf(L, R, LFE) // DVD 4
+            134 -> listOf(L, R, LFE, CS) // DVD 5
+            135 -> listOf(L, R, LFE, LS, RS) // DVD 6
+            136 -> listOf(L, R, C, LFE) // DVD 10
+            137 -> listOf(L, R, C, LFE, CS) // DVD 11
+            138 -> listOf(L, R, LS, RS, LFE) // DVD 18
+            141 -> listOf(C, L, R, LS, RS, CS) // AAC 6.0
+            142 -> listOf(C, L, R, LS, RS, CS, LFE) // AAC 6.1
+            // Discrete channels in order, and the explicitly unknown layout.
+            147, 0xFFFF -> if (count > 0) List(count) { AudioChannel.UNKNOWN } else null
+            else -> null
+        }
     }
+
+    private val L = AudioChannel.FRONT_LEFT
+    private val R = AudioChannel.FRONT_RIGHT
+    private val C = AudioChannel.FRONT_CENTER
+    private val LFE = AudioChannel.LOW_FREQUENCY
+    private val LS = AudioChannel.BACK_LEFT
+    private val RS = AudioChannel.BACK_RIGHT
+    private val CS = AudioChannel.BACK_CENTER
 }
