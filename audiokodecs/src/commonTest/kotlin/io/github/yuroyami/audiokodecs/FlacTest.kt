@@ -165,6 +165,49 @@ class FlacTest {
     }
 
     @Test
+    fun frameBuffersFollowTheLargestFrameNotTheLengthOfTheFile() {
+        var seed = 1234
+        val samples = FloatArray(131_072) {
+            seed = seed * 1_664_525 + 1_013_904_223
+            (seed shr 16) / 32_768f
+        }
+        val stated = AudioKodecs.encode(samples, AudioFormat(44_100, 1), EncodeTarget.flac(16, 0))
+        // The same file with its maximum frame size left unstated, which the
+        // format allows and which leaves the reader to find frame sizes out.
+        val unstated = stated.copyOf().also { for (i in 15..17) it[i] = 0 }
+
+        for ((what, bytes) in listOf("stated maximum" to stated, "unstated maximum" to unstated)) {
+            // Each frame is small, so a small ceiling is enough to stream it,
+            // however long the recording is.
+            var streamed = 0
+            AudioKodecs.open(bytes, DecodeOptions(maxAllocationBytes = 65_536)).use { decoder ->
+                while (true) streamed += (decoder.nextFrame() ?: break).frameCount
+            }
+            assertEquals(131_072, streamed, what)
+
+            // Bytes read from the source stay proportional to the file.
+            var transferred = 0L
+            val inner = bytes.asAudioSource()
+            val counting = object : AudioSource {
+                override val size: Long get() = inner.size
+                override fun readAt(position: Long, into: ByteArray, offset: Int, count: Int): Int =
+                    inner.readAt(position, into, offset, count).also { if (it > 0) transferred += it }
+                override fun close() = Unit
+            }
+            var frames = 0
+            AudioKodecs.open(counting).use { decoder ->
+                transferred = 0
+                while (true) frames += (decoder.nextFrame() ?: break).frameCount
+            }
+            assertEquals(131_072, frames, what)
+            assertTrue(
+                transferred < bytes.size * 4L,
+                "$what: decoding a ${bytes.size}-byte file read $transferred bytes",
+            )
+        }
+    }
+
+    @Test
     fun aPredictorLongerThanItsBlockIsCorruptNotAnArrayOverrun() {
         // LPC order 32 in a 16-sample block, and fixed order 4 in a 2-sample
         // one. The warm-up samples alone would run past the block.

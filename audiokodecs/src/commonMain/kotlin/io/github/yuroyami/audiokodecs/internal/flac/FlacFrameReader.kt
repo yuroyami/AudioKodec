@@ -81,11 +81,17 @@ internal class FlacFrameReader(
     private fun initialBufferSize(): Int {
         val stated = streamInfo.maximumFrameSize
         if (stated > 0) return stated + 64
-        // A verbatim frame is the worst case: every sample stored whole, plus
-        // a header. This is a bound, not a guess.
+        return verbatimFrameBound().toInt()
+    }
+
+    /**
+     * The size of the largest block stored verbatim: every sample whole, with
+     * a byte to spare for the side channel's extra bit, plus a header. Every
+     * encoder falls back to this when prediction would do worse.
+     */
+    private fun verbatimFrameBound(): Long {
         val perSample = (streamInfo.bitsPerSample + 7) / 8 + 1
-        val bound = streamInfo.maximumBlockSize.toLong() * streamInfo.channels * perSample + 256
-        return bound.toInt()
+        return streamInfo.maximumBlockSize.toLong() * streamInfo.channels * perSample + 256
     }
 
     /**
@@ -96,9 +102,19 @@ internal class FlacFrameReader(
      * to reject a false sync word.
      */
     fun decodeAt(at: Long): Frame? {
-        val available = readInto(at)
-        if (available < 5) return null
-        return decodeFrom(buffer, available, at)
+        while (true) {
+            val available = fill(at)
+            if (available < 5) return null
+            try {
+                return decodeFrom(buffer, available, at)
+            } catch (short: TruncatedStreamException) {
+                // A frame that runs off the end of a full buffer may only be
+                // longer than the buffer. One that runs off a short read has
+                // run off the end of the source.
+                if (available < buffer.size) throw short
+                grow()
+            }
+        }
     }
 
     /**
@@ -192,30 +208,34 @@ internal class FlacFrameReader(
         )
     }
 
-    /** Reads as much as the buffer holds, growing it when a frame needs more. */
-    private fun readInto(at: Long): Int {
-        var got = fill(at)
-        // A frame larger than the buffer is possible when the stream
-        // information gave no maximum. Grow until the source ends or the
-        // caller's allocation ceiling refuses the next size.
-        while (got == buffer.size) {
-            val remaining = if (reader.size >= 0) {
-                (reader.size - at).coerceAtLeast(0L)
-            } else {
-                Int.MAX_VALUE.toLong()
-            }
-            if (remaining <= buffer.size) break
-            val next = minOf(
-                buffer.size.toLong() * 2L,
-                remaining,
-                Int.MAX_VALUE.toLong(),
+    /**
+     * Doubles the frame buffer, for a frame that did not fit in it.
+     *
+     * The buffer starts at the maximum frame size the stream information
+     * states, or at the size of a verbatim frame when it states none, so this
+     * runs only for a frame larger than that. It grows because one frame
+     * needs it, never because the source has more bytes to give, so memory
+     * follows the largest frame and not the length of the recording.
+     */
+    private fun grow() {
+        // With a stated maximum, a frame beyond both it and the size of the
+        // same samples stored verbatim is damaged, or a sync word that was
+        // never a frame. More memory would not help, and a seek scanning for
+        // frames needs to hear that it is corrupt. Some files understate the
+        // maximum, which is why the verbatim size is allowed as well.
+        val stated = streamInfo.maximumFrameSize
+        if (stated > 0 && buffer.size >= maxOf(stated + 64L, verbatimFrameBound())) {
+            throw CorruptStreamException(
+                "a FLAC frame runs past both the $stated-byte maximum its stream information " +
+                    "states and the size of a verbatim frame",
             )
-            if (next <= buffer.size) break
-            options.checkAllocation(next, "growing the FLAC frame buffer")
-            buffer = ByteArray(next.toInt())
-            got = fill(at)
         }
-        return got
+        val next = minOf(buffer.size.toLong() * 2L, Int.MAX_VALUE.toLong() - 8)
+        if (next <= buffer.size) {
+            throw CorruptStreamException("a FLAC frame is larger than any array can hold")
+        }
+        options.checkAllocation(next, "growing the FLAC frame buffer")
+        buffer = ByteArray(next.toInt())
     }
 
     private fun fill(at: Long): Int {
