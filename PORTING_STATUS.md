@@ -88,7 +88,7 @@ them.
 | **Microsoft ADPCM** | ✅ | ✅ | Seven standard coefficient sets, plus a table carried by the file. Bit-identical to ffmpeg |
 | **FLAC** | ✅ | ✅ | Constant, verbatim, fixed and linear predictors up to order 32; Rice and Rice2 residuals with escaped partitions; all four stereo arrangements; wasted-bits subframes; 8 to 32-bit decode and 8, 16 and 24-bit encode. Decodes inside Ogg as well as natively |
 | **Vorbis** | ✅ | ❌ | Floor type 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodecs's channel order. Floor type 0 is parsed and refused: no encoder has emitted it since the format's 2001 betas, and none exists to make a file to test one against |
-| Opus, Speex | ❌ | ❌ | Their Ogg carriage is done: headers, length and comments are read. The codecs themselves are #1 and #18 |
+| Opus, Speex | ❌ | ❌ | Their Ogg carriage is done: headers, length and comments are read. The codecs themselves are #1 and #18. Opus's CELT layer decodes, identical sample for sample to the reference decoder; SILK, the layer joining the two and the Ogg mapping remain |
 | ALAC, WavPack, APE, TTA | ❌ | ❌ | #10, #14, #15 and #16 |
 | MP3 (Layer III) | ✅ | ❌ | MPEG-1, 2 and 2.5. Bit reservoir, all four block shapes including mixed, mid-side and intensity stereo for both versions, alias reduction, sample-accurate seeking. Agrees with ffmpeg to about 1e-6 |
 | MP2 (Layer II) | ✅ | ❌ | All five bit allocation tables, grouped quantisation, scalefactor selection, joint stereo. Agrees with ffmpeg's float decoder to about 1e-6 |
@@ -271,8 +271,12 @@ MPEG-2, where a start or stop block needs 54 and only a short block needs 36. It
 is the kind of mistake that shows up nowhere except on the few frames either
 side of a transient.
 
-Opus is next, and it is the largest single port here because it is two codecs
-in one: #1 holds it. Speex stays further out, at #18. After that comes MP4 and
+Opus is under way, and it is the largest single port here because it is two
+codecs in one: #1 holds it. The range decoder and the CELT layer are done, and
+CELT agrees with libopus built without its SIMD kernels to the last bit, in
+clean and lossy streams at every output rate. The SIMD build sums in a
+different order and drifts from its own plain build by tens of steps in
+concealed frames, so the plain build is the one to compare against. Speex stays further out, at #18. After that comes MP4 and
 ALAC, #6, which also closes the last tag gap.
 
 Four small leftovers, all refused today rather than done wrong: writing the
