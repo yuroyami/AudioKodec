@@ -54,7 +54,12 @@ internal object Id3v2Writer {
                 }
                 else -> {
                     val frameId = TagMapping.id3FrameFor(field, major)
-                    if (frameId != null) {
+                    if (frameId != null && frameId.startsWith("W")) {
+                        // URL frames hold the URL and nothing else: no
+                        // encoding byte, which a reader would take for an
+                        // empty URL, and one frame per value.
+                        for (value in values) frames.add(urlFrame(frameId, value, major))
+                    } else if (frameId != null) {
                         if (major >= 4) {
                             frames.add(textFrame(frameId, values, major))
                         } else {
@@ -173,6 +178,10 @@ internal object Id3v2Writer {
         }
         return frame(id, body, major)
     }
+
+    /** A URL link frame, whose body is the Latin-1 URL with no encoding byte. */
+    private fun urlFrame(id: String, url: String, major: Int): ByteArray =
+        frame(id, TagText.encodeLatin1(url), major)
 
     private fun userTextFrame(description: String, value: String, major: Int): ByteArray {
         val encoding = encodingFor(listOf(description, value), major)
@@ -346,7 +355,7 @@ internal object Id3v2Writer {
         val text = entry.text ?: return null
         return when {
             key.startsWith("T") -> textFrame(key, listOf(text), major)
-            key.startsWith("W") -> frame(key, TagText.encodeLatin1(text), major)
+            key.startsWith("W") -> urlFrame(key, text, major)
             else -> frame(key, TagText.encodeLatin1(text), major)
         }
     }
