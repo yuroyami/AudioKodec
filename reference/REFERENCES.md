@@ -272,6 +272,10 @@ CELT is ported in `Float` from its float path, and SILK, whose decoder is
 fixed point in every build, in `Int` and `Long` with its own 32-bit wrapping
 where the C relies on it.
 
+Concentus, the managed-language translation of libopus, was not used. Both
+layers are translated from libopus itself, so no licence beyond the one above
+applies to them.
+
 The test oracles for this work are the reference programs built from the same
 commit and run, never read: `opus_demo`, and `opus_compare`, which scores the
 RFC 8251 conformance vectors from
