@@ -210,6 +210,73 @@ rather than states: with 32-bit codes and 8-bit symbols the extra is
 `(32 - 2) % 8 + 1`, which is 7. Deriving it in the code rather than writing 7 in
 is what stops it silently becoming wrong if the widths ever change.
 
+### The libopus port
+
+The decoder is a translation of libopus, recorded here before the first line
+was written, as rule 2 asks.
+
+| Field | Value |
+|---|---|
+| Repository | https://github.com/xiph/opus |
+| Tag | v1.5.2 |
+| Commit | `ddbe48383984d56acd9e1ab6a090c54ca6b735a6` |
+| Licence | BSD-3-Clause, the `COPYING` file at that commit |
+| Files | `celt/` and `silk/` decoder sources, `src/opus_decoder.c`, `src/opus_multistream_decoder.c`, `src/opus_projection_decoder.c`, `src/mapping_matrix.c` |
+| Not ported | Every encoder source, the `dnn/` tree (deep PLC, DRED and OSCE), and the architecture-specific `x86/`, `arm/` and `mips/` variants |
+
+The licence text, which a binary release of AudioKodecs has to carry because
+the port is a derivative of it:
+
+```
+Copyright 2001-2023 Xiph.Org, Skype Limited, Octasic,
+                    Jean-Marc Valin, Timothy B. Terriberry,
+                    CSIRO, Gregory Maxwell, Mark Borgerding,
+                    Erik de Castro Lopo, Mozilla, Amazon
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither the name of Internet Society, IETF or IETF Trust, nor the
+names of specific contributors, may be used to endorse or promote
+products derived from this software without specific prior written
+permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+The same file ends by noting that Opus is subject to royalty-free patent
+licences from Xiph.Org, Microsoft and Broadcom, published as IETF IPR
+disclosures 1524, 1914 and 1526. Those grants cover implementations of the
+format, this one included, and are the caller's to read, not the code's.
+
+Arithmetic follows the default float build, as AGENTS.md asks of every port:
+CELT is ported in `Float` from its float path, and SILK, whose decoder is
+fixed point in every build, in `Int` and `Long` with its own 32-bit wrapping
+where the C relies on it.
+
+The test oracles for this work are the reference programs built from the same
+commit and run, never read: `opus_demo`, and `opus_compare`, which scores the
+RFC 8251 conformance vectors from
+https://opus-codec.org/static/testvectors/opus_testvectors-rfc8251.tar.gz.
+
 ## Never opened
 
 These are copyleft or otherwise incompatible with an Apache-2.0 release. The

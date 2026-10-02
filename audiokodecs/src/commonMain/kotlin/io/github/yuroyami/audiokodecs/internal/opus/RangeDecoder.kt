@@ -12,262 +12,208 @@ package io.github.yuroyami.audiokodecs.internal.opus
  * The unusual part is that a packet is read from both ends at once. Values with
  * a probability model are decoded forwards from the front, and values with none
  * are read backwards from the back, so the two meet in the middle and no bits
- * are wasted aligning them. A decoder therefore has two positions, and running
- * out means they crossed.
+ * are wasted aligning them.
  *
- * Written from RFC 6716 section 4.1, following its reference implementation
- * where the prose leaves a choice open.
+ * Both halves of Opus budget their bits from [tell] and [tellFraction], and the
+ * encoder made the same calls on the same state, so this has to agree with the
+ * reference to the bit rather than approximately. It is a translation of
+ * libopus `celt/entdec.c` and `celt/entcode.c` (see `reference/REFERENCES.md`),
+ * with the 32-bit unsigned state carried in `Long`s.
  */
 internal class RangeDecoder(
     private val data: ByteArray,
     private val offset: Int = 0,
-    private val length: Int = data.size - offset,
+    length: Int = data.size - offset,
 ) {
+    /** Bytes the decoder may read, which the caller can shrink with [shrinkStorage]. */
+    var storage: Int = length
+        private set
 
-    /** How much of the range is left, always above `1 shl 23` after a read. */
-    private var range: Int = 128
-
-    /** Where in that range the coded value sits. */
-    private var value: Int = 0
-
-    /** The part of the last byte read that has not been folded in yet. */
-    private var partial: Int = 0
-
-    /** Bytes consumed from the front. */
     private var forward: Int = 0
-
-    /** Bytes consumed from the back, where the raw bits live. */
     private var backward: Int = 0
+    private var endWindow: Long = 0
+    private var endBits: Int = 0
+    private var bitsTotal: Int = CODE_BITS + 1 - ((CODE_BITS - CODE_EXTRA) / SYM_BITS) * SYM_BITS
+    private var range: Long = 1L shl CODE_EXTRA
+    private var remainder: Int
+    private var value: Long
+    private var ext: Long = 0
 
-    /** Raw bits taken from the back but not yet handed out. */
-    private var backwardWindow: Int = 0
-    private var backwardBits: Int = 0
-
-    /** Bits notionally consumed, which is what a caller budgets against. */
-    private var bitsUsed: Int = 0
+    /** Set when a value decoded out of range, which only a damaged packet causes. */
+    var error: Boolean = false
+        private set
 
     init {
-        partial = readForward()
-        value = 127 - (partial shr 1)
-        bitsUsed = -1
-        // The first byte gives seven bits, not eight, because the coder's
-        // window is 31 bits wide rather than 32.
-        bitsUsed = 1
+        remainder = readByte()
+        value = range - 1 - (remainder shr (SYM_BITS - CODE_EXTRA))
         normalize()
     }
 
-    /** Bytes the packet holds. */
-    val size: Int get() = length
-
-    private fun readForward(): Int {
-        if (forward >= length - backward) return 0
-        return data[offset + forward++].toInt() and 0xFF
-    }
-
-    private fun readBackward(): Int {
-        if (backward >= length - forward) return 0
-        return data[offset + length - 1 - backward++].toInt() and 0xFF
-    }
-
     /**
-     * Pulls bytes in until the range is wide enough to split again.
-     *
-     * The shift here is not eight. A 32-bit coder carrying a 31-bit window
-     * leaves seven bits over, so each byte is folded in one bit off the
-     * boundary, and the leftover bit of the previous byte joins it.
+     * The range at this point, which the encoder reports for the same point.
+     * Agreeing on it after a packet means every symbol was decoded as coded.
      */
+    val finalRange: Long get() = range
+
+    private fun readByte(): Int =
+        if (forward < storage) data[offset + forward++].toInt() and 0xFF else 0
+
+    private fun readByteFromEnd(): Int =
+        if (backward < storage) data[offset + storage - ++backward].toInt() and 0xFF else 0
+
     private fun normalize() {
-        while (range <= BOTTOM) {
-            bitsUsed += 8
-            range = range shl 8
-            val previous = partial
-            partial = readForward()
-            val symbol = ((previous shl 8) or partial) ushr (8 - EXTRA)
-            value = ((value shl 8) + (0xFF - symbol)) and (TOP - 1)
+        while (range <= CODE_BOT) {
+            bitsTotal += SYM_BITS
+            range = (range shl SYM_BITS) and MASK
+            var symbol = remainder
+            remainder = readByte()
+            symbol = ((symbol shl SYM_BITS) or remainder) shr (SYM_BITS - CODE_EXTRA)
+            value = ((value shl SYM_BITS) + (SYM_MAX and symbol.inv())) and (CODE_TOP - 1)
         }
     }
 
-    /**
-     * Reads where in `0 until total` the next symbol falls, without consuming
-     * it. The caller looks the answer up in its own table and then says what it
-     * found with [update].
-     */
+    /** `ec_decode`: where in `0 until total` the next symbol falls, without consuming it. */
     fun decode(total: Int): Int {
-        divisor = (range.toLong() and 0xFFFF_FFFFL) / total
-        val scaled = (value.toLong() and 0xFFFF_FFFFL) / divisor
-        val room = if (scaled + 1 < total) (scaled + 1).toInt() else total
-        return total - room
+        ext = range / total
+        val s = value / ext
+        return (total - minOf(s + 1, total.toLong())).toInt()
     }
 
-    /** The last [decode]'s range per unit, kept for [update]. */
-    private var divisor: Long = 0
+    /** `ec_decode_bin`: [decode] for a power-of-two total. */
+    fun decodeBin(bits: Int): Int {
+        ext = range shr bits
+        val s = value / ext
+        val total = 1L shl bits
+        return (total - minOf(s + 1, total)).toInt()
+    }
 
-    /**
-     * Narrows the range to the symbol that was found, which occupied
-     * `from until to` out of [total].
-     */
-    fun update(from: Int, to: Int, total: Int) {
-        val unsigned = value.toLong() and 0xFFFF_FFFFL
-        val taken = divisor * (total - to)
-        value = (unsigned - taken).toInt()
-        range = if (from > 0) {
-            (divisor * (to - from)).toInt()
-        } else {
-            ((range.toLong() and 0xFFFF_FFFFL) - taken).toInt()
-        }
+    /** `ec_dec_update`: consumes the symbol occupying `low until high` of [total]. */
+    fun update(low: Int, high: Int, total: Int) {
+        val s = (ext * (total - high)) and MASK
+        value = (value - s) and MASK
+        range = if (low > 0) (ext * (high - low)) and MASK else (range - s) and MASK
         normalize()
     }
 
-    /**
-     * Decodes one symbol against an inverse cumulative table.
-     *
-     * The tables Opus uses count down to zero rather than up from it, which
-     * lets one array serve as both the boundaries and the terminator, and lets
-     * the search stop as soon as it passes the value.
-     */
-    fun decodeIcdf(table: IntArray, bits: Int): Int {
-        val total = 1 shl bits
-        val scaled = decode(total)
-        var symbol = 0
-        var high = total
-        var low: Int
-        while (true) {
-            low = total - table[symbol]
-            if (low > scaled) break
-            high = low
-            symbol++
-        }
-        // The table is descending, so the symbol's own span is the gap between
-        // the entry that passed the value and the one before it.
-        val fromValue = if (symbol == 0) 0 else total - table[symbol - 1]
-        update(fromValue, total - table[symbol], total)
-        if (high == 0) Unit
-        return symbol
-    }
-
-    /**
-     * Decodes one bit whose probability of being zero is `1 - 2^-logp`.
-     *
-     * Used for the many flags in an Opus packet that are almost always one way,
-     * where a whole bit each would be most of a kilobit per second.
-     */
-    fun decodeBitLogp(logp: Int): Int {
-        val unsigned = value.toLong() and 0xFFFF_FFFFL
-        val wide = range.toLong() and 0xFFFF_FFFFL
-        val threshold = wide ushr logp
-        val bit: Int
-        if (unsigned < threshold) {
-            bit = 1
-            range = threshold.toInt()
-        } else {
-            bit = 0
-            value = (unsigned - threshold).toInt()
-            range = (wide - threshold).toInt()
-        }
+    /** `ec_dec_bit_logp`: a bit that is one with probability `2^-logp`. */
+    fun decodeBitLogp(logp: Int): Boolean {
+        val r = range
+        val d = value
+        val s = r shr logp
+        val bit = d < s
+        if (!bit) value = d - s
+        range = if (bit) s else r - s
         normalize()
         return bit
     }
 
-    /**
-     * Reads [count] bits that carry no probability model at all.
-     *
-     * These come from the back of the packet rather than the front, so that
-     * neither end has to be padded to a byte boundary.
-     */
-    fun decodeRawBits(count: Int): Int {
-        var got = 0
-        var need = count
-        var result = 0
-        while (need > 0) {
-            if (backwardBits == 0) {
-                backwardWindow = readBackward()
-                backwardBits = 8
-            }
-            val take = if (need < backwardBits) need else backwardBits
-            val chunk = backwardWindow and ((1 shl take) - 1)
-            backwardWindow = backwardWindow ushr take
-            backwardBits -= take
-            result = result or (chunk shl got)
-            got += take
-            need -= take
+    /** `ec_dec_icdf`: a symbol from an inverse cumulative table of `1 shl bits`. */
+    fun decodeIcdf(table: IntArray, bits: Int): Int = decodeIcdf(table, 0, bits)
+
+    /** [decodeIcdf] from a table starting at [start] within a larger array. */
+    fun decodeIcdf(table: IntArray, start: Int, bits: Int): Int {
+        var s = range
+        val d = value
+        val r = s shr bits
+        var symbol = -1
+        var t: Long
+        do {
+            t = s
+            s = r * table[start + ++symbol]
+        } while (d < s)
+        value = d - s
+        range = t - s
+        normalize()
+        return symbol
+    }
+
+    /** `ec_dec_uint`: a value uniformly distributed over `0 until total`. */
+    fun decodeUniform(total: Long): Long {
+        require(total > 1) { "a uniform value needs at least two possibilities, was $total" }
+        val top = total - 1
+        var bits = ilog(top)
+        if (bits > UINT_BITS) {
+            bits -= UINT_BITS
+            val ft = ((top shr bits) + 1).toInt()
+            val s = decode(ft)
+            update(s, s + 1, ft)
+            val t = (s.toLong() shl bits) or decodeRawBits(bits).toLong()
+            if (t <= top) return t
+            error = true
+            return top
         }
-        bitsUsed += count
+        val s = decode(total.toInt())
+        update(s, s + 1, total.toInt())
+        return s.toLong()
+    }
+
+    /** [decodeUniform] for totals that fit in an `Int`. */
+    fun decodeUniform(total: Int): Int = decodeUniform(total.toLong()).toInt()
+
+    /** `ec_dec_bits`: [count] raw bits from the back of the packet, up to 25. */
+    fun decodeRawBits(count: Int): Int {
+        var window = endWindow
+        var available = endBits
+        if (available < count) {
+            do {
+                window = window or (readByteFromEnd().toLong() shl available)
+                available += SYM_BITS
+            } while (available <= WINDOW_SIZE - SYM_BITS)
+        }
+        val result = (window and ((1L shl count) - 1)).toInt()
+        window = window ushr count
+        available -= count
+        endWindow = window and MASK
+        endBits = available
+        bitsTotal += count
         return result
     }
 
-    /**
-     * Decodes a value uniformly distributed over `0 until total`.
-     *
-     * Anything wider than eight bits is split: the top eight go through the
-     * range coder and the rest are read raw, because modelling them would cost
-     * more than it saves.
-     */
-    fun decodeUniform(total: Int): Int {
-        require(total > 1) { "a uniform value needs at least two possibilities, was $total" }
-        val bits = widthOf(total - 1)
-        if (bits <= UNIFORM_BITS) {
-            val scaled = decode(total)
-            update(scaled, scaled + 1, total)
-            return scaled
-        }
-        val extra = bits - UNIFORM_BITS
-        val top = (total - 1 shr extra) + 1
-        val scaled = decode(top)
-        update(scaled, scaled + 1, top)
-        val result = (scaled shl extra) or decodeRawBits(extra)
-        // A value past the end means the packet was corrupt. Clamping keeps the
-        // decoder in step rather than indexing past a table with it.
-        return if (result < total) result else total - 1
-    }
+    /** `ec_tell`: whole bits consumed so far, rounded up. */
+    fun tell(): Int = bitsTotal - ilog(range)
 
-    /**
-     * Bits consumed so far, in eighths.
-     *
-     * Opus budgets bits between its own stages, so a decoder has to know how
-     * much of the packet it has spent to finer than a whole bit.
-     */
+    /** `ec_tell_frac`: bits consumed so far, in eighths. */
     fun tellFraction(): Int {
-        val width = widthOf(range)
-        var correction = (bitsUsed - width) shl BITRES
-        var wide = (range.toLong() and 0xFFFF_FFFFL) ushr (width - 16)
-        // Three rounds of squaring gets three more bits of the logarithm, which
-        // is the eighth of a bit this reports to.
-        for (i in 0 until BITRES) {
-            wide = (wide * wide) ushr 15
-            val bit = (wide ushr 16).toInt()
-            correction += bit shl (BITRES - 1 - i)
-            wide = wide ushr bit
-        }
-        return correction
+        val bits = bitsTotal shl BITRES
+        var l = ilog(range)
+        val r = range shr (l - 16)
+        var b = ((r shr 12) - 8).toInt()
+        if (r > TELL_CORRECTION[b]) b++
+        l = (l shl 3) + b
+        return bits - l
     }
 
-    /** Bits consumed so far, rounded up. */
-    fun tell(): Int = bitsUsed - widthOf(range) + 1
-
-    private fun widthOf(value: Int): Int {
-        var bits = 0
-        var v = value
-        while (v != 0) {
-            v = v ushr 1
-            bits++
-        }
-        return bits
+    /**
+     * Stops the decoder reading past [bytes], as when a packet's last bytes
+     * belong to a redundant frame rather than to this one.
+     */
+    fun shrinkStorage(bytes: Int) {
+        storage -= bytes
     }
 
-    private companion object {
-        /** The coder's window, one bit short of the full word. */
-        const val TOP = 1 shl 31
+    /** Bytes read from the front so far. */
+    val bytesRead: Int get() = forward
 
-        /** Where the range has to be topped up again. */
-        const val BOTTOM = 1 shl 23
+    /** Bytes the packet holds, before any shrinking. */
+    val size: Int = length
 
-        /** Bits of a byte that do not fit the window, which is `(32 - 2) % 8 + 1`. */
-        const val EXTRA = (32 - 2) % 8 + 1
+    companion object {
+        private const val SYM_BITS = 8
+        private const val CODE_BITS = 32
+        private const val SYM_MAX = (1 shl SYM_BITS) - 1
+        private const val CODE_TOP = 1L shl (CODE_BITS - 1)
+        private const val CODE_BOT = CODE_TOP ushr SYM_BITS
+        private const val CODE_EXTRA = (CODE_BITS - 2) % SYM_BITS + 1
+        private const val WINDOW_SIZE = 32
+        private const val UINT_BITS = 8
+        private const val MASK = 0xFFFF_FFFFL
 
-        /** Bits of a uniform value worth modelling rather than reading raw. */
-        const val UNIFORM_BITS = 8
+        /** Bits of resolution [tellFraction] reports to, three being eighths. */
+        const val BITRES: Int = 3
 
-        /** Bits of resolution the fractional bit count carries. */
-        const val BITRES = 3
+        private val TELL_CORRECTION = longArrayOf(35733, 38967, 42495, 46340, 50535, 55109, 60097, 65535)
+
+        /** `EC_ILOG`: one more than the index of the highest set bit, and 0 for 0. */
+        fun ilog(value: Long): Int = 64 - (value and MASK).countLeadingZeroBits()
     }
 }
