@@ -79,21 +79,43 @@ public object AudioKodecs {
     /**
      * Opens a decoder over [source].
      *
-     * The decoder takes ownership: closing it closes the source. Pull blocks
-     * with [AudioDecoder.nextFrame] until it returns null.
+     * The decoder takes ownership: closing it closes the source. Ownership
+     * passes on the call rather than on success, so when opening fails the
+     * source is closed before the failure is thrown, and
+     * `AudioKodecs.open(source).use { ... }` never leaks it. Pull blocks with
+     * [AudioDecoder.nextFrame] until it returns null.
      */
     public fun open(
         source: AudioSource,
         options: DecodeOptions = DecodeOptions.DEFAULT,
-    ): AudioDecoder {
+    ): AudioDecoder = closingOnFailure(source) {
         val detected = containerOf(SourceReader(source, options))
         val reader = detected.reader
-        return when (detected.container) {
+        when (detected.container) {
             AudioContainer.FLAC ->
                 FlacDecoder(reader, FlacMetadata.parse(reader, options), options)
             AudioContainer.OGG -> openOgg(reader, options)
             AudioContainer.MPEG_AUDIO -> openMpeg(reader, options)
             else -> parse(reader, options, detected.container).toDecoder(reader, options)
+        }
+    }
+
+    /**
+     * Runs [block], closing [source] if it throws.
+     *
+     * The original failure is the useful one, so a failure to close is added
+     * to it as suppressed rather than thrown in its place.
+     */
+    private inline fun <T> closingOnFailure(source: AudioSource, block: () -> T): T {
+        try {
+            return block()
+        } catch (failure: Throwable) {
+            try {
+                source.close()
+            } catch (closing: Throwable) {
+                failure.addSuppressed(closing)
+            }
+            throw failure
         }
     }
 
@@ -122,17 +144,8 @@ public object AudioKodecs {
         // the decoder's buffers would be wrong here whatever the caller asked
         // for.
         val decodeOptions = if (options.reuseBuffers) options.copy(reuseBuffers = false) else options
-        val decoder = try {
-            open(source, decodeOptions)
-        } catch (failure: Throwable) {
-            try {
-                source.close()
-            } catch (_: Throwable) {
-                // Preserve the decoding failure, which is the useful cause.
-            }
-            throw failure
-        }
-        decoder.use {
+        // A failure to open has already closed the source.
+        open(source, decodeOptions).use {
             val channels = it.format.channels
             val expected = it.durationFrames
             val expectedSamples = expected?.let {
@@ -201,7 +214,7 @@ public object AudioKodecs {
         source: AudioSource,
         options: DecodeOptions = DecodeOptions.DEFAULT,
     ): Boolean? {
-        val decoder = try {
+        val decoder = closingOnFailure(source) {
             val detected = containerOf(SourceReader(source, options))
             val reader = detected.reader
             if (detected.container != AudioContainer.FLAC) {
@@ -211,13 +224,6 @@ public object AudioKodecs {
                 )
             }
             FlacDecoder(reader, FlacMetadata.parse(reader, options), options)
-        } catch (failure: Throwable) {
-            try {
-                source.close()
-            } catch (_: Throwable) {
-                // Preserve the verification failure, which is the useful cause.
-            }
-            throw failure
         }
         return decoder.use { it.verifyMd5() }
     }
