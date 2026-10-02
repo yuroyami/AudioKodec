@@ -165,6 +165,19 @@ class FlacTest {
     }
 
     @Test
+    fun aPredictorLongerThanItsBlockIsCorruptNotAnArrayOverrun() {
+        // LPC order 32 in a 16-sample block, and fixed order 4 in a 2-sample
+        // one. The warm-up samples alone would run past the block.
+        for ((what, file) in listOf(
+            "LPC order 32" to flacWithOversizedPredictor(blockSize = 16, subframeType = 63, warmUp = 32),
+            "fixed order 4" to flacWithOversizedPredictor(blockSize = 2, subframeType = 12, warmUp = 4),
+        )) {
+            assertFailsWith<CorruptStreamException>(what) { AudioKodecs.decode(file) }
+            expectOnlyKiteFailures(what) { AudioKodecs.decode(file, DecodeOptions(tolerant = true)) }
+        }
+    }
+
+    @Test
     fun aResidualWiderThanThePcmSampleDoesNotOverflow() {
         // A fixed order-one predictor subtracts the preceding sample. Moving
         // from Int.MAX_VALUE to Int.MIN_VALUE therefore produces the valid
@@ -513,6 +526,42 @@ private fun flacWithWideOrderOneResidual(): ByteArray {
     writeU16Be(out, 8, 16)
     writeU16Be(out, 10, 16)
     val packed = (44_100L shl 44) or (31L shl 36) or 16L
+    writeU64Be(out, 18, packed)
+    frame.rawBuffer().copyInto(out, 42, 0, frame.byteLength)
+    return out
+}
+
+/**
+ * A one-frame 16-bit mono FLAC file whose only subframe declares a predictor
+ * with [warmUp] warm-up samples, written as zeros, in a block of [blockSize].
+ */
+private fun flacWithOversizedPredictor(blockSize: Int, subframeType: Int, warmUp: Int): ByteArray {
+    val frame = BitWriterMsb(128)
+    frame.writeBits(0x3FFE, 14)
+    frame.writeBit(0)
+    frame.writeBit(0)
+    frame.writeBits(6, 4) // Block size stored as an 8-bit value minus one.
+    frame.writeBits(9, 4) // 44.1 kHz.
+    frame.writeBits(0, 4) // Mono.
+    frame.writeBits(4, 3) // 16 bits.
+    frame.writeBit(0)
+    frame.writeBits(0, 8) // Frame number zero.
+    frame.writeBits(blockSize - 1, 8)
+    frame.writeBits(FlacCrc.crc8(frame.rawBuffer(), 0, frame.byteLength), 8)
+    frame.writeBit(0)
+    frame.writeBits(subframeType, 6)
+    frame.writeBit(0)
+    repeat(warmUp) { frame.writeBits(0, 16) }
+    frame.alignToByte()
+    frame.writeBits(FlacCrc.crc16(frame.rawBuffer(), 0, frame.byteLength), 16)
+
+    val out = ByteArray(4 + 4 + 34 + frame.byteLength)
+    "fLaC".encodeToByteArray().copyInto(out)
+    out[4] = 0x80.toByte()
+    out[7] = 34
+    writeU16Be(out, 8, blockSize)
+    writeU16Be(out, 10, blockSize)
+    val packed = (44_100L shl 44) or (15L shl 36) or blockSize.toLong()
     writeU64Be(out, 18, packed)
     frame.rawBuffer().copyInto(out, 42, 0, frame.byteLength)
     return out

@@ -455,6 +455,7 @@ internal class FlacFrameReader(
 
             type in 8..12 -> {
                 val order = type - 8
+                checkPredictorOrder(order, blockSize, at)
                 for (i in 0 until order) {
                     out[i] = reading.readSignedBitsLong(effectiveBits)
                 }
@@ -464,6 +465,7 @@ internal class FlacFrameReader(
 
             type in 32..63 -> {
                 val order = (type and 0x1F) + 1
+                checkPredictorOrder(order, blockSize, at)
                 for (i in 0 until order) {
                     out[i] = reading.readSignedBitsLong(effectiveBits)
                 }
@@ -507,6 +509,20 @@ internal class FlacFrameReader(
                     "a FLAC side-channel sample does not fit in $bitsPerSample bits", at,
                 )
             }
+        }
+    }
+
+    /**
+     * A predictor's warm-up samples are the first samples of the block, so an
+     * order larger than the block would write past its end before anything
+     * else about the subframe could be checked.
+     */
+    private fun checkPredictorOrder(order: Int, blockSize: Int, at: Long) {
+        if (order > blockSize) {
+            throw CorruptStreamException(
+                "a predictor of order $order cannot fit a $blockSize-sample block",
+                at,
+            )
         }
     }
 
