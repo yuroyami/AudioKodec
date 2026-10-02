@@ -133,6 +133,37 @@ class OpusTest {
         }
     }
 
+    @Test
+    fun aTruncatedOrMutatedOpusFileFailsOnlyWithItsOwnExceptions() {
+        val whole = file()
+        for (keep in 0 until whole.size step 13) {
+            val cut = whole.copyOf(keep)
+            expectOnlyOwnFailures("truncated to $keep bytes") { AudioKodecs.decode(cut) }
+            expectOnlyOwnFailures("truncated to $keep bytes, tolerant") {
+                AudioKodecs.decode(cut, DecodeOptions(tolerant = true))
+            }
+            expectOnlyOwnFailures("probing $keep bytes") { AudioKodecs.probe(cut) }
+        }
+        var state = 31
+        repeat(1_500) {
+            state = state * 1_103_515_245 + 12_345
+            val at = ((state ushr 8) and 0x7FFF_FFFF) % whole.size
+            state = state * 1_103_515_245 + 12_345
+            val mutated = whole.copyOf().also { it[at] = (state ushr 16).toByte() }
+            expectOnlyOwnFailures("byte $at changed") { AudioKodecs.decode(mutated, DecodeOptions(tolerant = true)) }
+        }
+    }
+
+    private inline fun expectOnlyOwnFailures(what: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (_: AudioKodecsException) {
+            // Every failure has to be one of the library's own.
+        } catch (e: Throwable) {
+            throw AssertionError("$what threw ${e::class.simpleName}: ${e.message}", e)
+        }
+    }
+
     private fun audioPackets(): List<ByteArray> {
         val reader = OggReader(SourceReader(file().asAudioSource(), DecodeOptions.DEFAULT), DecodeOptions.DEFAULT)
         val packets = reader.packets(reader.readStreamHeads().first().serialNumber, 0L)
