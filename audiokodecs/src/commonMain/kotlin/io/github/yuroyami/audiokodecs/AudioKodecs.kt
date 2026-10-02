@@ -162,12 +162,7 @@ public object AudioKodecs {
                 val nextFrames = frames + block.frameCount
                 val needed = checkedDecodedSampleCount(nextFrames, channels, options)
                 if (needed > samples.size) {
-                    var next = maxOf(samples.size.toLong(), 1L)
-                    while (next < needed) {
-                        next = minOf(needed.toLong(), next * 2)
-                    }
-                    options.checkAllocation(next * 4, "growing the decode buffer")
-                    samples = samples.copyOf(next.toInt())
+                    samples = samples.copyOf(grownCapacity(samples.size, needed, options))
                 }
                 val destination = (frames * channels).toInt()
                 block.samples.copyInto(samples, destination, 0, block.sampleCount)
@@ -493,6 +488,30 @@ public object AudioKodecs {
         }
         return samples.toInt()
     }
+
+    /**
+     * Picks the next size of the whole-file decode buffer.
+     *
+     * Growth doubles, so the copies made while a result accumulates cost a
+     * constant factor of its final size rather than one full copy per block.
+     * Doubling stops at the allocation ceiling and at the largest array every
+     * platform will hand out, and [needed] has already passed both checks in
+     * [checkedDecodedSampleCount], so the fallback to exactly [needed] is
+     * always allowed.
+     */
+    private fun grownCapacity(current: Int, needed: Int, options: DecodeOptions): Int {
+        val ceiling = minOf(options.maxAllocationBytes / 4, MAX_GROWN_SAMPLES)
+        val doubled = maxOf(current.toLong(), 1L) * 2
+        val next = maxOf(needed.toLong(), minOf(doubled, ceiling))
+        options.checkAllocation(next * 4, "growing the decode buffer")
+        return next.toInt()
+    }
+
+    /**
+     * The largest buffer geometric growth will ask for on its own. Some
+     * virtual machines refuse arrays within a few elements of `Int.MAX_VALUE`.
+     */
+    private const val MAX_GROWN_SAMPLES: Long = Int.MAX_VALUE.toLong() - 8
 
     /**
      * Names the container and returns a logical reader positioned after any
