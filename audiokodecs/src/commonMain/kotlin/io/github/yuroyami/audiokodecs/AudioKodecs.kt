@@ -13,6 +13,7 @@ import io.github.yuroyami.audiokodecs.internal.io.SourceReader
 import io.github.yuroyami.audiokodecs.internal.mpeg.Layer12Decoder
 import io.github.yuroyami.audiokodecs.internal.mpeg.Mp3Decoder
 import io.github.yuroyami.audiokodecs.internal.mpeg.MpegStream
+import io.github.yuroyami.audiokodecs.internal.mp4.Mp4Container
 import io.github.yuroyami.audiokodecs.internal.ogg.OggAnalyser
 import io.github.yuroyami.audiokodecs.internal.ogg.OggFlacDecoder
 import io.github.yuroyami.audiokodecs.internal.ogg.OggOpusDecoder
@@ -69,6 +70,7 @@ public object AudioKodecs {
                 FlacDecoder(reader, FlacMetadata.parse(reader, options), options).info
             AudioContainer.OGG -> oggInfo(reader, options)
             AudioContainer.MPEG_AUDIO -> mpegInfo(reader, options)
+            AudioContainer.MP4 -> Mp4Container.info(reader, options)
             else -> parse(reader, options, detected.container).toInfo(reader)
         }
     }
@@ -97,6 +99,7 @@ public object AudioKodecs {
                 FlacDecoder(reader, FlacMetadata.parse(reader, options), options)
             AudioContainer.OGG -> openOgg(reader, options)
             AudioContainer.MPEG_AUDIO -> openMpeg(reader, options)
+            AudioContainer.MP4 -> Mp4Container.decoder(reader, options)
             else -> parse(reader, options, detected.container).toDecoder(reader, options)
         }
     }
@@ -251,12 +254,16 @@ public object AudioKodecs {
      */
     public fun readTags(source: AudioSource, options: DecodeOptions = DecodeOptions.DEFAULT): TagBundle {
         val reader = SourceReader(source, options)
-        val container = try {
-            containerOf(reader).container
+        val detected = try {
+            containerOf(reader)
         } catch (_: AudioKodecsException) {
             null
         }
-        return TagAssembler.assemble(TagLocator.findAll(reader, container), options)
+        val container = detected?.container
+        // MP4 keeps chapters in a track of their own rather than in a tag
+        // block, so they are read from the file's structure.
+        val chapters = if (container == AudioContainer.MP4) Mp4Container.chapters(detected.reader, options) else emptyList()
+        return TagAssembler.assemble(TagLocator.findAll(reader, container), options, chapters)
     }
 
     /** Reads the tags of an in-memory file. */

@@ -553,7 +553,7 @@ internal object CafReader {
      * relabelled. The two tags that state no positions at all give unknown
      * channels, which is what they mean.
      */
-    private fun storedOrderForTag(tag: Long): List<AudioChannel>? {
+    fun storedOrderForTag(tag: Long): List<AudioChannel>? {
         val count = (tag and 0xFFFF).toInt()
         return when ((tag ushr 16).toInt()) {
             100 -> listOf(C)

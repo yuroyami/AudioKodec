@@ -27,13 +27,15 @@ internal object TagAssembler {
     fun assemble(
         blocks: List<RawTagBlock>,
         options: DecodeOptions = DecodeOptions.DEFAULT,
+        /** Chapters the container keeps outside its tag blocks, as MP4 does. */
+        containerChapters: List<TagChapter> = emptyList(),
     ): TagBundle {
-        if (blocks.isEmpty()) return TagBundle.EMPTY
+        if (blocks.isEmpty() && containerChapters.isEmpty()) return TagBundle.EMPTY
 
         val fields = LinkedHashMap<TagField, MutableList<String>>()
         val claimedBy = HashMap<TagField, Int>()
         val pictures = ArrayList<TagPicture>()
-        val chapters = ArrayList<TagChapter>()
+        val chapters = ArrayList<TagChapter>(containerChapters)
         val gain = ReplayGainReader()
 
         // Highest precedence first, so the first block to state a field is the

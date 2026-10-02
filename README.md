@@ -151,6 +151,18 @@ pre-skip and end trim are applied, so the samples come out where they went in
 and one file follows another without a gap. Every layer is checked against
 libopus, sample for sample.
 
+## MP4
+
+MP4, M4A, M4B, 3GP and QuickTime files are read: the audio track's packets
+from its sample tables, wherever the `moov` box sits and in fragmented files
+too, the edit list that says which part of the track plays, and chapters from
+either a chapter track or a Nero `chpl` list. Every packet is found where
+ffmpeg finds it.
+
+Opus, FLAC and QuickTime's uncompressed codings decode, seeking included. AAC,
+ALAC, MP3, AC-3 and AMR are named, with their length and chapters, and `open`
+refuses them by name.
+
 Vorbis decodes the whole format: both floor and residue kinds an encoder emits,
 channel coupling, block switching, and up to eight channels reordered into
 AudioKodecs's own channel order rather than Vorbis's. It is checked against
@@ -293,10 +305,11 @@ and `ima4`.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
+| MP4, M4A, M4B, 3GP and QuickTime | Opus, FLAC, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, ALAC, MP3, AC-3 and AMR are named and not decoded yet |
 
 ### Named but not decoded
 
-AAC in both ADTS and ADIF framing, MP4 and M4A, Matroska and WebM, Monkey's
+AAC in both ADTS and ADIF framing, Matroska and WebM, Monkey's
 Audio, WavPack, Musepack, True Audio, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA,
 MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
 

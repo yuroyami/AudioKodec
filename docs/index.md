@@ -250,6 +250,37 @@ A file interleaving several logical streams, such as a video with a soundtrack,
 is refused rather than repaginated. Rebuilding the interleaving is a job worth
 doing properly or not at all.
 
+## MP4
+
+MP4 is a container, and the same reader covers its relatives: M4A, M4B, 3GP
+and QuickTime `.mov`. The audio track's packets are found from its sample
+tables wherever the `moov` box sits, before the audio or after it, and in
+fragmented files from each fragment's own table.
+
+| Coding | Audio |
+|---|---|
+| Opus | decodes, with seeking |
+| FLAC | decodes, with seeking, exactly |
+| Uncompressed PCM, float, A-law and mu-law | decodes, with seeking, exactly |
+| AAC, ALAC, MP3, AC-3, AMR | named, not yet decoded |
+
+```kotlin
+val info = AudioKodecs.probe(m4aBytes)
+println(info.codec.displayName)                      // AAC
+val chapters = AudioKodecs.readTags(m4bBytes).chapters
+```
+
+The length is what the track's edit list says plays, which is how an encoder
+leaves out its priming samples, and decoding drops the same samples. An edit
+list that plays the media straight through is followed; one that skips or
+repeats parts of it is refused, and in tolerant mode only its first part is
+played. A file without an edit list plays all of its media, except Opus,
+whose pre-skip is dropped either way.
+
+Chapters come from a QuickTime chapter track, with start and end times, or
+failing that from Nero's `chpl` list, which states only starts: the last
+chapter's end is reported as -1.
+
 ## MPEG audio
 
 An MP3 has no file header. It is a run of frames, each one carrying its own

@@ -188,7 +188,7 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these nine.
+        // The README's read and write tables name exactly these ten.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -200,6 +200,7 @@ class SnifferTest {
                 AudioContainer.CAF,
                 AudioContainer.OGG,
                 AudioContainer.MPEG_AUDIO,
+                AudioContainer.MP4,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -220,7 +221,10 @@ class SnifferTest {
         assertTrue(AudioContainer.OGG.isDecodable)
         // MPEG audio decodes all three of its layers.
         assertTrue(AudioContainer.MPEG_AUDIO.isDecodable)
-        assertTrue(!AudioContainer.MP4.isDecodable)
+        // MP4, like Ogg, decodes the codings AudioKodecs has, and names and
+        // refuses the rest.
+        assertTrue(AudioContainer.MP4.isDecodable)
+        assertTrue(!AudioContainer.MATROSKA.isDecodable)
     }
 }
 
