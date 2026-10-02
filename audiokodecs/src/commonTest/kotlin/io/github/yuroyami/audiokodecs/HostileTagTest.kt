@@ -60,6 +60,38 @@ class HostileTagTest {
     }
 
     @Test
+    fun malformedLyrics3FieldsStayInsideTheTypedFailureContract() {
+        fun lyrics3(body: ByteArray): ByteArray {
+            val block = "LYRICSBEGIN".encodeToByteArray() + body
+            return block + block.size.toString().padStart(6, '0').encodeToByteArray() +
+                "LYRICS200".encodeToByteArray()
+        }
+        val audio = ByteArray(32) { 0x55 }
+
+        // A key starting with a null once escaped as IllegalArgumentException.
+        val nullKey = audio + lyrics3(byteArrayOf(0, 65, 66) + "00001X".encodeToByteArray())
+        expectOnlyKiteFailures("a Lyrics3 key with a null") {
+            assertTrue(AudioKodecs.readTags(nullKey).raw.blocks.flatMap { it.entries }.isEmpty())
+        }
+
+        // Every byte of two well-formed fields, set to every value that could
+        // matter: nulls, digits, letters, spaces and high bytes.
+        val good = lyrics3("IND00002".encodeToByteArray() + "10".encodeToByteArray() +
+            "INF00005".encodeToByteArray() + "Hello".encodeToByteArray())
+        val values = byteArrayOf(0, ' '.code.toByte(), '0'.code.toByte(), '9'.code.toByte(),
+            'A'.code.toByte(), 'z'.code.toByte(), 0x7F, 0x80.toByte(), 0xFF.toByte())
+        for (at in good.indices) {
+            for (value in values) {
+                val mutated = good.copyOf()
+                mutated[at] = value
+                expectOnlyKiteFailures("Lyrics3 byte $at set to $value") {
+                    AudioKodecs.readTags(audio + mutated)
+                }
+            }
+        }
+    }
+
+    @Test
     fun aFrameClaimingToBeLargerThanTheBlockIsIgnored() {
         val file = good.copyOf()
         val at = file.indexOfBytes("TIT2".encodeToByteArray())

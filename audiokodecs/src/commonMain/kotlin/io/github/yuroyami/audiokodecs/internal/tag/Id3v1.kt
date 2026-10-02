@@ -164,6 +164,11 @@ internal object Lyrics3 {
         var position = start + 11
         val bodyEnd = end - 15
         while (position + 8 <= bodyEnd) {
+            // A field identifier is three capital letters. Anything else means
+            // the fields that follow cannot be trusted either.
+            for (i in position until position + 3) {
+                if (bytes[i].toInt() !in 'A'.code..'Z'.code) return partial(start, total, entries)
+            }
             val key = TagText.decodeLatin1(bytes, position, 3)
             var fieldSize = 0
             for (i in position + 3 until position + 8) {
