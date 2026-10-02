@@ -140,9 +140,16 @@ The Ogg container is read in full: pages and their checksums, packets
 reassembled across pages, files carrying several logical streams at once, and
 files chained one after another.
 
-Vorbis and FLAC inside Ogg both decode, seeking included. Opus and Speex are
-identified and their headers, length and tags are read; their audio does not
+Vorbis, Opus and FLAC inside Ogg all decode, seeking included. Speex is
+identified and its headers, length and tags are read; its audio does not
 decode yet, and `open` says so by name rather than failing obscurely.
+
+Opus decodes the whole format: the SILK speech codec, the CELT music codec, the
+hybrid of the two, the joins between them, concealment of lost packets, and
+every channel mapping, from mono through 7.1 surround to ambisonics. The
+pre-skip and end trim are applied, so the samples come out where they went in
+and one file follows another without a gap. Every layer is checked against
+libopus, sample for sample.
 
 Vorbis decodes the whole format: both floor and residue kinds an encoder emits,
 channel coupling, block switching, and up to eight channels reordered into
@@ -268,7 +275,7 @@ if (container?.isDecodable == true) { /* AudioKodecs can read it */ }
 | Container | Codings |
 |---|---|
 | FLAC | FLAC, 8 to 32-bit on read and 8, 16 or 24-bit on write |
-| Ogg | Vorbis and FLAC. Opus and Speex have their headers, length and tags read, and their audio is not decoded yet |
+| Ogg | Vorbis, Opus and FLAC. Speex has its headers, length and tags read, and its audio is not decoded yet |
 | WAV (RIFF), including WAVE_FORMAT_EXTENSIBLE | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law, IMA ADPCM, Microsoft ADPCM |
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
 | AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law |

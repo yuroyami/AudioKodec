@@ -178,7 +178,7 @@ streams at once, and files chained one after another.
 |---|---|---|
 | Vorbis | read | decodes, with seeking |
 | FLAC | read | decodes, with seeking |
-| Opus | read | not yet |
+| Opus | read | decodes, with seeking |
 | Speex | read | not yet |
 
 ```kotlin
@@ -189,7 +189,15 @@ println(info.durationSeconds)       // 213.5
 
 The length comes from the granule position on the last page, which is the only
 place an Ogg file records it. For Opus the pre-skip is subtracted, because those
-samples are an artefact of the encoder and are not part of the recording.
+samples are an artefact of the encoder and are not part of the recording, and
+so is the start of a stream cut out of a longer one. Decoding drops the same
+samples: the pre-skip at the front and, at the back, whatever the last page's
+granule position says lies past the end of the recording.
+
+Opus always decodes at 48 kHz, whatever rate the header says the material was
+recorded at, and applies the header's output gain. Samples are floats and are
+not clipped, so a loud decode can reach past full scale where a 16-bit decoder
+would have bent it back.
 
 `open` on a mapping whose codec is not implemented throws
 `UnsupportedFormatException` naming the codec, rather than failing in a way that

@@ -1,11 +1,13 @@
 package io.github.yuroyami.audiokodecs.internal.ogg
 
 import io.github.yuroyami.audiokodecs.AudioCodec
+import io.github.yuroyami.audiokodecs.AudioKodecsException
 import io.github.yuroyami.audiokodecs.CorruptStreamException
 import io.github.yuroyami.audiokodecs.DecodeOptions
 import io.github.yuroyami.audiokodecs.UnsupportedFeatureException
 import io.github.yuroyami.audiokodecs.UnsupportedFormatException
 import io.github.yuroyami.audiokodecs.internal.io.SourceReader
+import io.github.yuroyami.audiokodecs.internal.opus.OpusPacket
 import io.github.yuroyami.audiokodecs.internal.tag.FlacPicture
 import io.github.yuroyami.audiokodecs.internal.tag.VorbisComment
 import io.github.yuroyami.audiokodecs.tag.RawTagBlock
@@ -80,6 +82,16 @@ internal object OggAnalyser {
          * Vorbis is, needs them back rather than a summary of them.
          */
         val headerPackets: List<ByteArray>,
+        /**
+         * The granule position of the stream's first sample, which is zero
+         * unless the stream was cut out of a longer one.
+         *
+         * Only Opus states it, by giving the first page that finishes a
+         * packet a granule position larger than the samples those packets
+         * hold; RFC 7845 section 4.5 defines it. The other mappings leave it
+         * to their decoders, which work it out from their own blocks.
+         */
+        val startGranule: Long,
         /**
          * How many packets the mapping spends on headers before the audio.
          *
@@ -265,6 +277,7 @@ internal object OggAnalyser {
         } else {
             audioStart
         }
+        val startGranule = if (audio.codec == AudioCodec.OPUS) opusStartGranule(ogg, audio, audioStart, options) else 0L
         val duration = when {
             // A granule of zero means no audio packet has finished yet, which
             // is what the header pages carry. Reading it as a length would say
@@ -273,7 +286,7 @@ internal object OggAnalyser {
             // honest answer, and it lets the decoder meet the damage and
             // report it rather than stopping before it.
             granule <= 0 -> null
-            audio.codec == AudioCodec.OPUS -> (granule - audio.preSkip).coerceAtLeast(0L)
+            audio.codec == AudioCodec.OPUS -> (granule - startGranule - audio.preSkip).coerceAtLeast(0L)
             else -> granule
         }
 
@@ -290,8 +303,51 @@ internal object OggAnalyser {
             audioStartOffset = audioStart,
             streamEndOffset = streamEnd,
             headerPackets = headerPackets,
+            startGranule = startGranule,
             headerPacketCount = headerPackets.size,
         )
+    }
+
+    /**
+     * Where an Opus stream's first sample sits, in granule positions.
+     *
+     * The first page that finishes a packet states the position its packets
+     * end at, and their lengths are in their first bytes, so the difference
+     * is where they began. A stream cut out of a longer one begins above
+     * zero. One that begins below zero is invalid, unless that page also ends
+     * the stream, in which case the granule position is cutting samples off
+     * the end and the start is zero. Anything unreadable here is left for the
+     * decoder to meet, so the answer is then zero too.
+     */
+    private fun opusStartGranule(ogg: OggReader, audio: Stream, from: Long, options: DecodeOptions): Long {
+        val packets = ogg.packets(audio.serialNumber, from)
+        // A packet's length is its first stream's, which in a multistream
+        // packet is framed to state its own size.
+        val head = audio.identification
+        val multistream = head[18].toInt() != 0 && (head[19].toInt() and 0xFF) > 1
+        var samples = 0L
+        while (true) {
+            val packet = try {
+                packets.next()
+            } catch (failure: AudioKodecsException) {
+                return 0L
+            } ?: return 0L
+            if (packet.length > 0) {
+                samples += try {
+                    OpusPacket.parse(packet.bytes, 0, packet.length, selfDelimited = multistream).samples
+                } catch (failure: CorruptStreamException) {
+                    return 0L
+                }
+            }
+            if (packet.granule < 0) continue
+            val start = packet.granule - samples
+            if (start >= 0 || packet.isLast || options.tolerant) return start.coerceAtLeast(0L)
+            throw CorruptStreamException(
+                "the first Opus page ends at granule position ${packet.granule}, " +
+                    "before the $samples samples its packets hold",
+                packet.startOffset,
+            )
+        }
     }
 
     /** Names the mapping a stream's first packet declares. */
@@ -324,7 +380,32 @@ internal object OggAnalyser {
                     )
                 }
             } else {
-                val required = 21 + channels
+                if (length < 21) {
+                    throw CorruptStreamException("the OpusHead channel mapping is cut short", page.offset)
+                }
+                val streams = bytes[19].toInt() and 0xFF
+                val coupled = bytes[20].toInt() and 0xFF
+                val codedChannels = streams + coupled
+                // RFC 7845 asks only that there is a stream, that no more are
+                // coupled than exist, and that the coded channels fit in a
+                // byte. Output channels may outnumber them, fed twice or left
+                // silent, or be fewer, leaving some unused.
+                if (streams == 0 || coupled > streams || codedChannels > 255) {
+                    throw CorruptStreamException(
+                        "an OpusHead with $streams streams of which $coupled coupled is not a valid layout",
+                        page.offset,
+                    )
+                }
+                if (mappingFamily == 1 && channels > 8) {
+                    throw CorruptStreamException(
+                        "Opus mapping family 1 defines one to eight channels, not $channels",
+                        page.offset,
+                    )
+                }
+                // Projection, family 3, carries a demixing matrix where the
+                // others carry a table, one signed 16-bit entry per output
+                // channel per coded channel.
+                val required = 21 + if (mappingFamily == 3) 2 * channels * codedChannels else channels
                 if (length < required) {
                     throw CorruptStreamException(
                         "the OpusHead channel mapping is cut short",
@@ -337,22 +418,22 @@ internal object OggAnalyser {
                         page.offset,
                     )
                 }
-                val streams = bytes[19].toInt() and 0xFF
-                val coupled = bytes[20].toInt() and 0xFF
-                if (streams == 0 || coupled > streams || streams + coupled != channels) {
-                    throw CorruptStreamException(
-                        "the OpusHead stream and coupled counts do not make $channels channels",
-                        page.offset,
-                    )
-                }
-                val codedChannels = streams + coupled
-                for (i in 0 until channels) {
-                    val mapping = bytes[21 + i].toInt() and 0xFF
-                    if (mapping != 255 && mapping >= codedChannels) {
+                if (mappingFamily == 3) {
+                    if (channels > codedChannels) {
                         throw CorruptStreamException(
-                            "Opus channel $i maps to nonexistent coded channel $mapping",
+                            "Opus projection cannot make $channels channels from $codedChannels coded ones",
                             page.offset,
                         )
+                    }
+                } else {
+                    for (i in 0 until channels) {
+                        val mapping = bytes[21 + i].toInt() and 0xFF
+                        if (mapping != 255 && mapping >= codedChannels) {
+                            throw CorruptStreamException(
+                                "Opus channel $i maps to nonexistent coded channel $mapping",
+                                page.offset,
+                            )
+                        }
                     }
                 }
             }

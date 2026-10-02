@@ -15,6 +15,7 @@ import io.github.yuroyami.audiokodecs.internal.mpeg.Mp3Decoder
 import io.github.yuroyami.audiokodecs.internal.mpeg.MpegStream
 import io.github.yuroyami.audiokodecs.internal.ogg.OggAnalyser
 import io.github.yuroyami.audiokodecs.internal.ogg.OggFlacDecoder
+import io.github.yuroyami.audiokodecs.internal.ogg.OggOpusDecoder
 import io.github.yuroyami.audiokodecs.internal.tag.TagAssembler
 import io.github.yuroyami.audiokodecs.internal.vorbis.VorbisDecoder
 import io.github.yuroyami.audiokodecs.internal.tag.TagLocator
@@ -396,8 +397,8 @@ public object AudioKodecs {
      * Opens an Ogg file.
      *
      * Ogg is a container, not a codec, so what it can be decoded to depends on
-     * what is inside. Vorbis and FLAC decode today; the others are named and
-     * refused, which is a more useful answer than a generic failure.
+     * what is inside. Vorbis, Opus and FLAC decode today; the others are named
+     * and refused, which is a more useful answer than a generic failure.
      */
     private fun openOgg(reader: SourceReader, options: DecodeOptions): AudioDecoder {
         val parsed = OggAnalyser.parse(reader, options)
@@ -405,6 +406,7 @@ public object AudioKodecs {
         return when (stream?.codec) {
             AudioCodec.FLAC -> OggFlacDecoder(reader, parsed, options)
             AudioCodec.VORBIS -> VorbisDecoder(reader, parsed, options)
+            AudioCodec.OPUS -> OggOpusDecoder(reader, parsed, options)
             else -> throw UnsupportedFormatException(
                 AudioContainer.OGG,
                 "this Ogg file carries ${stream?.codecName ?: "no audio"}, which AudioKodecs " +

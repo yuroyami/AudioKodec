@@ -38,8 +38,15 @@ audio and Ogg.
   order.
 - The Ogg container, read in full: pages and checksums, packet reassembly
   across pages, several logical streams at once, chained streams and granule
-  positions. Vorbis and FLAC inside Ogg both decode and seek; Opus and Speex
-  have their headers, length and comments read.
+  positions. Vorbis, Opus and FLAC inside Ogg all decode and seek; Speex has
+  its headers, length and comments read.
+- Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames
+  that smooth a change of codec, concealment of lost packets and recovery from
+  the redundant copy the next packet carries, and every channel mapping,
+  surround in AudioKodecs's channel order and ambisonics with or without a
+  demixing matrix. Pre-skip, end trim and the header's output gain are
+  applied, and seeking runs 80 ms ahead of its target. Identical to libopus,
+  sample for sample.
 - Vorbis, decoded: floor type 1, residue types 0, 1 and 2, channel coupling,
   block switching, and up to eight channels reordered into AudioKodecs's channel
   order. Checked against libvorbis sample for sample at every quality level.

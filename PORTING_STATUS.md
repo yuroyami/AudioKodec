@@ -36,6 +36,12 @@ passing one. Within them:
   sample, and survive a tag rewrite that the reference decoder then accepts.
 - The headers and comments of Ogg Vorbis, Ogg Opus and Ogg Speex files from
   ffmpeg are read, including the length of each.
+- Opus decodes **bit-exactly** against libopus 1.5.2 built without its SIMD
+  kernels: CELT, SILK, hybrid frames, changes of mode, bandwidth and channel
+  count, concealment and recovery from redundancy, at every output rate, and
+  every multistream mapping family wrapped in Ogg with its pre-skip, start
+  offset and end trim. Ogg Opus files from ffmpeg decode to within 2e-7 of
+  ffmpeg's own libopus decode, with each 5.1 and 7.1 channel in its place.
 - Vorbis files from libvorbis decode to within a ten-thousandth of what the
   reference decoder produces, at qualities 0, 4 and 9, in mono, stereo and 5.1,
   at 8 kHz, 44.1 kHz and 48 kHz, on a signal full of transients that makes the
@@ -68,7 +74,7 @@ them.
 | **AU** | ✅ | ✅ | Six-field header. A data size of `0xFFFFFFFF` reads to end of input |
 | **FLAC** | ✅ | ✅ | Metadata block chain, stream information, seek table, cue sheet and application blocks carried across a tag edit, stream MD5 verification |
 | **CAF** | ✅ | ❌ | 64-bit chunk sizes, the description chunk, Apple's named channel-layout tags reordered from their stored speaker order into the canonical one, and packet-table valid/priming/remainder frame counts; codec priming and remainder are excluded from decode and seek output. Above two channels a file without a layout chunk has unknown speakers, because CAF assumes no order. Bitmap, explicit-description and unmapped layouts are named and refused rather than relabelled |
-| **Ogg** | ✅ | tags only | Pages, checksums, packet reassembly across pages, several logical streams at once, chained streams, granule positions. The Vorbis, Opus, FLAC and Speex mappings are all identified and their headers and comments read; Vorbis and FLAC decode |
+| **Ogg** | ✅ | tags only | Pages, checksums, packet reassembly across pages, several logical streams at once, chained streams, granule positions. The Vorbis, Opus, FLAC and Speex mappings are all identified and their headers and comments read; Vorbis, Opus and FLAC decode |
 | **MPEG audio** | ✅ | ❌ | Frame headers for MPEG-1, 2 and 2.5 in all three layers, with every reserved combination rejected. A candidate sync is confirmed against the frames that follow it. `Xing`, `Info` and `VBRI` headers, LAME gapless delay and padding, tag blocks at both ends excluded from the audio. Exact durations. All three layers decode, with sample-accurate seeking. A protected frame's checksum is verified in strict mode, against ffmpeg's own checker, and decoded as stored in tolerant mode |
 | **Raw PCM** | ✅ | ✅ | Through `AudioSource` and `PcmSource` with a caller-supplied `AudioFormat` |
 | Everything else | sniff only | ❌ | See [Sniffing](#sniffing) |
@@ -88,12 +94,12 @@ them.
 | **Microsoft ADPCM** | ✅ | ✅ | Seven standard coefficient sets, plus a table carried by the file. Bit-identical to ffmpeg |
 | **FLAC** | ✅ | ✅ | Constant, verbatim, fixed and linear predictors up to order 32; Rice and Rice2 residuals with escaped partitions; all four stereo arrangements; wasted-bits subframes; 8 to 32-bit decode and 8, 16 and 24-bit encode. Decodes inside Ogg as well as natively |
 | **Vorbis** | ✅ | ❌ | Floor type 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodecs's channel order. Floor type 0 is parsed and refused: no encoder has emitted it since the format's 2001 betas, and none exists to make a file to test one against |
-| Opus, Speex | ❌ | ❌ | Their Ogg carriage is done: headers, length and comments are read. The codecs themselves are #1 and #18. Opus's CELT and SILK layers both decode, each identical sample for sample to the reference decoder; the layer joining the two and the Ogg mapping remain |
+| **Opus** | ✅ | ❌ | SILK, CELT and hybrid frames, mode and bandwidth changes with their redundant frames, concealment and recovery from in-band redundancy, mapping families 0, 1, 2, 3 and 255 with surround reordered into AudioKodecs's channel order. Pre-skip, start offset, end trim and output gain applied; seeking with 80 ms of run-up. Bit-exact against libopus 1.5.2 |
+| Speex | ❌ | ❌ | Its Ogg carriage is done: headers, length and comments are read. The codec itself is #18 |
 | ALAC, WavPack, APE, TTA | ❌ | ❌ | #10, #14, #15 and #16 |
 | MP3 (Layer III) | ✅ | ❌ | MPEG-1, 2 and 2.5. Bit reservoir, all four block shapes including mixed, mid-side and intensity stereo for both versions, alias reduction, sample-accurate seeking. Agrees with ffmpeg to about 1e-6 |
 | MP2 (Layer II) | ✅ | ❌ | All five bit allocation tables, grouped quantisation, scalefactor selection, joint stereo. Agrees with ffmpeg's float decoder to about 1e-6 |
 | MP1 (Layer I) | ✅ | ❌ | Agrees with ffmpeg's float decoder to about 1e-6 |
-| Opus | ❌ | ❌ | #1 |
 | AAC, AC-3, and the rest | ❌ | ❌ | #13 and #42 |
 
 ## Tags
@@ -271,15 +277,15 @@ MPEG-2, where a start or stop block needs 54 and only a short block needs 36. It
 is the kind of mistake that shows up nowhere except on the few frames either
 side of a transient.
 
-Opus is under way, and it is the largest single port here because it is two
-codecs in one: #1 holds it. The range decoder and both layers are done. CELT
-agrees with libopus built without its SIMD kernels to the last bit, in clean
-and lossy streams at every output rate, and SILK, which is fixed point
-everywhere, agrees to the last bit at every internal rate, frame length and
-output rate, in mono and stereo. The SIMD build sums in a
-different order and drifts from its own plain build by tens of steps in
-concealed frames, so the plain build is the one to compare against. Speex stays further out, at #18. After that comes MP4 and
-ALAC, #6, which also closes the last tag gap.
+Opus is done, and it was the largest single port here because it is two codecs
+in one. Both are translated from libopus and agree with it to the last bit:
+CELT in floating point, as the reference's default build has it, and SILK in
+fixed point, as every build has it. One thing about it is worth writing down.
+libopus's own SIMD kernels sum in a different order, and concealment feeds the
+last bits of that through a long filter, so the default build drifts from its
+own plain build by tens of steps in concealed frames. The plain build is the one
+to compare a port against. Speex stays further out, at #18. After that comes MP4
+and ALAC, #6, which also closes the last tag gap.
 
 Four small leftovers, all refused today rather than done wrong: writing the
 Broadcast Wave `bext` chunk (#43), writing tags into an Ogg file that
@@ -287,5 +293,5 @@ interleaves several logical streams (#44), Vorbis floor type 0 (#45), and free
 format MPEG audio (#46).
 
 This is past the point at which the library is worth publishing. WAV, AIFF, AU, Wave64,
-CAF, FLAC, Vorbis, Ogg and the tag set are a coherent product, and `0.1.0` can
+CAF, FLAC, Vorbis, Opus, Ogg and the tag set are a coherent product, and `0.1.0` can
 go to Maven Central without the README having to apologise for anything.

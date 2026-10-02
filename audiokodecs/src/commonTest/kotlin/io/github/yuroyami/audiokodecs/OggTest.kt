@@ -79,7 +79,13 @@ class OggTest {
                 serial = 2, sequence = 1, granule = 0, flags = 0,
                 packets = listOf(opusTags("TITLE=Opus Title")),
             )
-            .page(serial = 2, sequence = 2, granule = 48_312, flags = 4, packets = listOf(ByteArray(80)))
+            // Fifty-one packets of 20 ms make 48 960 samples, which the
+            // last page's granule position cuts to 48 312: the pre-skip and
+            // a second of audio.
+            .page(
+                serial = 2, sequence = 2, granule = 48_312, flags = 4,
+                packets = List(51) { byteArrayOf(0xF8.toByte(), 0) },
+            )
             .build()
 
         val info = AudioKodecs.probe(bytes)

@@ -15,7 +15,7 @@ import io.github.yuroyami.audiokodecs.CorruptStreamException
  * are coded so that the common cases cost nothing: two frames of equal size
  * state no length at all.
  *
- * Written from RFC 6716 section 3.
+ * Written from RFC 6716 section 3, with the checks of the reference decoder.
  */
 internal class OpusPacket(
     val config: Int,
@@ -24,6 +24,8 @@ internal class OpusPacket(
     val frames: List<IntRange>,
     /** Padding the packet carried, which is not audio. */
     val paddingBytes: Int,
+    /** Bytes the packet occupies, which a self-delimited one states itself. */
+    val length: Int,
 ) {
 
     val mode: Mode get() = MODES[config]
@@ -70,171 +72,150 @@ internal class OpusPacket(
         /** The most bytes one frame may hold. */
         const val MAX_FRAME_BYTES = 1275
 
-        fun parse(data: ByteArray, offset: Int, length: Int): OpusPacket {
-            if (length < 1) {
-                throw CorruptStreamException("an Opus packet must hold at least one byte", offset.toLong())
-            }
+        /** The most frames a packet may hold: 48 of 2.5 ms make 120 ms. */
+        private const val MAX_FRAMES = 48
+
+        /**
+         * Parses the packet of [length] bytes at [offset].
+         *
+         * A [selfDelimited] packet states the length of its last frame too,
+         * which is how a multistream packet packs every stream but the last
+         * one after another; the length it turns out to occupy is
+         * [OpusPacket.length]. Follows `opus_packet_parse_impl` in libopus
+         * `opus.c`, so that a packet is accepted or refused exactly as the
+         * reference decoder would.
+         */
+        fun parse(data: ByteArray, offset: Int, length: Int, selfDelimited: Boolean = false): OpusPacket {
+            fun corrupt(message: String): Nothing = throw CorruptStreamException(message, offset.toLong())
+            if (length < 1) corrupt("an Opus packet must hold at least one byte")
             val toc = data[offset].toInt() and 0xFF
             val config = (toc ushr 3) and 0x1F
             val stereo = (toc and 0x4) != 0
             val code = toc and 0x3
 
             var at = offset + 1
-            val end = offset + length
-            val frames = ArrayList<IntRange>(if (code == 3) 6 else 2)
+            var remaining = length - 1
+            var lastSize = remaining
+            val sizes = IntArray(MAX_FRAMES)
+            val count: Int
+            var equalSizes = false
             var padding = 0
 
+            // Reads one frame length into sizes[index] and returns the bytes
+            // it took: one below 252, two from there up.
+            fun readLength(index: Int): Int {
+                if (remaining < 1) corrupt("an Opus frame length ran past the packet")
+                val first = data[at].toInt() and 0xFF
+                if (first < 252) {
+                    sizes[index] = first
+                    return 1
+                }
+                if (remaining < 2) corrupt("an Opus frame length ran past the packet")
+                sizes[index] = 4 * (data[at + 1].toInt() and 0xFF) + first
+                return 2
+            }
+
             when (code) {
-                0 -> frames.add(at until end)
+                0 -> count = 1
 
                 1 -> {
                     // Two frames of the same size, which is why no length is
                     // written: what is left simply divides in two.
-                    val room = end - at
-                    if (room < 0 || room % 2 != 0) {
-                        throw CorruptStreamException(
-                            "a two frame Opus packet holds $room bytes, which does not divide in two",
-                            offset.toLong(),
-                        )
+                    count = 2
+                    equalSizes = true
+                    if (!selfDelimited) {
+                        if (remaining % 2 != 0) {
+                            corrupt("a two frame Opus packet holds $remaining bytes, which does not divide in two")
+                        }
+                        lastSize = remaining / 2
+                        sizes[0] = lastSize
                     }
-                    val half = room / 2
-                    frames.add(at until at + half)
-                    frames.add(at + half until end)
                 }
 
                 2 -> {
-                    val first = readLength(data, at, end, offset)
-                    at = first.second
-                    if (at + first.first > end) {
-                        throw CorruptStreamException(
-                            "an Opus frame states ${first.first} bytes and the packet has fewer",
-                            offset.toLong(),
-                        )
-                    }
-                    frames.add(at until at + first.first)
-                    frames.add(at + first.first until end)
+                    count = 2
+                    val bytes = readLength(0)
+                    remaining -= bytes
+                    if (sizes[0] > remaining) corrupt("an Opus frame states ${sizes[0]} bytes and the packet has fewer")
+                    at += bytes
+                    lastSize = remaining - sizes[0]
                 }
 
                 else -> {
-                    if (at >= end) {
-                        throw CorruptStreamException(
-                            "an Opus packet promised a frame count and ended first",
-                            offset.toLong(),
-                        )
-                    }
+                    if (remaining < 1) corrupt("an Opus packet promised a frame count and ended first")
                     val counts = data[at++].toInt() and 0xFF
-                    val count = counts and 0x3F
-                    val variable = (counts and 0x80) != 0
-                    val padded = (counts and 0x40) != 0
-                    if (count < 1) {
-                        throw CorruptStreamException(
-                            "an Opus packet states no frames at all",
-                            offset.toLong(),
-                        )
-                    }
+                    remaining--
+                    count = counts and 0x3F
+                    if (count < 1) corrupt("an Opus packet states no frames at all")
                     if (count * FRAME_SIZES[config] > MAX_SAMPLES) {
-                        throw CorruptStreamException(
+                        corrupt(
                             "an Opus packet of $count frames would decode to more than the " +
                                 "120 milliseconds the format allows",
-                            offset.toLong(),
                         )
                     }
-
-                    if (padded) {
+                    if (counts and 0x40 != 0) {
                         // Padding states its length in as many bytes as it
                         // takes, 254 at a time, so that any amount is codable.
-                        while (true) {
-                            if (at >= end) {
-                                throw CorruptStreamException(
-                                    "an Opus packet's padding ran past its end",
-                                    offset.toLong(),
-                                )
-                            }
+                        do {
+                            if (remaining <= 0) corrupt("an Opus packet's padding ran past its end")
                             val step = data[at++].toInt() and 0xFF
-                            padding += step
-                            if (step != 255) break
-                            padding--
-                        }
+                            remaining--
+                            val bytes = if (step == 255) 254 else step
+                            remaining -= bytes
+                            padding += bytes
+                        } while (step == 255)
                     }
-
-                    var body = end - padding
-                    if (body < at) {
-                        throw CorruptStreamException(
-                            "an Opus packet states more padding than it holds",
-                            offset.toLong(),
-                        )
-                    }
-
-                    if (variable) {
+                    if (remaining < 0) corrupt("an Opus packet states more padding than it holds")
+                    equalSizes = counts and 0x80 == 0
+                    if (!equalSizes) {
                         // Every frame but the last states its length.
-                        val lengths = IntArray(count)
+                        lastSize = remaining
                         for (i in 0 until count - 1) {
-                            val read = readLength(data, at, body, offset)
-                            lengths[i] = read.first
-                            at = read.second
+                            val bytes = readLength(i)
+                            remaining -= bytes
+                            if (sizes[i] > remaining) corrupt("an Opus frame states ${sizes[i]} bytes and the packet has fewer")
+                            at += bytes
+                            lastSize -= bytes + sizes[i]
                         }
-                        var cursor = at
-                        for (i in 0 until count - 1) {
-                            if (cursor + lengths[i] > body) {
-                                throw CorruptStreamException(
-                                    "an Opus frame states ${lengths[i]} bytes and the packet has fewer",
-                                    offset.toLong(),
-                                )
-                            }
-                            frames.add(cursor until cursor + lengths[i])
-                            cursor += lengths[i]
+                        if (lastSize < 0) corrupt("the frames of an Opus packet state more bytes than it holds")
+                    } else if (!selfDelimited) {
+                        lastSize = remaining / count
+                        if (lastSize * count != remaining) {
+                            corrupt("an Opus packet of $count equal frames holds $remaining bytes")
                         }
-                        frames.add(cursor until body)
-                    } else {
-                        val room = body - at
-                        if (room < 0 || room % count != 0) {
-                            throw CorruptStreamException(
-                                "an Opus packet of $count equal frames holds $room bytes",
-                                offset.toLong(),
-                            )
-                        }
-                        val each = room / count
-                        for (i in 0 until count) {
-                            frames.add(at + i * each until at + (i + 1) * each)
-                        }
+                        for (i in 0 until count - 1) sizes[i] = lastSize
                     }
                 }
             }
 
-            for (frame in frames) {
-                if (frame.first > frame.last + 1 || frame.last >= end) {
-                    throw CorruptStreamException("an Opus frame runs past its packet", offset.toLong())
+            if (selfDelimited) {
+                val bytes = readLength(count - 1)
+                remaining -= bytes
+                val last = sizes[count - 1]
+                if (last > remaining) corrupt("an Opus frame states $last bytes and the packet has fewer")
+                at += bytes
+                if (equalSizes) {
+                    if (last * count > remaining) corrupt("an Opus packet of $count equal frames holds $remaining bytes")
+                    for (i in 0 until count - 1) sizes[i] = last
+                } else if (bytes + last > lastSize) {
+                    corrupt("the frames of an Opus packet state more bytes than it holds")
                 }
+            } else {
+                // Every other frame's length is coded in at most two bytes,
+                // which cannot exceed 1275. The last frame's is implied by
+                // what is left, so it has to be checked against the same limit.
+                if (lastSize > MAX_FRAME_BYTES) {
+                    corrupt("an Opus frame of $lastSize bytes exceeds the $MAX_FRAME_BYTES the format allows")
+                }
+                sizes[count - 1] = lastSize
             }
-            // Every other frame's length is coded in at most two bytes, which
-            // cannot exceed 1275. The last frame's is implied by what is left,
-            // so it has to be checked against the same limit.
-            val last = frames.last()
-            if (last.last - last.first + 1 > MAX_FRAME_BYTES) {
-                throw CorruptStreamException(
-                    "an Opus frame of ${last.last - last.first + 1} bytes exceeds the $MAX_FRAME_BYTES the format allows",
-                    offset.toLong(),
-                )
-            }
-            return OpusPacket(config, stereo, frames, padding)
-        }
 
-        /**
-         * Reads a frame length, which is one byte below 252 and two above it.
-         *
-         * Returns the length and where reading stopped.
-         */
-        private fun readLength(data: ByteArray, at: Int, end: Int, packetAt: Int): Pair<Int, Int> {
-            if (at >= end) {
-                throw CorruptStreamException("an Opus frame length ran past the packet", packetAt.toLong())
+            val frames = ArrayList<IntRange>(count)
+            for (i in 0 until count) {
+                frames.add(at until at + sizes[i])
+                at += sizes[i]
             }
-            val first = data[at].toInt() and 0xFF
-            if (first < 252) return first to at + 1
-            if (at + 1 >= end) {
-                throw CorruptStreamException("an Opus frame length ran past the packet", packetAt.toLong())
-            }
-            val second = data[at + 1].toInt() and 0xFF
-            return (second * 4 + first) to at + 2
+            return OpusPacket(config, stereo, frames, padding, padding + at - offset)
         }
 
         /**
