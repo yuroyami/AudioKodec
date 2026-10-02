@@ -16,12 +16,12 @@ allprojects {
 }
 
 dependencies {
-    dokka(projects.kiteaudio)
-    dokka(projects.kiteaudioIo)
+    dokka(projects.audiokodecs)
+    dokka(projects.audiokodecsIo)
 }
 
 dokka {
-    moduleName.set("KiteAudio")
+    moduleName.set("AudioKodecs")
 }
 
 // Shared Kite theme. Sources live in ../_kite-docs; ./_kite-docs/sync.sh copies
@@ -43,7 +43,7 @@ allprojects {
                 if (templates.asFile.exists()) {
                     templatesDir.set(templates)
                 }
-                footerMessage.set("Apache-2.0 · KiteAudio is part of the Kite family.")
+                footerMessage.set("Apache-2.0 · AudioKodecs is part of the Kite family.")
             }
 
             // A module with a Module.md gets its description onto the aggregated

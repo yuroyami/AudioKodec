@@ -18,7 +18,7 @@ C.
    ones need a stated numeric bound and a comment explaining the number.
 2. Malformed-input coverage: truncation at every interesting boundary, and
    mutation of the header fields. No input may produce a throwable outside
-   `KiteAudioException`, and none may hang. A new container goes into the
+   `AudioKodecsException`, and none may hang. A new container goes into the
    shared sweep in `HostileInputTest` rather than getting its own hand-written
    cases.
 3. Seeking and duration tests where the format supports them.
@@ -60,9 +60,9 @@ repository.
 ## Running the tests
 
 ```
-./gradlew :kiteaudio:jvmTest
-./gradlew :kiteaudio:jsNodeTest :kiteaudio:wasmJsNodeTest :kiteaudio:wasmWasiNodeTest
-./gradlew :kiteaudio:macosArm64Test
+./gradlew :audiokodecs:jvmTest
+./gradlew :audiokodecs:jsNodeTest :audiokodecs:wasmJsNodeTest :audiokodecs:wasmWasiNodeTest
+./gradlew :audiokodecs:macosArm64Test
 ```
 
 The oracle suites compare against three outside tools: `ffmpeg` and `ffprobe`

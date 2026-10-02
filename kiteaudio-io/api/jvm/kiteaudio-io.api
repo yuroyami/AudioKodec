@@ -1,8 +1,0 @@
-public final class io/github/yuroyami/kiteaudio/io/KiteAudioIoKt {
-	public static final fun asAudioSink (Lkotlinx/io/RawSink;)Lio/github/yuroyami/kiteaudio/AudioSink;
-	public static final fun asAudioSink (Lkotlinx/io/files/Path;)Lio/github/yuroyami/kiteaudio/AudioSink;
-	public static final fun readAudioSource (Lkotlinx/io/RawSource;J)Lio/github/yuroyami/kiteaudio/AudioSource;
-	public static final fun readAudioSource (Lkotlinx/io/files/Path;J)Lio/github/yuroyami/kiteaudio/AudioSource;
-	public static synthetic fun readAudioSource$default (Lkotlinx/io/RawSource;JILjava/lang/Object;)Lio/github/yuroyami/kiteaudio/AudioSource;
-	public static synthetic fun readAudioSource$default (Lkotlinx/io/files/Path;JILjava/lang/Object;)Lio/github/yuroyami/kiteaudio/AudioSource;
-}

@@ -1,4 +1,4 @@
-# KiteAudio
+# AudioKodecs
 
 Audio containers, codecs and tags written in Kotlin for Kotlin Multiplatform:
 read and write FLAC, WAV, AIFF and AU; decode FLAC, Vorbis, every MPEG audio
@@ -11,12 +11,12 @@ the audio; and run the same code on every target.
 
 **[Documentation](docs/)** · a guide per task, plus the format support table.
 
-KiteAudio is at an early version. Audio covers MPEG Layers I, II and III,
+AudioKodecs is at an early version. Audio covers MPEG Layers I, II and III,
 Vorbis, FLAC both native and inside Ogg, and the uncompressed family. Tag
 reading and editing covers ID3, APE, Vorbis comments and the metadata chunks of
 RIFF, AIFF and Ogg, on any file. [What it reads and writes](#formats) is the whole list,
 [PORTING_STATUS.md](PORTING_STATUS.md) has the detail behind it, and the
-[open issues](https://github.com/yuroyami/KiteAudio/issues) are what comes next.
+[open issues](https://github.com/yuroyami/AudioKodecs/issues) are what comes next.
 Nothing below is aspirational: every format in the tables has tests, and most
 are checked against ffmpeg.
 
@@ -24,7 +24,7 @@ are checked against ffmpeg.
 
 Kotlin Multiplatform has no library that decodes audio in common code. The
 existing choices wrap each platform's own player, which gives you playback and
-not samples, and gives you nothing at all on JS or WebAssembly. KiteAudio
+not samples, and gives you nothing at all on JS or WebAssembly. AudioKodecs
 decodes in `commonMain` with no dependency beyond `kotlin-stdlib`, so the same
 call works on Android, iOS, the JVM, Linux, Windows, watchOS, in a browser and
 in a WASI runtime.
@@ -33,16 +33,16 @@ in a WASI runtime.
 
 ```kotlin
 dependencies {
-    implementation("io.github.yuroyami:kiteaudio:0.1.0")
+    implementation("io.github.yuroyami:audiokodecs:0.1.0")
     // Optional, for reading and writing through kotlinx-io:
-    implementation("io.github.yuroyami:kiteaudio-io:0.1.0")
+    implementation("io.github.yuroyami:audiokodecs-io:0.1.0")
 }
 ```
 
 ## Decode a file
 
 ```kotlin
-val audio = KiteAudio.decode(bytes)
+val audio = AudioKodecs.decode(bytes)
 println("${audio.format.sampleRate} Hz, ${audio.format.channels} channels")
 println("${audio.durationSeconds} seconds")
 // audio.samples is interleaved Float32, nominally -1.0 to 1.0
@@ -54,7 +54,7 @@ println("${audio.durationSeconds} seconds")
 kilobytes per file rather than a full decode.
 
 ```kotlin
-val info = KiteAudio.probe(bytes)
+val info = AudioKodecs.probe(bytes)
 println(info.container.displayName)   // WAV
 println(info.codec.displayName)       // PCM
 println(info.durationFrames)          // 4410000
@@ -68,7 +68,7 @@ instead. Seeking is sample accurate: the decoder lands on the frame you asked
 for, not on the block that contains it.
 
 ```kotlin
-KiteAudio.open(source).use { decoder ->
+AudioKodecs.open(source).use { decoder ->
     decoder.seek(decoder.durationFrames!! / 2)
     while (true) {
         val block = decoder.nextFrame() ?: break
@@ -83,16 +83,16 @@ loop, at the cost of each block staying valid only until the next one.
 ## Write a file
 
 ```kotlin
-val wav = KiteAudio.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16))
-val small = KiteAudio.encode(samples, format, EncodeTarget.wavImaAdpcm())
-val exact = KiteAudio.encode(samples, format, EncodeTarget.wavFloat(32))
+val wav = AudioKodecs.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16))
+val small = AudioKodecs.encode(samples, format, EncodeTarget.wavImaAdpcm())
+val exact = AudioKodecs.encode(samples, format, EncodeTarget.wavFloat(32))
 ```
 
 Reducing the depth of a float or a deeper integer source is where dither
 belongs:
 
 ```kotlin
-KiteAudio.encode(samples, format, EncodeTarget.wav(16, dither = Dither.Tpdf()))
+AudioKodecs.encode(samples, format, EncodeTarget.wav(16, dither = Dither.Tpdf()))
 ```
 
 The source channel layout is never silently relabelled. WAV PCM and float
@@ -111,8 +111,8 @@ rejects a non-empty bundle instead of silently dropping it.
 FLAC decodes bit-exactly and encodes to files the reference decoder accepts.
 
 ```kotlin
-val flac = KiteAudio.encode(samples, format, EncodeTarget.flac(bitDepth = 16, effort = 5))
-val audio = KiteAudio.decode(flac)
+val flac = AudioKodecs.encode(samples, format, EncodeTarget.flac(bitDepth = 16, effort = 5))
+val audio = AudioKodecs.decode(flac)
 ```
 
 `effort` runs from 0 to 8 and trades encoding time against size, the same way
@@ -123,7 +123,7 @@ Every FLAC file carries an MD5 of its own audio, which makes a decoder
 checkable against whichever encoder wrote the file:
 
 ```kotlin
-when (KiteAudio.verifyFlacMd5(bytes)) {
+when (AudioKodecs.verifyFlacMd5(bytes)) {
     true -> println("the audio matches the hash the encoder stored")
     false -> println("this file has been damaged")
     null -> println("this file states no hash")
@@ -146,17 +146,17 @@ decode yet, and `open` says so by name rather than failing obscurely.
 
 Vorbis decodes the whole format: both floor and residue kinds an encoder emits,
 channel coupling, block switching, and up to eight channels reordered into
-KiteAudio's own channel order rather than Vorbis's. It is checked against
+AudioKodecs's own channel order rather than Vorbis's. It is checked against
 libvorbis, sample for sample, at every quality level and every channel count.
 The one thing left out is floor type 0, which no encoder has produced since the
 format's 2001 beta releases; a file using it is named and refused rather than
 guessed at.
 
 ```kotlin
-val info = KiteAudio.probe(oggBytes)
+val info = AudioKodecs.probe(oggBytes)
 println(info.codec.displayName)      // Opus
 println(info.durationSeconds)        // 213.5
-println(KiteAudio.readTags(oggBytes)[TagField.TITLE])
+println(AudioKodecs.readTags(oggBytes)[TagField.TITLE])
 ```
 
 Tags can be rewritten in any single-stream Ogg file. The header pages are
@@ -167,11 +167,11 @@ untouched.
 
 MP3 and its two older layers have no file header at all: a file is a run of
 frames, each stating its own bitrate and sample rate, with tag blocks in front
-and behind that are not audio. KiteAudio reads that layer in full and decodes
+and behind that are not audio. AudioKodecs reads that layer in full and decodes
 all three layers.
 
 ```kotlin
-val info = KiteAudio.probe(mp3Bytes)
+val info = AudioKodecs.probe(mp3Bytes)
 println(info.codec.displayName)      // MP3
 println(info.durationSeconds)        // 213.5, with the encoder's padding off
 println(info.isVariableBitrate)      // true
@@ -195,7 +195,7 @@ before the target and discarding them, so a seek lands on the sample it was
 asked for rather than near it.
 
 ```kotlin
-KiteAudio.open(mp3Bytes).use { decoder ->
+AudioKodecs.open(mp3Bytes).use { decoder ->
     decoder.seek(44_100)                 // one second in, to the sample
     val block = decoder.nextFrame()      // 1152 frames of Float32
 }
@@ -205,15 +205,15 @@ Measured against ffmpeg's own decoders, the output agrees to about one part in a
 million for Layer III and to the same for Layers I and II. Note that ffmpeg
 ships two decoders for the older layers and picks its fixed point one by
 default; the comparison above is against its float decoder, because its two
-disagree with each other by far more than either disagrees with KiteAudio.
+disagree with each other by far more than either disagrees with AudioKodecs.
 
 ## Read and edit tags
 
-Tags work on any file, including the ones KiteAudio cannot decode. A tag block
+Tags work on any file, including the ones AudioKodecs cannot decode. A tag block
 does not need a decoder, so an MP3 or a FLAC has its tags read today.
 
 ```kotlin
-val tags = KiteAudio.readTags(bytes)
+val tags = AudioKodecs.readTags(bytes)
 println(tags[TagField.TITLE])
 println(tags[TagField.ARTIST])
 println(tags.number(TagField.TRACK_NUMBER))
@@ -239,7 +239,7 @@ val edited = tags.edit {
     set(TagField.TRACK_NUMBER, 4)
     remove(TagField.COMMENT)
 }
-val updated = KiteAudio.writeTags(bytes, edited)
+val updated = AudioKodecs.writeTags(bytes, edited)
 ```
 
 Tags are read from ID3v2.2, 2.3 and 2.4, ID3v1 and v1.1, APEv1 and APEv2,
@@ -252,13 +252,13 @@ container.
 
 ## Name a format
 
-The sniffer names 29 formats, including those KiteAudio cannot decode. That is
+The sniffer names 29 formats, including those AudioKodecs cannot decode. That is
 deliberate: a file it cannot read is one you can route somewhere else, and
 guessing from the extension is worse.
 
 ```kotlin
-val container = KiteAudio.sniff(firstBytes)   // AudioContainer.FLAC
-if (container?.isDecodable == true) { /* KiteAudio can read it */ }
+val container = AudioKodecs.sniff(firstBytes)   // AudioContainer.FLAC
+if (container?.isDecodable == true) { /* AudioKodecs can read it */ }
 ```
 
 ## Formats
@@ -305,7 +305,7 @@ mantissa. A decoder for a lossless coding therefore also implements
 `IntPcmAccess`, which hands back the stored integers untouched:
 
 ```kotlin
-KiteAudio.open(bytes).use { decoder ->
+AudioKodecs.open(bytes).use { decoder ->
     if (decoder is IntPcmAccess) {
         val block = decoder.nextIntFrame()   // exactly what the file holds
     }
@@ -314,7 +314,7 @@ KiteAudio.open(bytes).use { decoder ->
 
 ## Malformed input
 
-Every failure is a `KiteAudioException`: `UnsupportedFormatException`,
+Every failure is an `AudioKodecsException`: `UnsupportedFormatException`,
 `UnsupportedFeatureException`, `CorruptStreamException`,
 `TruncatedStreamException` or `AllocationGuardException`. Nothing else escapes
 a decoder, whatever the input, and a fuzz suite holds that claim up.
@@ -322,16 +322,16 @@ a decoder, whatever the input, and a fuzz suite holds that claim up.
 A truncated file throws by default and can be salvaged instead:
 
 ```kotlin
-KiteAudio.decode(bytes, DecodeOptions(tolerant = true))
+AudioKodecs.decode(bytes, DecodeOptions(tolerant = true))
 ```
 
-`DecodeOptions.maxAllocationBytes` caps what a header can make KiteAudio
+`DecodeOptions.maxAllocationBytes` caps what a header can make AudioKodecs
 allocate. It defaults to one gibibyte, and the guard fires before the
 allocation is attempted rather than after it fails.
 
 ## Targets
 
-`kiteaudio` builds for 22 targets: Android (minSdk 21), `jvm`, `iosArm64`,
+`audiokodecs` builds for 22 targets: Android (minSdk 21), `jvm`, `iosArm64`,
 `iosSimulatorArm64`, `iosX64`, `macosArm64`, `tvosArm64`,
 `tvosSimulatorArm64`, `watchosArm32`, `watchosArm64`, `watchosDeviceArm64`,
 `watchosSimulatorArm64`, `androidNativeArm32`, `androidNativeArm64`,
@@ -339,18 +339,18 @@ allocation is attempted rather than after it fails.
 `js` (browser and Node), `wasmJs` (browser and Node), `wasmWasi` (Node). There
 is no `macosX64`, following Kotlin's deprecation of Intel-Apple targets.
 
-`kiteaudio-io` builds for the same set without `js`, which is what kotlinx-io
+`audiokodecs-io` builds for the same set without `js`, which is what kotlinx-io
 publishes.
 
 ## Reading and writing files
 
-The core never touches the filesystem, so it ports everywhere. `kiteaudio-io`
+The core never touches the filesystem, so it ports everywhere. `audiokodecs-io`
 adds the bridge to kotlinx-io:
 
 ```kotlin
-val info = Path("song.wav").readAudioSource().use { KiteAudio.probe(it) }
+val info = Path("song.wav").readAudioSource().use { AudioKodecs.probe(it) }
 Path("out.wav").asAudioSink().use { sink ->
-    KiteAudio.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
+    AudioKodecs.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
 }
 ```
 

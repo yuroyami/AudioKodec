@@ -1,6 +1,6 @@
 # References
 
-What KiteAudio was written from, and what it may be written from next.
+What AudioKodecs was written from, and what it may be written from next.
 
 Nothing listed here is redistributed. Specifications are read; implementations
 are either studied under a permissive licence or left unopened. The
@@ -170,7 +170,7 @@ Things that look like transcription errors and are not:
   skips seven levels where its first group has them.
 - The standard prints two of the seventeen C constants truncated rather than
   rounded: 1.77777777777 where correct rounding gives ...778, and 1.06666666666
-  where it gives ...667. This is the same class of tie as D[196] above. KiteAudio
+  where it gives ...667. This is the same class of tie as D[196] above. AudioKodecs
   computes the dequantisation rather than transcribing it, which sidesteps both.
 
 One source disagreement found, recorded because it is exactly the failure mode
@@ -200,7 +200,7 @@ freely published and may be implemented from without qualification.
 RFC 6716 also carries the complete reference implementation in its body, under a
 BSD-style licence stated in the RFC itself, and the same code is published as
 libopus under BSD-3-Clause. That is permissive and not on the never-opened list,
-so it may be ported from. Where KiteAudio follows it rather than the prose, the
+so it may be ported from. Where AudioKodecs follows it rather than the prose, the
 comment says so.
 
 The range decoder is the one place where following the reference exactly matters

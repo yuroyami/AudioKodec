@@ -1,4 +1,4 @@
-# KiteAudio
+# AudioKodecs
 
 Audio containers, codecs and tags written in Kotlin for Kotlin Multiplatform.
 Read and write FLAC, WAV, AIFF and AU; decode FLAC, Vorbis, every MPEG audio
@@ -7,35 +7,35 @@ the audio; and run the same code on every target.
 
 This release covers MPEG Layers I, II and III, FLAC (natively and inside Ogg),
 Vorbis, the uncompressed family, the Ogg container and tags. The
-[format status](https://github.com/yuroyami/KiteAudio/blob/main/PORTING_STATUS.md)
+[format status](https://github.com/yuroyami/AudioKodecs/blob/main/PORTING_STATUS.md)
 page is the full list of what works today and what is coming.
 
 ## Install
 
 ```kotlin
 dependencies {
-    implementation("io.github.yuroyami:kiteaudio:0.1.0")
+    implementation("io.github.yuroyami:audiokodecs:0.1.0")
     // Optional, for reading and writing through kotlinx-io:
-    implementation("io.github.yuroyami:kiteaudio-io:0.1.0")
+    implementation("io.github.yuroyami:audiokodecs-io:0.1.0")
 }
 ```
 
 ## Decode a file
 
 ```kotlin
-val audio = KiteAudio.decode(bytes)
+val audio = AudioKodecs.decode(bytes)
 println("${audio.format.sampleRate} Hz, ${audio.format.channels} channels")
 println("${audio.durationSeconds} seconds")
 ```
 
 `audio.samples` is interleaved Float32, nominally between -1.0 and 1.0. A
-lossy coding can go slightly outside that range, and KiteAudio does not clamp
+lossy coding can go slightly outside that range, and AudioKodecs does not clamp
 it, because clamping belongs at the point where samples become integers again.
 
 ## Read a header without decoding
 
 ```kotlin
-val info = KiteAudio.probe(bytes)
+val info = AudioKodecs.probe(bytes)
 println(info.container.displayName)
 println(info.codec.displayName)
 println(info.durationSeconds)
@@ -51,7 +51,7 @@ anything long. Seeking is sample accurate: the decoder lands on the frame you
 asked for, not on the block containing it.
 
 ```kotlin
-KiteAudio.open(source).use { decoder ->
+AudioKodecs.open(source).use { decoder ->
     decoder.seek(decoder.durationFrames!! / 2)
     while (true) {
         val block = decoder.nextFrame() ?: break
@@ -81,7 +81,7 @@ keep.
 ## Write a file
 
 ```kotlin
-val wav = KiteAudio.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16))
+val wav = AudioKodecs.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16))
 ```
 
 The targets available are FLAC, integer PCM and IEEE float in WAV, AIFF and AU,
@@ -92,10 +92,10 @@ belongs. It replaces the distortion of plain rounding with a small amount of
 noise, which is what you want at 16 bits and below:
 
 ```kotlin
-KiteAudio.encode(samples, format, EncodeTarget.wav(16, dither = Dither.Tpdf()))
+AudioKodecs.encode(samples, format, EncodeTarget.wav(16, dither = Dither.Tpdf()))
 ```
 
-Files above 4 GiB are written as RF64 automatically. KiteAudio reserves the
+Files above 4 GiB are written as RF64 automatically. AudioKodecs reserves the
 space for the larger size fields in every WAV it writes, and uses it when the
 file turns out to need it.
 
@@ -107,7 +107,7 @@ mantissa. Decoders for lossless codings therefore also implement
 `IntPcmAccess`:
 
 ```kotlin
-KiteAudio.open(bytes).use { decoder ->
+AudioKodecs.open(bytes).use { decoder ->
     if (decoder is IntPcmAccess) {
         val block = decoder.nextIntFrame()   // exactly what the file holds
     }
@@ -122,7 +122,7 @@ cursor.
 FLAC decodes bit-exactly, and encodes to files the reference decoder accepts.
 
 ```kotlin
-val flac = KiteAudio.encode(samples, format, EncodeTarget.flac(bitDepth = 16, effort = 5))
+val flac = AudioKodecs.encode(samples, format, EncodeTarget.flac(bitDepth = 16, effort = 5))
 ```
 
 `effort` runs from 0 to 8. It changes how hard the encoder looks for a good
@@ -136,7 +136,7 @@ Every FLAC file carries an MD5 of its own unencoded audio, written by whichever
 program encoded it. That makes a decoder checkable against a third party:
 
 ```kotlin
-when (KiteAudio.verifyFlacMd5(bytes)) {
+when (AudioKodecs.verifyFlacMd5(bytes)) {
     true -> println("the audio matches the hash the encoder stored")
     false -> println("this file has been damaged")
     null -> println("this file states no hash")
@@ -149,7 +149,7 @@ in front of every playback.
 ### Seeking
 
 FLAC frames vary in size, so a position cannot be turned into a byte offset by
-multiplying. KiteAudio uses the seek table when the file has one and scans frame
+multiplying. AudioKodecs uses the seek table when the file has one and scans frame
 headers when it does not. Both checksums in every frame are verified during that
 scan, so a byte sequence that happens to look like a frame sync is rejected
 rather than decoded as audio.
@@ -170,7 +170,7 @@ touched, and it is what the tests check.
 ## Ogg
 
 Ogg is a container, not a codec, so what a file holds depends on the mapping
-inside it. KiteAudio reads the container in full: pages and their checksums,
+inside it. AudioKodecs reads the container in full: pages and their checksums,
 packets reassembled across page boundaries, files carrying several logical
 streams at once, and files chained one after another.
 
@@ -182,7 +182,7 @@ streams at once, and files chained one after another.
 | Speex | read | not yet |
 
 ```kotlin
-val info = KiteAudio.probe(oggBytes)
+val info = AudioKodecs.probe(oggBytes)
 println(info.codec.displayName)     // Opus
 println(info.durationSeconds)       // 213.5
 ```
@@ -206,12 +206,12 @@ tail of the block before.
 Two consequences of that reach the API. Blocks vary in size within one file,
 because an encoder switches to short blocks at a transient, so the frame count
 of what `nextFrame` returns varies too. And a seek cannot begin at an arbitrary
-packet, because a block with no predecessor has no left half; KiteAudio restarts
+packet, because a block with no predecessor has no left half; AudioKodecs restarts
 on a page boundary before the target and discards up to it, so a seek is still
 sample accurate.
 
 ```kotlin
-KiteAudio.open(oggBytes).use { decoder ->
+AudioKodecs.open(oggBytes).use { decoder ->
     decoder.seek(48_000)                    // one second in, at 48 kHz
     val block = decoder.nextFrame()
     println(block?.positionFrames)          // 48000
@@ -220,7 +220,7 @@ KiteAudio.open(oggBytes).use { decoder ->
 
 Everything an encoder emits is covered: floor type 1, all three residue types,
 channel coupling, block switching, and up to eight channels, which come out in
-KiteAudio's channel order rather than Vorbis's own. Vorbis puts the centre
+AudioKodecs's channel order rather than Vorbis's own. Vorbis puts the centre
 channel second, between the two front channels, where WAV and everything derived
 from it puts it third.
 
@@ -249,7 +249,7 @@ bitrate, sample rate and channel mode, with tag blocks in front of and behind
 the audio that are not part of it. Reading such a file means finding the frames.
 
 ```kotlin
-val info = KiteAudio.probe(mp3Bytes)
+val info = AudioKodecs.probe(mp3Bytes)
 println(info.durationSeconds)     // exact, not estimated
 println(info.dataOffset)          // where the audio begins, past the tags
 ```
@@ -275,7 +275,7 @@ far enough before the target to reconstruct that state, then discards samples
 until it lands on the exact requested frame.
 
 ```kotlin
-KiteAudio.open(mp3Bytes).use { decoder ->
+AudioKodecs.open(mp3Bytes).use { decoder ->
     decoder.seek(44_100)                 // one second in, to the sample
     val block = decoder.nextFrame()      // 1152 frames of Float32
 }
@@ -286,11 +286,11 @@ their output agrees to about one part in a million.
 
 ## Tags
 
-Tag reading works on any file, including the ones KiteAudio cannot decode yet.
+Tag reading works on any file, including the ones AudioKodecs cannot decode yet.
 A tag block does not need a decoder.
 
 ```kotlin
-val tags = KiteAudio.readTags(bytes)
+val tags = AudioKodecs.readTags(bytes)
 println(tags[TagField.TITLE])
 println(tags.all(TagField.ARTIST))    // a file may name more than one
 println(tags.number(TagField.TRACK_NUMBER))
@@ -330,14 +330,14 @@ Editing rewrites the tag blocks and copies the audio across unchanged. It never
 decodes or re-encodes, so it is safe on a lossy file.
 
 ```kotlin
-val edited = KiteAudio.readTags(bytes).edit {
+val edited = AudioKodecs.readTags(bytes).edit {
     set(TagField.TITLE, "New title")
     set(TagField.TRACK_NUMBER, 4)
     set(TagField.TRACK_TOTAL, 11)
     remove(TagField.COMMENT)
     addPicture(TagPicture(mimeType = "image/jpeg", bytes = coverBytes))
 }
-val updated = KiteAudio.writeTags(bytes, edited)
+val updated = AudioKodecs.writeTags(bytes, edited)
 ```
 
 This produces a new file rather than editing one in place. Write it to a
@@ -347,7 +347,7 @@ operation safe against a crash halfway through.
 `TagWriteOptions` controls the details:
 
 ```kotlin
-KiteAudio.writeTags(
+AudioKodecs.writeTags(
     bytes,
     edited,
     TagWriteOptions(
@@ -367,14 +367,14 @@ for (picture in tags.pictures) {
 }
 ```
 
-The bytes are the image file exactly as it was stored. KiteAudio does not
+The bytes are the image file exactly as it was stored. AudioKodecs does not
 decode it, and does not need to: pass them to KiteImage, or to whatever the
 platform uses.
 
 ### Loudness
 
 Two conventions exist and they are five decibels apart. ReplayGain 2 measures
-against -18 LUFS; Opus writes `R128_TRACK_GAIN` against -23 LUFS. KiteAudio
+against -18 LUFS; Opus writes `R128_TRACK_GAIN` against -23 LUFS. AudioKodecs
 reports both as decibels and says which was found, so applying one as the other
 is not a mistake you can make by accident.
 
@@ -389,7 +389,7 @@ tags.replayGain?.let { gain ->
 
 An `AudioFormat` carries the speaker position of every channel, in the order
 the samples are interleaved. Files that state their layout, such as a WAV with
-a channel mask, keep it through decoding, and KiteAudio writes the mask back
+a channel mask, keep it through decoding, and AudioKodecs writes the mask back
 out for files with more than two channels.
 
 ```kotlin
@@ -402,7 +402,7 @@ channels.
 
 ## Handling bad input
 
-Every failure KiteAudio reports is a `KiteAudioException`:
+Every failure AudioKodecs reports is an `AudioKodecsException`:
 
 | Exception | Meaning |
 |---|---|
@@ -417,7 +417,7 @@ Nothing else escapes a decoder, whatever the input.
 A truncated file throws by default. To salvage what is there instead:
 
 ```kotlin
-KiteAudio.decode(bytes, DecodeOptions(tolerant = true))
+AudioKodecs.decode(bytes, DecodeOptions(tolerant = true))
 ```
 
 `DecodeOptions.maxAllocationBytes` caps what any single allocation may be, and
@@ -427,13 +427,13 @@ it fails.
 ## Reading and writing files
 
 The core never touches the filesystem, which is what lets it build for every
-Kotlin target. `kiteaudio-io` adds the bridge:
+Kotlin target. `audiokodecs-io` adds the bridge:
 
 ```kotlin
-val info = Path("song.wav").readAudioSource().use { KiteAudio.probe(it) }
+val info = Path("song.wav").readAudioSource().use { AudioKodecs.probe(it) }
 
 Path("out.wav").asAudioSink().use { sink ->
-    KiteAudio.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
+    AudioKodecs.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
 }
 ```
 
@@ -444,11 +444,11 @@ advance.
 
 For a large file, implement `AudioSource` over a seekable handle of your own.
 It has three members, and the platform APIs behind it differ enough that
-KiteAudio does not try to wrap them all.
+AudioKodecs does not try to wrap them all.
 
 ## Playing the result
 
-KiteAudio decodes and does not play. The result is Float32 PCM, which every
+AudioKodecs decodes and does not play. The result is Float32 PCM, which every
 platform sink accepts:
 
 | Platform | Sink | Notes |

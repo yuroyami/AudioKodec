@@ -1,0 +1,465 @@
+package io.github.yuroyami.audiokodecs.internal.tag
+
+import io.github.yuroyami.audiokodecs.tag.RawTagEntry
+import io.github.yuroyami.audiokodecs.tag.TagField
+import io.github.yuroyami.audiokodecs.tag.TagFormat
+
+/**
+ * Which native key means which [TagField].
+ *
+ * Every tag format spells the same facts differently, and several spell them
+ * more than one way. This is the whole translation, in one place, so that
+ * adding a format means adding a table rather than threading a new case
+ * through the readers.
+ */
+internal object TagMapping {
+
+    /** ID3v2.3 and 2.4 frame identifiers. */
+    private val ID3V2_4: Map<String, TagField> = mapOf(
+        "TIT2" to TagField.TITLE,
+        "TIT1" to TagField.GROUPING,
+        "TIT3" to TagField.DESCRIPTION,
+        "TPE1" to TagField.ARTIST,
+        "TPE2" to TagField.ALBUM_ARTIST,
+        "TPE3" to TagField.CONDUCTOR,
+        "TPE4" to TagField.REMIXER,
+        "TALB" to TagField.ALBUM,
+        "TCOM" to TagField.COMPOSER,
+        "TEXT" to TagField.LYRICIST,
+        "TCON" to TagField.GENRE,
+        "TYER" to TagField.DATE,
+        "TDRC" to TagField.DATE,
+        "TDRL" to TagField.DATE,
+        "TDOR" to TagField.ORIGINAL_DATE,
+        "TORY" to TagField.ORIGINAL_DATE,
+        "TBPM" to TagField.BPM,
+        "TKEY" to TagField.KEY,
+        "TSRC" to TagField.ISRC,
+        "TCOP" to TagField.COPYRIGHT,
+        "TENC" to TagField.ENCODER,
+        "TSSE" to TagField.ENCODING_SETTINGS,
+        "TPUB" to TagField.PUBLISHER,
+        "TLAN" to TagField.LANGUAGE,
+        "TMOO" to TagField.MOOD,
+        "TMED" to TagField.MEDIA,
+        "TCMP" to TagField.COMPILATION,
+        "TSOT" to TagField.SORT_TITLE,
+        "TSOP" to TagField.SORT_ARTIST,
+        "TSOA" to TagField.SORT_ALBUM,
+        "TSO2" to TagField.SORT_ALBUM_ARTIST,
+        "TSOC" to TagField.SORT_COMPOSER,
+        "GRP1" to TagField.GROUPING,
+        "COMM" to TagField.COMMENT,
+        "USLT" to TagField.LYRICS,
+        "WOAR" to TagField.URL,
+    )
+
+    /** ID3v2.2 frame identifiers, which are the same fields three letters wide. */
+    private val ID3V2_2: Map<String, TagField> = mapOf(
+        "TT2" to TagField.TITLE,
+        "TT1" to TagField.GROUPING,
+        "TT3" to TagField.DESCRIPTION,
+        "TP1" to TagField.ARTIST,
+        "TP2" to TagField.ALBUM_ARTIST,
+        "TP3" to TagField.CONDUCTOR,
+        "TP4" to TagField.REMIXER,
+        "TAL" to TagField.ALBUM,
+        "TCM" to TagField.COMPOSER,
+        "TXT" to TagField.LYRICIST,
+        "TCO" to TagField.GENRE,
+        "TYE" to TagField.DATE,
+        "TOR" to TagField.ORIGINAL_DATE,
+        "TBP" to TagField.BPM,
+        "TKE" to TagField.KEY,
+        "TRC" to TagField.ISRC,
+        "TCR" to TagField.COPYRIGHT,
+        "TEN" to TagField.ENCODER,
+        "TSS" to TagField.ENCODING_SETTINGS,
+        "TPB" to TagField.PUBLISHER,
+        "TLA" to TagField.LANGUAGE,
+        "TMT" to TagField.MEDIA,
+        "TCP" to TagField.COMPILATION,
+        "COM" to TagField.COMMENT,
+        "ULT" to TagField.LYRICS,
+        "WAR" to TagField.URL,
+    )
+
+    /** Frames whose value is a number and a total joined by a slash. */
+    private val NUMBER_AND_TOTAL: Map<String, Pair<TagField, TagField>> = mapOf(
+        "TRCK" to (TagField.TRACK_NUMBER to TagField.TRACK_TOTAL),
+        "TRK" to (TagField.TRACK_NUMBER to TagField.TRACK_TOTAL),
+        "TPOS" to (TagField.DISC_NUMBER to TagField.DISC_TOTAL),
+        "TPA" to (TagField.DISC_NUMBER to TagField.DISC_TOTAL),
+    )
+
+    /** Vorbis comment keys, which are also what FLAC uses. */
+    private val VORBIS: Map<String, TagField> = mapOf(
+        "TITLE" to TagField.TITLE,
+        "ARTIST" to TagField.ARTIST,
+        "ALBUM" to TagField.ALBUM,
+        "ALBUMARTIST" to TagField.ALBUM_ARTIST,
+        "ALBUM ARTIST" to TagField.ALBUM_ARTIST,
+        "TRACKNUMBER" to TagField.TRACK_NUMBER,
+        "TRACKTOTAL" to TagField.TRACK_TOTAL,
+        "TOTALTRACKS" to TagField.TRACK_TOTAL,
+        "DISCNUMBER" to TagField.DISC_NUMBER,
+        "DISCTOTAL" to TagField.DISC_TOTAL,
+        "TOTALDISCS" to TagField.DISC_TOTAL,
+        "DATE" to TagField.DATE,
+        "YEAR" to TagField.DATE,
+        "ORIGINALDATE" to TagField.ORIGINAL_DATE,
+        "GENRE" to TagField.GENRE,
+        "COMPOSER" to TagField.COMPOSER,
+        "PERFORMER" to TagField.PERFORMER,
+        "CONDUCTOR" to TagField.CONDUCTOR,
+        "LYRICIST" to TagField.LYRICIST,
+        "REMIXER" to TagField.REMIXER,
+        "COMMENT" to TagField.COMMENT,
+        "DESCRIPTION" to TagField.DESCRIPTION,
+        "LYRICS" to TagField.LYRICS,
+        "UNSYNCEDLYRICS" to TagField.LYRICS,
+        "GROUPING" to TagField.GROUPING,
+        "BPM" to TagField.BPM,
+        "KEY" to TagField.KEY,
+        "INITIALKEY" to TagField.KEY,
+        "ISRC" to TagField.ISRC,
+        "COPYRIGHT" to TagField.COPYRIGHT,
+        "ENCODER" to TagField.ENCODER,
+        "ENCODED-BY" to TagField.ENCODER,
+        "ENCODEDBY" to TagField.ENCODER,
+        "ENCODING" to TagField.ENCODING_SETTINGS,
+        "ENCODERSETTINGS" to TagField.ENCODING_SETTINGS,
+        "PUBLISHER" to TagField.PUBLISHER,
+        "LABEL" to TagField.PUBLISHER,
+        "ORGANIZATION" to TagField.PUBLISHER,
+        "LANGUAGE" to TagField.LANGUAGE,
+        "MOOD" to TagField.MOOD,
+        "MEDIA" to TagField.MEDIA,
+        "CATALOGNUMBER" to TagField.CATALOG_NUMBER,
+        "BARCODE" to TagField.BARCODE,
+        "COMPILATION" to TagField.COMPILATION,
+        "TITLESORT" to TagField.SORT_TITLE,
+        "ARTISTSORT" to TagField.SORT_ARTIST,
+        "ALBUMSORT" to TagField.SORT_ALBUM,
+        "ALBUMARTISTSORT" to TagField.SORT_ALBUM_ARTIST,
+        "COMPOSERSORT" to TagField.SORT_COMPOSER,
+        "MUSICBRAINZ_TRACKID" to TagField.MUSICBRAINZ_RECORDING_ID,
+        "MUSICBRAINZ_RELEASETRACKID" to TagField.MUSICBRAINZ_TRACK_ID,
+        "MUSICBRAINZ_ALBUMID" to TagField.MUSICBRAINZ_RELEASE_ID,
+        "MUSICBRAINZ_RELEASEGROUPID" to TagField.MUSICBRAINZ_RELEASE_GROUP_ID,
+        "MUSICBRAINZ_ARTISTID" to TagField.MUSICBRAINZ_ARTIST_ID,
+        "MUSICBRAINZ_ALBUMARTISTID" to TagField.MUSICBRAINZ_RELEASE_ARTIST_ID,
+        "ACOUSTID_ID" to TagField.ACOUSTID_ID,
+        "ISRC" to TagField.ISRC,
+    )
+
+    /** APE keys, which are written as words with capitals. */
+    private val APE: Map<String, TagField> = VORBIS + mapOf(
+        "TITLE" to TagField.TITLE,
+        "ARTIST" to TagField.ARTIST,
+        "ALBUM" to TagField.ALBUM,
+        "ALBUM ARTIST" to TagField.ALBUM_ARTIST,
+        "ALBUMARTIST" to TagField.ALBUM_ARTIST,
+        "YEAR" to TagField.DATE,
+        "GENRE" to TagField.GENRE,
+        "COMPOSER" to TagField.COMPOSER,
+        "CONDUCTOR" to TagField.CONDUCTOR,
+        "PERFORMER" to TagField.PERFORMER,
+        "COMMENT" to TagField.COMMENT,
+        "COPYRIGHT" to TagField.COPYRIGHT,
+        "PUBLISHER" to TagField.PUBLISHER,
+        "LABEL" to TagField.PUBLISHER,
+        "ISRC" to TagField.ISRC,
+        "LANGUAGE" to TagField.LANGUAGE,
+        "MEDIA" to TagField.MEDIA,
+        "CATALOG" to TagField.CATALOG_NUMBER,
+        "CATALOGNUMBER" to TagField.CATALOG_NUMBER,
+        "BARCODE" to TagField.BARCODE,
+        "COMPILATION" to TagField.COMPILATION,
+        "LYRICS" to TagField.LYRICS,
+        "BPM" to TagField.BPM,
+        "TOOL NAME" to TagField.ENCODER,
+        "TOOL VERSION" to TagField.ENCODING_SETTINGS,
+    )
+
+    /** The `LIST INFO` keys of a RIFF file. */
+    private val RIFF_INFO: Map<String, TagField> = mapOf(
+        "INAM" to TagField.TITLE,
+        "IART" to TagField.ARTIST,
+        "IPRD" to TagField.ALBUM,
+        "ICRD" to TagField.DATE,
+        "IGNR" to TagField.GENRE,
+        "ICMT" to TagField.COMMENT,
+        "ITRK" to TagField.TRACK_NUMBER,
+        "IPRT" to TagField.TRACK_NUMBER,
+        "ICOP" to TagField.COPYRIGHT,
+        "ISFT" to TagField.ENCODER,
+        "IWRI" to TagField.LYRICIST,
+        "IMUS" to TagField.COMPOSER,
+        "IENG" to TagField.PERFORMER,
+        "ILNG" to TagField.LANGUAGE,
+        "ISRF" to TagField.MEDIA,
+        "ISBJ" to TagField.DESCRIPTION,
+    )
+
+    /** The text chunks of an AIFF file. */
+    private val AIFF_TEXT: Map<String, TagField> = mapOf(
+        "NAME" to TagField.TITLE,
+        "AUTH" to TagField.ARTIST,
+        "(c) " to TagField.COPYRIGHT,
+        "ANNO" to TagField.COMMENT,
+    )
+
+    /** ID3v1's four named fields, which the reader emits under these keys. */
+    private val ID3V1: Map<String, TagField> = mapOf(
+        "TITLE" to TagField.TITLE,
+        "ARTIST" to TagField.ARTIST,
+        "ALBUM" to TagField.ALBUM,
+        "YEAR" to TagField.DATE,
+        "COMMENT" to TagField.COMMENT,
+        "GENRE" to TagField.GENRE,
+        "TRACK" to TagField.TRACK_NUMBER,
+    )
+
+    /** Descriptions of `TXXX` frames that carry a field with no frame of its own. */
+    private val USER_TEXT: Map<String, TagField> = mapOf(
+        "MUSICBRAINZ ARTIST ID" to TagField.MUSICBRAINZ_ARTIST_ID,
+        "MUSICBRAINZ ALBUM ID" to TagField.MUSICBRAINZ_RELEASE_ID,
+        "MUSICBRAINZ ALBUM ARTIST ID" to TagField.MUSICBRAINZ_RELEASE_ARTIST_ID,
+        "MUSICBRAINZ RELEASE GROUP ID" to TagField.MUSICBRAINZ_RELEASE_GROUP_ID,
+        "MUSICBRAINZ RELEASE TRACK ID" to TagField.MUSICBRAINZ_TRACK_ID,
+        "ACOUSTID ID" to TagField.ACOUSTID_ID,
+        "CATALOGNUMBER" to TagField.CATALOG_NUMBER,
+        "BARCODE" to TagField.BARCODE,
+        "LABEL" to TagField.PUBLISHER,
+        "ALBUMARTISTSORT" to TagField.SORT_ALBUM_ARTIST,
+        "COMPILATION" to TagField.COMPILATION,
+        "ORIGINALDATE" to TagField.ORIGINAL_DATE,
+        "MOOD" to TagField.MOOD,
+        "ISRC" to TagField.ISRC,
+    )
+
+    /**
+     * The field an entry carries, or null when it is one AudioKodecs does not
+     * model.
+     *
+     * An unmapped entry is not lost: it stays in the raw view under its own
+     * key, which is what a caller reaching for something unusual reads.
+     */
+    fun fieldFor(format: TagFormat, entry: RawTagEntry): TagField? {
+        val key = entry.key
+        return when (format) {
+            TagFormat.ID3V2_2 -> {
+                if (key == "TXX") userTextField(entry) else ID3V2_2[key]
+            }
+            TagFormat.ID3V2_3, TagFormat.ID3V2_4 -> {
+                if (key == "TXXX") userTextField(entry) else ID3V2_4[key]
+            }
+            TagFormat.VORBIS_COMMENT -> VORBIS[key.uppercase()]
+            TagFormat.APEV1, TagFormat.APEV2 -> APE[key.uppercase()]
+            TagFormat.RIFF_INFO -> RIFF_INFO[key]
+            TagFormat.AIFF_TEXT -> AIFF_TEXT[key]
+            TagFormat.ID3V1 -> ID3V1[key]
+            TagFormat.MP4_ILST -> MP4_ILST[key]
+            else -> null
+        }
+    }
+
+    /** MP4 metadata atom names. */
+    private val MP4_ILST: Map<String, TagField> = mapOf(
+        "©nam" to TagField.TITLE,
+        "©ART" to TagField.ARTIST,
+        "©alb" to TagField.ALBUM,
+        "aART" to TagField.ALBUM_ARTIST,
+        "©day" to TagField.DATE,
+        "©gen" to TagField.GENRE,
+        "gnre" to TagField.GENRE,
+        "©cmt" to TagField.COMMENT,
+        "©wrt" to TagField.COMPOSER,
+        "©lyr" to TagField.LYRICS,
+        "©too" to TagField.ENCODER,
+        "©grp" to TagField.GROUPING,
+        "cprt" to TagField.COPYRIGHT,
+        "tmpo" to TagField.BPM,
+        "cpil" to TagField.COMPILATION,
+        "soal" to TagField.SORT_ALBUM,
+        "soar" to TagField.SORT_ARTIST,
+        "soaa" to TagField.SORT_ALBUM_ARTIST,
+        "sonm" to TagField.SORT_TITLE,
+        "soco" to TagField.SORT_COMPOSER,
+        "desc" to TagField.DESCRIPTION,
+        "ldes" to TagField.DESCRIPTION,
+        "catg" to TagField.GROUPING,
+        "©con" to TagField.CONDUCTOR,
+    )
+
+    /**
+     * The field a `TXXX` frame carries, from its description.
+     *
+     * Two conventions are in use. Some programs write a fixed set of
+     * descriptions for the fields ID3v2 has no frame for, which is the table
+     * above. Others, ffmpeg among them, write any metadata key they were given
+     * as a `TXXX` whose description is the key, using the same names Vorbis
+     * comments use. A comment written that way is a `TXXX` called `comment`
+     * rather than a `COMM` frame, and a reader that only knew the first
+     * convention would silently lose it.
+     */
+    private fun userTextField(entry: RawTagEntry): TagField? {
+        val description = entry.description?.trim()?.uppercase() ?: return null
+        return USER_TEXT[description] ?: VORBIS[description]
+    }
+
+    /**
+     * The pair of fields a value like `3/12` fills, or null when the key is
+     * not one of those.
+     */
+    fun numberAndTotalFor(format: TagFormat, key: String): Pair<TagField, TagField>? {
+        return when (format) {
+            TagFormat.ID3V2_2, TagFormat.ID3V2_3, TagFormat.ID3V2_4 -> NUMBER_AND_TOTAL[key]
+            TagFormat.APEV1, TagFormat.APEV2 -> when (key.uppercase()) {
+                "TRACK" -> TagField.TRACK_NUMBER to TagField.TRACK_TOTAL
+                "DISC" -> TagField.DISC_NUMBER to TagField.DISC_TOTAL
+                else -> null
+            }
+            TagFormat.VORBIS_COMMENT -> when (key.uppercase()) {
+                "TRACKNUMBER" -> TagField.TRACK_NUMBER to TagField.TRACK_TOTAL
+                "DISCNUMBER" -> TagField.DISC_NUMBER to TagField.DISC_TOTAL
+                else -> null
+            }
+            TagFormat.MP4_ILST -> when (key) {
+                "trkn" -> TagField.TRACK_NUMBER to TagField.TRACK_TOTAL
+                "disk" -> TagField.DISC_NUMBER to TagField.DISC_TOTAL
+                else -> null
+            }
+            else -> null
+        }
+    }
+
+    /**
+     * The ID3v2.3 or 2.4 frame that holds [field], or null when the field has
+     * no frame of its own and belongs in a `TXXX`.
+     *
+     * This cannot be the read table turned around. Three frames read as a
+     * date, and only one of them is the right frame to write: `TDRC` in
+     * version 2.4 and `TYER` in version 2.3, which is the single place the two
+     * versions differ enough to matter here.
+     */
+    fun id3FrameFor(field: TagField, major: Int): String? = when (field) {
+        TagField.TITLE -> "TIT2"
+        TagField.ARTIST -> "TPE1"
+        TagField.ALBUM -> "TALB"
+        TagField.ALBUM_ARTIST -> "TPE2"
+        TagField.TRACK_NUMBER -> "TRCK"
+        TagField.DISC_NUMBER -> "TPOS"
+        TagField.DATE -> if (major >= 4) "TDRC" else "TYER"
+        TagField.ORIGINAL_DATE -> if (major >= 4) "TDOR" else "TORY"
+        TagField.GENRE -> "TCON"
+        TagField.COMPOSER -> "TCOM"
+        TagField.CONDUCTOR -> "TPE3"
+        TagField.REMIXER -> "TPE4"
+        TagField.LYRICIST -> "TEXT"
+        TagField.GROUPING -> "TIT1"
+        TagField.DESCRIPTION -> "TIT3"
+        TagField.BPM -> "TBPM"
+        TagField.KEY -> "TKEY"
+        TagField.ISRC -> "TSRC"
+        TagField.COPYRIGHT -> "TCOP"
+        TagField.ENCODER -> "TENC"
+        TagField.ENCODING_SETTINGS -> "TSSE"
+        TagField.PUBLISHER -> "TPUB"
+        TagField.LANGUAGE -> "TLAN"
+        TagField.MEDIA -> "TMED"
+        TagField.COMPILATION -> "TCMP"
+        TagField.SORT_TITLE -> "TSOT"
+        TagField.SORT_ARTIST -> "TSOP"
+        TagField.SORT_ALBUM -> "TSOA"
+        TagField.SORT_ALBUM_ARTIST -> "TSO2"
+        TagField.SORT_COMPOSER -> "TSOC"
+        TagField.COMMENT -> "COMM"
+        TagField.LYRICS -> "USLT"
+        TagField.URL -> "WOAR"
+        // Version 2.4 added a mood frame. In 2.3 it goes in a TXXX.
+        TagField.MOOD -> if (major >= 4) "TMOO" else null
+        // Everything else has no frame of its own and is written as a TXXX,
+        // or is the total half of a pair and is written into the slash form.
+        else -> null
+    }
+
+    /** The `TXXX` description that holds [field], or null. */
+    fun userTextDescriptionFor(field: TagField): String? {
+        for ((description, mapped) in USER_TEXT) {
+            if (mapped == field) return description
+        }
+        return null
+    }
+
+    /** The preferred APE key for [field], or null when APE has no convention. */
+    fun apeKeyFor(field: TagField): String? {
+        for ((key, mapped) in APE) {
+            if (mapped == field) return key
+        }
+        return null
+    }
+
+    /** The Vorbis comment key for [field], or null. */
+    fun vorbisKeyFor(field: TagField): String? = when (field) {
+        TagField.ALBUM_ARTIST -> "ALBUMARTIST"
+        TagField.TRACK_NUMBER -> "TRACKNUMBER"
+        TagField.TRACK_TOTAL -> "TRACKTOTAL"
+        TagField.DISC_NUMBER -> "DISCNUMBER"
+        TagField.DISC_TOTAL -> "DISCTOTAL"
+        TagField.ENCODER -> "ENCODER"
+        TagField.PUBLISHER -> "PUBLISHER"
+        TagField.SORT_TITLE -> "TITLESORT"
+        TagField.SORT_ARTIST -> "ARTISTSORT"
+        TagField.SORT_ALBUM -> "ALBUMSORT"
+        TagField.SORT_ALBUM_ARTIST -> "ALBUMARTISTSORT"
+        TagField.SORT_COMPOSER -> "COMPOSERSORT"
+        TagField.MUSICBRAINZ_RECORDING_ID -> "MUSICBRAINZ_TRACKID"
+        TagField.MUSICBRAINZ_TRACK_ID -> "MUSICBRAINZ_RELEASETRACKID"
+        TagField.MUSICBRAINZ_RELEASE_ID -> "MUSICBRAINZ_ALBUMID"
+        TagField.MUSICBRAINZ_RELEASE_GROUP_ID -> "MUSICBRAINZ_RELEASEGROUPID"
+        TagField.MUSICBRAINZ_ARTIST_ID -> "MUSICBRAINZ_ARTISTID"
+        TagField.MUSICBRAINZ_RELEASE_ARTIST_ID -> "MUSICBRAINZ_ALBUMARTISTID"
+        TagField.ACOUSTID_ID -> "ACOUSTID_ID"
+        TagField.ORIGINAL_DATE -> "ORIGINALDATE"
+        TagField.CATALOG_NUMBER -> "CATALOGNUMBER"
+        TagField.ENCODING_SETTINGS -> "ENCODERSETTINGS"
+        TagField.URL -> null
+        else -> field.name
+    }
+
+    /**
+     * The RIFF `INFO` key for [field], or null when RIFF has no place for it.
+     *
+     * Written out rather than derived from the read table, because two keys
+     * read as a track number and only one of them should be written.
+     */
+    fun riffInfoKeyFor(field: TagField): String? = when (field) {
+        TagField.TITLE -> "INAM"
+        TagField.ARTIST -> "IART"
+        TagField.ALBUM -> "IPRD"
+        TagField.DATE -> "ICRD"
+        TagField.GENRE -> "IGNR"
+        TagField.COMMENT -> "ICMT"
+        TagField.TRACK_NUMBER -> "ITRK"
+        TagField.COPYRIGHT -> "ICOP"
+        TagField.ENCODER -> "ISFT"
+        TagField.LYRICIST -> "IWRI"
+        TagField.COMPOSER -> "IMUS"
+        TagField.PERFORMER -> "IENG"
+        TagField.LANGUAGE -> "ILNG"
+        TagField.MEDIA -> "ISRF"
+        TagField.DESCRIPTION -> "ISBJ"
+        else -> null
+    }
+
+    /** The AIFF text chunk for [field], or null. */
+    fun aiffChunkFor(field: TagField): String? = when (field) {
+        TagField.TITLE -> "NAME"
+        TagField.ARTIST -> "AUTH"
+        TagField.COPYRIGHT -> "(c) "
+        TagField.COMMENT -> "ANNO"
+        else -> null
+    }
+}

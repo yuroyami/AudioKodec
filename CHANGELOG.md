@@ -40,7 +40,7 @@ audio and Ogg.
   positions. Vorbis and FLAC inside Ogg both decode and seek; Opus and Speex
   have their headers, length and comments read.
 - Vorbis, decoded: floor type 1, residue types 0, 1 and 2, channel coupling,
-  block switching, and up to eight channels reordered into KiteAudio's channel
+  block switching, and up to eight channels reordered into AudioKodecs's channel
   order. Checked against libvorbis sample for sample at every quality level.
   Floor type 0 is parsed and refused, because no encoder has emitted it since
   the format's 2001 beta releases.
@@ -55,4 +55,4 @@ audio and Ogg.
   `Xing`, `Info` and `VBRI` headers, LAME gapless trimming, and exact
   durations for constant and variable bitrate files alike. Layers I, II and
   III all decode, with sample-accurate seeking.
-- `kiteaudio-io`, the optional kotlinx-io bridge.
+- `audiokodecs-io`, the optional kotlinx-io bridge.

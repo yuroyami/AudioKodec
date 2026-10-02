@@ -6,7 +6,7 @@ agp = "9.2.1"
 vanniktechPublish = "0.36.0"
 dokka = "2.2.0"
 
-# :kiteaudio-io only. The :kiteaudio core stays kotlin-stdlib-only.
+# :audiokodecs-io only. The :audiokodecs core stays kotlin-stdlib-only.
 kotlinx-io = "0.9.1"
 
 [libraries] ######################################################################################

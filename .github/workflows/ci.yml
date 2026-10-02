@@ -42,20 +42,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Core tests (JVM)
-        run: ./gradlew :kiteaudio:jvmTest :kiteaudio-io:jvmTest --stacktrace
+        run: ./gradlew :audiokodecs:jvmTest :audiokodecs-io:jvmTest --stacktrace
 
       - name: Core tests (JS + wasm)
         run: >-
           ./gradlew
-          :kiteaudio:jsNodeTest
-          :kiteaudio:wasmJsNodeTest
-          :kiteaudio:wasmWasiNodeTest
-          :kiteaudio-io:wasmJsNodeTest
-          :kiteaudio-io:wasmWasiNodeTest
+          :audiokodecs:jsNodeTest
+          :audiokodecs:wasmJsNodeTest
+          :audiokodecs:wasmWasiNodeTest
+          :audiokodecs-io:wasmJsNodeTest
+          :audiokodecs-io:wasmWasiNodeTest
           --stacktrace
 
       - name: Core tests (native)
-        run: ./gradlew :kiteaudio:linuxX64Test :kiteaudio-io:linuxX64Test --stacktrace
+        run: ./gradlew :audiokodecs:linuxX64Test :audiokodecs-io:linuxX64Test --stacktrace
 
       - name: Public API check
         run: ./gradlew checkKotlinAbi --stacktrace
@@ -84,7 +84,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: MinGW x64 tests
-        run: .\gradlew.bat :kiteaudio:mingwX64Test :kiteaudio-io:mingwX64Test --stacktrace
+        run: .\gradlew.bat :audiokodecs:mingwX64Test :audiokodecs-io:mingwX64Test --stacktrace
 
       - name: Upload test reports
         if: failure()
@@ -112,10 +112,10 @@ jobs:
       - name: Native tests
         run: >-
           ./gradlew
-          :kiteaudio:macosArm64Test
-          :kiteaudio:iosSimulatorArm64Test
-          :kiteaudio-io:macosArm64Test
-          :kiteaudio-io:iosSimulatorArm64Test
+          :audiokodecs:macosArm64Test
+          :audiokodecs:iosSimulatorArm64Test
+          :audiokodecs-io:macosArm64Test
+          :audiokodecs-io:iosSimulatorArm64Test
           --stacktrace
 
       - name: Upload test reports
@@ -140,10 +140,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Android host tests
-        run: ./gradlew :kiteaudio:testAndroidHostTest :kiteaudio-io:testAndroidHostTest --stacktrace
+        run: ./gradlew :audiokodecs:testAndroidHostTest :audiokodecs-io:testAndroidHostTest --stacktrace
 
       - name: Assemble every target
-        run: ./gradlew :kiteaudio:assemble :kiteaudio-io:assemble --stacktrace
+        run: ./gradlew :audiokodecs:assemble :audiokodecs-io:assemble --stacktrace
 
   docs:
     name: API documentation
