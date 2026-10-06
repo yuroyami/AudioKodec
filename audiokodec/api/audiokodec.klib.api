@@ -1,0 +1,756 @@
+// Klib ABI Dump
+// Targets: [androidNativeArm32, androidNativeArm64, androidNativeX64, androidNativeX86, iosArm64, iosSimulatorArm64, iosX64, js, linuxArm64, linuxX64, macosArm64, mingwX64, tvosArm64, tvosSimulatorArm64, wasmJs, wasmWasi, watchosArm32, watchosArm64, watchosDeviceArm64, watchosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.yuroyami:audiokodec>
+final enum class io.github.yuroyami.audiokodec.tag/PictureType : kotlin/Enum<io.github.yuroyami.audiokodec.tag/PictureType> { // io.github.yuroyami.audiokodec.tag/PictureType|null[0]
+    enum entry ARTIST // io.github.yuroyami.audiokodec.tag/PictureType.ARTIST|null[0]
+    enum entry BACK_COVER // io.github.yuroyami.audiokodec.tag/PictureType.BACK_COVER|null[0]
+    enum entry BAND // io.github.yuroyami.audiokodec.tag/PictureType.BAND|null[0]
+    enum entry BAND_LOGO // io.github.yuroyami.audiokodec.tag/PictureType.BAND_LOGO|null[0]
+    enum entry BRIGHT_COLOURED_FISH // io.github.yuroyami.audiokodec.tag/PictureType.BRIGHT_COLOURED_FISH|null[0]
+    enum entry COMPOSER // io.github.yuroyami.audiokodec.tag/PictureType.COMPOSER|null[0]
+    enum entry CONDUCTOR // io.github.yuroyami.audiokodec.tag/PictureType.CONDUCTOR|null[0]
+    enum entry DURING_PERFORMANCE // io.github.yuroyami.audiokodec.tag/PictureType.DURING_PERFORMANCE|null[0]
+    enum entry DURING_RECORDING // io.github.yuroyami.audiokodec.tag/PictureType.DURING_RECORDING|null[0]
+    enum entry FILE_ICON // io.github.yuroyami.audiokodec.tag/PictureType.FILE_ICON|null[0]
+    enum entry FRONT_COVER // io.github.yuroyami.audiokodec.tag/PictureType.FRONT_COVER|null[0]
+    enum entry ILLUSTRATION // io.github.yuroyami.audiokodec.tag/PictureType.ILLUSTRATION|null[0]
+    enum entry LEAD_ARTIST // io.github.yuroyami.audiokodec.tag/PictureType.LEAD_ARTIST|null[0]
+    enum entry LEAFLET_PAGE // io.github.yuroyami.audiokodec.tag/PictureType.LEAFLET_PAGE|null[0]
+    enum entry LYRICIST // io.github.yuroyami.audiokodec.tag/PictureType.LYRICIST|null[0]
+    enum entry MEDIA // io.github.yuroyami.audiokodec.tag/PictureType.MEDIA|null[0]
+    enum entry OTHER // io.github.yuroyami.audiokodec.tag/PictureType.OTHER|null[0]
+    enum entry OTHER_FILE_ICON // io.github.yuroyami.audiokodec.tag/PictureType.OTHER_FILE_ICON|null[0]
+    enum entry PUBLISHER_LOGO // io.github.yuroyami.audiokodec.tag/PictureType.PUBLISHER_LOGO|null[0]
+    enum entry RECORDING_LOCATION // io.github.yuroyami.audiokodec.tag/PictureType.RECORDING_LOCATION|null[0]
+    enum entry SCREEN_CAPTURE // io.github.yuroyami.audiokodec.tag/PictureType.SCREEN_CAPTURE|null[0]
+
+    final val entries // io.github.yuroyami.audiokodec.tag/PictureType.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec.tag/PictureType> // io.github.yuroyami.audiokodec.tag/PictureType.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec.tag/PictureType // io.github.yuroyami.audiokodec.tag/PictureType.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec.tag/PictureType> // io.github.yuroyami.audiokodec.tag/PictureType.values|values#static(){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec.tag/PictureType.Companion|null[0]
+        final fun fromCode(kotlin/Int): io.github.yuroyami.audiokodec.tag/PictureType // io.github.yuroyami.audiokodec.tag/PictureType.Companion.fromCode|fromCode(kotlin.Int){}[0]
+    }
+}
+
+final enum class io.github.yuroyami.audiokodec.tag/TagField : kotlin/Enum<io.github.yuroyami.audiokodec.tag/TagField> { // io.github.yuroyami.audiokodec.tag/TagField|null[0]
+    enum entry ACOUSTID_ID // io.github.yuroyami.audiokodec.tag/TagField.ACOUSTID_ID|null[0]
+    enum entry ALBUM // io.github.yuroyami.audiokodec.tag/TagField.ALBUM|null[0]
+    enum entry ALBUM_ARTIST // io.github.yuroyami.audiokodec.tag/TagField.ALBUM_ARTIST|null[0]
+    enum entry ARTIST // io.github.yuroyami.audiokodec.tag/TagField.ARTIST|null[0]
+    enum entry BARCODE // io.github.yuroyami.audiokodec.tag/TagField.BARCODE|null[0]
+    enum entry BPM // io.github.yuroyami.audiokodec.tag/TagField.BPM|null[0]
+    enum entry CATALOG_NUMBER // io.github.yuroyami.audiokodec.tag/TagField.CATALOG_NUMBER|null[0]
+    enum entry COMMENT // io.github.yuroyami.audiokodec.tag/TagField.COMMENT|null[0]
+    enum entry COMPILATION // io.github.yuroyami.audiokodec.tag/TagField.COMPILATION|null[0]
+    enum entry COMPOSER // io.github.yuroyami.audiokodec.tag/TagField.COMPOSER|null[0]
+    enum entry CONDUCTOR // io.github.yuroyami.audiokodec.tag/TagField.CONDUCTOR|null[0]
+    enum entry COPYRIGHT // io.github.yuroyami.audiokodec.tag/TagField.COPYRIGHT|null[0]
+    enum entry DATE // io.github.yuroyami.audiokodec.tag/TagField.DATE|null[0]
+    enum entry DESCRIPTION // io.github.yuroyami.audiokodec.tag/TagField.DESCRIPTION|null[0]
+    enum entry DISC_NUMBER // io.github.yuroyami.audiokodec.tag/TagField.DISC_NUMBER|null[0]
+    enum entry DISC_TOTAL // io.github.yuroyami.audiokodec.tag/TagField.DISC_TOTAL|null[0]
+    enum entry ENCODER // io.github.yuroyami.audiokodec.tag/TagField.ENCODER|null[0]
+    enum entry ENCODING_SETTINGS // io.github.yuroyami.audiokodec.tag/TagField.ENCODING_SETTINGS|null[0]
+    enum entry GENRE // io.github.yuroyami.audiokodec.tag/TagField.GENRE|null[0]
+    enum entry GROUPING // io.github.yuroyami.audiokodec.tag/TagField.GROUPING|null[0]
+    enum entry ISRC // io.github.yuroyami.audiokodec.tag/TagField.ISRC|null[0]
+    enum entry KEY // io.github.yuroyami.audiokodec.tag/TagField.KEY|null[0]
+    enum entry LANGUAGE // io.github.yuroyami.audiokodec.tag/TagField.LANGUAGE|null[0]
+    enum entry LYRICIST // io.github.yuroyami.audiokodec.tag/TagField.LYRICIST|null[0]
+    enum entry LYRICS // io.github.yuroyami.audiokodec.tag/TagField.LYRICS|null[0]
+    enum entry MEDIA // io.github.yuroyami.audiokodec.tag/TagField.MEDIA|null[0]
+    enum entry MOOD // io.github.yuroyami.audiokodec.tag/TagField.MOOD|null[0]
+    enum entry MUSICBRAINZ_ARTIST_ID // io.github.yuroyami.audiokodec.tag/TagField.MUSICBRAINZ_ARTIST_ID|null[0]
+    enum entry MUSICBRAINZ_RECORDING_ID // io.github.yuroyami.audiokodec.tag/TagField.MUSICBRAINZ_RECORDING_ID|null[0]
+    enum entry MUSICBRAINZ_RELEASE_ARTIST_ID // io.github.yuroyami.audiokodec.tag/TagField.MUSICBRAINZ_RELEASE_ARTIST_ID|null[0]
+    enum entry MUSICBRAINZ_RELEASE_GROUP_ID // io.github.yuroyami.audiokodec.tag/TagField.MUSICBRAINZ_RELEASE_GROUP_ID|null[0]
+    enum entry MUSICBRAINZ_RELEASE_ID // io.github.yuroyami.audiokodec.tag/TagField.MUSICBRAINZ_RELEASE_ID|null[0]
+    enum entry MUSICBRAINZ_TRACK_ID // io.github.yuroyami.audiokodec.tag/TagField.MUSICBRAINZ_TRACK_ID|null[0]
+    enum entry ORIGINAL_DATE // io.github.yuroyami.audiokodec.tag/TagField.ORIGINAL_DATE|null[0]
+    enum entry PERFORMER // io.github.yuroyami.audiokodec.tag/TagField.PERFORMER|null[0]
+    enum entry PUBLISHER // io.github.yuroyami.audiokodec.tag/TagField.PUBLISHER|null[0]
+    enum entry REMIXER // io.github.yuroyami.audiokodec.tag/TagField.REMIXER|null[0]
+    enum entry SORT_ALBUM // io.github.yuroyami.audiokodec.tag/TagField.SORT_ALBUM|null[0]
+    enum entry SORT_ALBUM_ARTIST // io.github.yuroyami.audiokodec.tag/TagField.SORT_ALBUM_ARTIST|null[0]
+    enum entry SORT_ARTIST // io.github.yuroyami.audiokodec.tag/TagField.SORT_ARTIST|null[0]
+    enum entry SORT_COMPOSER // io.github.yuroyami.audiokodec.tag/TagField.SORT_COMPOSER|null[0]
+    enum entry SORT_TITLE // io.github.yuroyami.audiokodec.tag/TagField.SORT_TITLE|null[0]
+    enum entry TITLE // io.github.yuroyami.audiokodec.tag/TagField.TITLE|null[0]
+    enum entry TRACK_NUMBER // io.github.yuroyami.audiokodec.tag/TagField.TRACK_NUMBER|null[0]
+    enum entry TRACK_TOTAL // io.github.yuroyami.audiokodec.tag/TagField.TRACK_TOTAL|null[0]
+    enum entry URL // io.github.yuroyami.audiokodec.tag/TagField.URL|null[0]
+
+    final val entries // io.github.yuroyami.audiokodec.tag/TagField.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec.tag/TagField> // io.github.yuroyami.audiokodec.tag/TagField.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val isNumeric // io.github.yuroyami.audiokodec.tag/TagField.isNumeric|{}isNumeric[0]
+        final fun <get-isNumeric>(): kotlin/Boolean // io.github.yuroyami.audiokodec.tag/TagField.isNumeric.<get-isNumeric>|<get-isNumeric>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec.tag/TagField // io.github.yuroyami.audiokodec.tag/TagField.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec.tag/TagField> // io.github.yuroyami.audiokodec.tag/TagField.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.audiokodec.tag/TagFormat : kotlin/Enum<io.github.yuroyami.audiokodec.tag/TagFormat> { // io.github.yuroyami.audiokodec.tag/TagFormat|null[0]
+    enum entry AIFF_TEXT // io.github.yuroyami.audiokodec.tag/TagFormat.AIFF_TEXT|null[0]
+    enum entry APEV1 // io.github.yuroyami.audiokodec.tag/TagFormat.APEV1|null[0]
+    enum entry APEV2 // io.github.yuroyami.audiokodec.tag/TagFormat.APEV2|null[0]
+    enum entry BWF_BEXT // io.github.yuroyami.audiokodec.tag/TagFormat.BWF_BEXT|null[0]
+    enum entry ID3V1 // io.github.yuroyami.audiokodec.tag/TagFormat.ID3V1|null[0]
+    enum entry ID3V2_2 // io.github.yuroyami.audiokodec.tag/TagFormat.ID3V2_2|null[0]
+    enum entry ID3V2_3 // io.github.yuroyami.audiokodec.tag/TagFormat.ID3V2_3|null[0]
+    enum entry ID3V2_4 // io.github.yuroyami.audiokodec.tag/TagFormat.ID3V2_4|null[0]
+    enum entry LYRICS3 // io.github.yuroyami.audiokodec.tag/TagFormat.LYRICS3|null[0]
+    enum entry MP4_ILST // io.github.yuroyami.audiokodec.tag/TagFormat.MP4_ILST|null[0]
+    enum entry RIFF_INFO // io.github.yuroyami.audiokodec.tag/TagFormat.RIFF_INFO|null[0]
+    enum entry VORBIS_COMMENT // io.github.yuroyami.audiokodec.tag/TagFormat.VORBIS_COMMENT|null[0]
+
+    final val displayName // io.github.yuroyami.audiokodec.tag/TagFormat.displayName|{}displayName[0]
+        final fun <get-displayName>(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagFormat.displayName.<get-displayName>|<get-displayName>(){}[0]
+    final val entries // io.github.yuroyami.audiokodec.tag/TagFormat.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec.tag/TagFormat> // io.github.yuroyami.audiokodec.tag/TagFormat.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val precedence // io.github.yuroyami.audiokodec.tag/TagFormat.precedence|{}precedence[0]
+        final fun <get-precedence>(): kotlin/Int // io.github.yuroyami.audiokodec.tag/TagFormat.precedence.<get-precedence>|<get-precedence>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec.tag/TagFormat // io.github.yuroyami.audiokodec.tag/TagFormat.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec.tag/TagFormat> // io.github.yuroyami.audiokodec.tag/TagFormat.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.audiokodec/AudioChannel : kotlin/Enum<io.github.yuroyami.audiokodec/AudioChannel> { // io.github.yuroyami.audiokodec/AudioChannel|null[0]
+    enum entry BACK_CENTER // io.github.yuroyami.audiokodec/AudioChannel.BACK_CENTER|null[0]
+    enum entry BACK_LEFT // io.github.yuroyami.audiokodec/AudioChannel.BACK_LEFT|null[0]
+    enum entry BACK_RIGHT // io.github.yuroyami.audiokodec/AudioChannel.BACK_RIGHT|null[0]
+    enum entry FRONT_CENTER // io.github.yuroyami.audiokodec/AudioChannel.FRONT_CENTER|null[0]
+    enum entry FRONT_LEFT // io.github.yuroyami.audiokodec/AudioChannel.FRONT_LEFT|null[0]
+    enum entry FRONT_LEFT_OF_CENTER // io.github.yuroyami.audiokodec/AudioChannel.FRONT_LEFT_OF_CENTER|null[0]
+    enum entry FRONT_RIGHT // io.github.yuroyami.audiokodec/AudioChannel.FRONT_RIGHT|null[0]
+    enum entry FRONT_RIGHT_OF_CENTER // io.github.yuroyami.audiokodec/AudioChannel.FRONT_RIGHT_OF_CENTER|null[0]
+    enum entry LOW_FREQUENCY // io.github.yuroyami.audiokodec/AudioChannel.LOW_FREQUENCY|null[0]
+    enum entry SIDE_LEFT // io.github.yuroyami.audiokodec/AudioChannel.SIDE_LEFT|null[0]
+    enum entry SIDE_RIGHT // io.github.yuroyami.audiokodec/AudioChannel.SIDE_RIGHT|null[0]
+    enum entry TOP_BACK_CENTER // io.github.yuroyami.audiokodec/AudioChannel.TOP_BACK_CENTER|null[0]
+    enum entry TOP_BACK_LEFT // io.github.yuroyami.audiokodec/AudioChannel.TOP_BACK_LEFT|null[0]
+    enum entry TOP_BACK_RIGHT // io.github.yuroyami.audiokodec/AudioChannel.TOP_BACK_RIGHT|null[0]
+    enum entry TOP_CENTER // io.github.yuroyami.audiokodec/AudioChannel.TOP_CENTER|null[0]
+    enum entry TOP_FRONT_CENTER // io.github.yuroyami.audiokodec/AudioChannel.TOP_FRONT_CENTER|null[0]
+    enum entry TOP_FRONT_LEFT // io.github.yuroyami.audiokodec/AudioChannel.TOP_FRONT_LEFT|null[0]
+    enum entry TOP_FRONT_RIGHT // io.github.yuroyami.audiokodec/AudioChannel.TOP_FRONT_RIGHT|null[0]
+    enum entry UNKNOWN // io.github.yuroyami.audiokodec/AudioChannel.UNKNOWN|null[0]
+
+    final val entries // io.github.yuroyami.audiokodec/AudioChannel.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec/AudioChannel> // io.github.yuroyami.audiokodec/AudioChannel.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val waveMaskBit // io.github.yuroyami.audiokodec/AudioChannel.waveMaskBit|{}waveMaskBit[0]
+        final fun <get-waveMaskBit>(): kotlin/Int // io.github.yuroyami.audiokodec/AudioChannel.waveMaskBit.<get-waveMaskBit>|<get-waveMaskBit>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec/AudioChannel // io.github.yuroyami.audiokodec/AudioChannel.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec/AudioChannel> // io.github.yuroyami.audiokodec/AudioChannel.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.audiokodec/AudioCodec : kotlin/Enum<io.github.yuroyami.audiokodec/AudioCodec> { // io.github.yuroyami.audiokodec/AudioCodec|null[0]
+    enum entry AAC // io.github.yuroyami.audiokodec/AudioCodec.AAC|null[0]
+    enum entry AC3 // io.github.yuroyami.audiokodec/AudioCodec.AC3|null[0]
+    enum entry ALAC // io.github.yuroyami.audiokodec/AudioCodec.ALAC|null[0]
+    enum entry AMR_NB // io.github.yuroyami.audiokodec/AudioCodec.AMR_NB|null[0]
+    enum entry AMR_WB // io.github.yuroyami.audiokodec/AudioCodec.AMR_WB|null[0]
+    enum entry APE // io.github.yuroyami.audiokodec/AudioCodec.APE|null[0]
+    enum entry A_LAW // io.github.yuroyami.audiokodec/AudioCodec.A_LAW|null[0]
+    enum entry DSD // io.github.yuroyami.audiokodec/AudioCodec.DSD|null[0]
+    enum entry FLAC // io.github.yuroyami.audiokodec/AudioCodec.FLAC|null[0]
+    enum entry GSM // io.github.yuroyami.audiokodec/AudioCodec.GSM|null[0]
+    enum entry IMA_ADPCM // io.github.yuroyami.audiokodec/AudioCodec.IMA_ADPCM|null[0]
+    enum entry MP1 // io.github.yuroyami.audiokodec/AudioCodec.MP1|null[0]
+    enum entry MP2 // io.github.yuroyami.audiokodec/AudioCodec.MP2|null[0]
+    enum entry MP3 // io.github.yuroyami.audiokodec/AudioCodec.MP3|null[0]
+    enum entry MS_ADPCM // io.github.yuroyami.audiokodec/AudioCodec.MS_ADPCM|null[0]
+    enum entry MUSEPACK // io.github.yuroyami.audiokodec/AudioCodec.MUSEPACK|null[0]
+    enum entry MU_LAW // io.github.yuroyami.audiokodec/AudioCodec.MU_LAW|null[0]
+    enum entry OPUS // io.github.yuroyami.audiokodec/AudioCodec.OPUS|null[0]
+    enum entry PCM_FLOAT // io.github.yuroyami.audiokodec/AudioCodec.PCM_FLOAT|null[0]
+    enum entry PCM_INTEGER // io.github.yuroyami.audiokodec/AudioCodec.PCM_INTEGER|null[0]
+    enum entry SPEEX // io.github.yuroyami.audiokodec/AudioCodec.SPEEX|null[0]
+    enum entry TTA // io.github.yuroyami.audiokodec/AudioCodec.TTA|null[0]
+    enum entry UNKNOWN // io.github.yuroyami.audiokodec/AudioCodec.UNKNOWN|null[0]
+    enum entry VORBIS // io.github.yuroyami.audiokodec/AudioCodec.VORBIS|null[0]
+    enum entry WAVPACK // io.github.yuroyami.audiokodec/AudioCodec.WAVPACK|null[0]
+
+    final val displayName // io.github.yuroyami.audiokodec/AudioCodec.displayName|{}displayName[0]
+        final fun <get-displayName>(): kotlin/String // io.github.yuroyami.audiokodec/AudioCodec.displayName.<get-displayName>|<get-displayName>(){}[0]
+    final val entries // io.github.yuroyami.audiokodec/AudioCodec.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec/AudioCodec> // io.github.yuroyami.audiokodec/AudioCodec.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val isLossless // io.github.yuroyami.audiokodec/AudioCodec.isLossless|{}isLossless[0]
+        final fun <get-isLossless>(): kotlin/Boolean // io.github.yuroyami.audiokodec/AudioCodec.isLossless.<get-isLossless>|<get-isLossless>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec/AudioCodec // io.github.yuroyami.audiokodec/AudioCodec.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec/AudioCodec> // io.github.yuroyami.audiokodec/AudioCodec.values|values#static(){}[0]
+}
+
+final enum class io.github.yuroyami.audiokodec/AudioContainer : kotlin/Enum<io.github.yuroyami.audiokodec/AudioContainer> { // io.github.yuroyami.audiokodec/AudioContainer|null[0]
+    enum entry AC3 // io.github.yuroyami.audiokodec/AudioContainer.AC3|null[0]
+    enum entry ADIF // io.github.yuroyami.audiokodec/AudioContainer.ADIF|null[0]
+    enum entry ADTS // io.github.yuroyami.audiokodec/AudioContainer.ADTS|null[0]
+    enum entry AIFF // io.github.yuroyami.audiokodec/AudioContainer.AIFF|null[0]
+    enum entry AMR_NB // io.github.yuroyami.audiokodec/AudioContainer.AMR_NB|null[0]
+    enum entry AMR_WB // io.github.yuroyami.audiokodec/AudioContainer.AMR_WB|null[0]
+    enum entry APE // io.github.yuroyami.audiokodec/AudioContainer.APE|null[0]
+    enum entry ASF // io.github.yuroyami.audiokodec/AudioContainer.ASF|null[0]
+    enum entry AU // io.github.yuroyami.audiokodec/AudioContainer.AU|null[0]
+    enum entry CAF // io.github.yuroyami.audiokodec/AudioContainer.CAF|null[0]
+    enum entry DFF // io.github.yuroyami.audiokodec/AudioContainer.DFF|null[0]
+    enum entry DSF // io.github.yuroyami.audiokodec/AudioContainer.DSF|null[0]
+    enum entry DTS // io.github.yuroyami.audiokodec/AudioContainer.DTS|null[0]
+    enum entry FLAC // io.github.yuroyami.audiokodec/AudioContainer.FLAC|null[0]
+    enum entry MATROSKA // io.github.yuroyami.audiokodec/AudioContainer.MATROSKA|null[0]
+    enum entry MIDI // io.github.yuroyami.audiokodec/AudioContainer.MIDI|null[0]
+    enum entry MP4 // io.github.yuroyami.audiokodec/AudioContainer.MP4|null[0]
+    enum entry MPEG_AUDIO // io.github.yuroyami.audiokodec/AudioContainer.MPEG_AUDIO|null[0]
+    enum entry MPEG_TS // io.github.yuroyami.audiokodec/AudioContainer.MPEG_TS|null[0]
+    enum entry MUSEPACK // io.github.yuroyami.audiokodec/AudioContainer.MUSEPACK|null[0]
+    enum entry OGG // io.github.yuroyami.audiokodec/AudioContainer.OGG|null[0]
+    enum entry OPTIMFROG // io.github.yuroyami.audiokodec/AudioContainer.OPTIMFROG|null[0]
+    enum entry RF64 // io.github.yuroyami.audiokodec/AudioContainer.RF64|null[0]
+    enum entry SHORTEN // io.github.yuroyami.audiokodec/AudioContainer.SHORTEN|null[0]
+    enum entry TAK // io.github.yuroyami.audiokodec/AudioContainer.TAK|null[0]
+    enum entry TTA // io.github.yuroyami.audiokodec/AudioContainer.TTA|null[0]
+    enum entry WAV // io.github.yuroyami.audiokodec/AudioContainer.WAV|null[0]
+    enum entry WAVE64 // io.github.yuroyami.audiokodec/AudioContainer.WAVE64|null[0]
+    enum entry WAVPACK // io.github.yuroyami.audiokodec/AudioContainer.WAVPACK|null[0]
+
+    final val displayName // io.github.yuroyami.audiokodec/AudioContainer.displayName|{}displayName[0]
+        final fun <get-displayName>(): kotlin/String // io.github.yuroyami.audiokodec/AudioContainer.displayName.<get-displayName>|<get-displayName>(){}[0]
+    final val entries // io.github.yuroyami.audiokodec/AudioContainer.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec/AudioContainer> // io.github.yuroyami.audiokodec/AudioContainer.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val extension // io.github.yuroyami.audiokodec/AudioContainer.extension|{}extension[0]
+        final fun <get-extension>(): kotlin/String // io.github.yuroyami.audiokodec/AudioContainer.extension.<get-extension>|<get-extension>(){}[0]
+    final val isDecodable // io.github.yuroyami.audiokodec/AudioContainer.isDecodable|{}isDecodable[0]
+        final fun <get-isDecodable>(): kotlin/Boolean // io.github.yuroyami.audiokodec/AudioContainer.isDecodable.<get-isDecodable>|<get-isDecodable>(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec/AudioContainer // io.github.yuroyami.audiokodec/AudioContainer.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec/AudioContainer> // io.github.yuroyami.audiokodec/AudioContainer.values|values#static(){}[0]
+}
+
+abstract interface io.github.yuroyami.audiokodec/AudioDecoder : kotlin/AutoCloseable { // io.github.yuroyami.audiokodec/AudioDecoder|null[0]
+    abstract val durationFrames // io.github.yuroyami.audiokodec/AudioDecoder.durationFrames|{}durationFrames[0]
+        abstract fun <get-durationFrames>(): kotlin/Long? // io.github.yuroyami.audiokodec/AudioDecoder.durationFrames.<get-durationFrames>|<get-durationFrames>(){}[0]
+    abstract val format // io.github.yuroyami.audiokodec/AudioDecoder.format|{}format[0]
+        abstract fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/AudioDecoder.format.<get-format>|<get-format>(){}[0]
+    abstract val info // io.github.yuroyami.audiokodec/AudioDecoder.info|{}info[0]
+        abstract fun <get-info>(): io.github.yuroyami.audiokodec/AudioInfo // io.github.yuroyami.audiokodec/AudioDecoder.info.<get-info>|<get-info>(){}[0]
+    abstract val positionFrames // io.github.yuroyami.audiokodec/AudioDecoder.positionFrames|{}positionFrames[0]
+        abstract fun <get-positionFrames>(): kotlin/Long // io.github.yuroyami.audiokodec/AudioDecoder.positionFrames.<get-positionFrames>|<get-positionFrames>(){}[0]
+
+    abstract fun close() // io.github.yuroyami.audiokodec/AudioDecoder.close|close(){}[0]
+    abstract fun nextFrame(): io.github.yuroyami.audiokodec/AudioFrame? // io.github.yuroyami.audiokodec/AudioDecoder.nextFrame|nextFrame(){}[0]
+    abstract fun seek(kotlin/Long): kotlin/Long // io.github.yuroyami.audiokodec/AudioDecoder.seek|seek(kotlin.Long){}[0]
+}
+
+abstract interface io.github.yuroyami.audiokodec/AudioSink : kotlin/AutoCloseable { // io.github.yuroyami.audiokodec/AudioSink|null[0]
+    abstract val canPatch // io.github.yuroyami.audiokodec/AudioSink.canPatch|{}canPatch[0]
+        abstract fun <get-canPatch>(): kotlin/Boolean // io.github.yuroyami.audiokodec/AudioSink.canPatch.<get-canPatch>|<get-canPatch>(){}[0]
+    abstract val position // io.github.yuroyami.audiokodec/AudioSink.position|{}position[0]
+        abstract fun <get-position>(): kotlin/Long // io.github.yuroyami.audiokodec/AudioSink.position.<get-position>|<get-position>(){}[0]
+
+    abstract fun close() // io.github.yuroyami.audiokodec/AudioSink.close|close(){}[0]
+    abstract fun patchAt(kotlin/Long, kotlin/ByteArray, kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.audiokodec/AudioSink.patchAt|patchAt(kotlin.Long;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+    abstract fun write(kotlin/ByteArray, kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.audiokodec/AudioSink.write|write(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+abstract interface io.github.yuroyami.audiokodec/AudioSource : kotlin/AutoCloseable { // io.github.yuroyami.audiokodec/AudioSource|null[0]
+    abstract val size // io.github.yuroyami.audiokodec/AudioSource.size|{}size[0]
+        abstract fun <get-size>(): kotlin/Long // io.github.yuroyami.audiokodec/AudioSource.size.<get-size>|<get-size>(){}[0]
+
+    abstract fun close() // io.github.yuroyami.audiokodec/AudioSource.close|close(){}[0]
+    abstract fun readAt(kotlin/Long, kotlin/ByteArray, kotlin/Int, kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/AudioSource.readAt|readAt(kotlin.Long;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+abstract interface io.github.yuroyami.audiokodec/IntPcmAccess { // io.github.yuroyami.audiokodec/IntPcmAccess|null[0]
+    abstract val bitDepth // io.github.yuroyami.audiokodec/IntPcmAccess.bitDepth|{}bitDepth[0]
+        abstract fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.audiokodec/IntPcmAccess.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+
+    abstract fun nextIntFrame(): io.github.yuroyami.audiokodec/IntAudioFrame? // io.github.yuroyami.audiokodec/IntPcmAccess.nextIntFrame|nextIntFrame(){}[0]
+}
+
+abstract interface io.github.yuroyami.audiokodec/PcmSource { // io.github.yuroyami.audiokodec/PcmSource|null[0]
+    abstract val format // io.github.yuroyami.audiokodec/PcmSource.format|{}format[0]
+        abstract fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/PcmSource.format.<get-format>|<get-format>(){}[0]
+    abstract val frameCount // io.github.yuroyami.audiokodec/PcmSource.frameCount|{}frameCount[0]
+        abstract fun <get-frameCount>(): kotlin/Long? // io.github.yuroyami.audiokodec/PcmSource.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+
+    abstract fun read(kotlin/FloatArray, kotlin/Int, kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/PcmSource.read|read(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+sealed interface io.github.yuroyami.audiokodec/Dither { // io.github.yuroyami.audiokodec/Dither|null[0]
+    final class Tpdf : io.github.yuroyami.audiokodec/Dither { // io.github.yuroyami.audiokodec/Dither.Tpdf|null[0]
+        constructor <init>(kotlin/Int = ...) // io.github.yuroyami.audiokodec/Dither.Tpdf.<init>|<init>(kotlin.Int){}[0]
+    }
+
+    final object None : io.github.yuroyami.audiokodec/Dither { // io.github.yuroyami.audiokodec/Dither.None|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // io.github.yuroyami.audiokodec/Dither.None.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // io.github.yuroyami.audiokodec/Dither.None.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // io.github.yuroyami.audiokodec/Dither.None.toString|toString(){}[0]
+    }
+}
+
+final class io.github.yuroyami.audiokodec.tag/RawTagBlock { // io.github.yuroyami.audiokodec.tag/RawTagBlock|null[0]
+    constructor <init>(io.github.yuroyami.audiokodec.tag/TagFormat, kotlin/Long, kotlin/Long, kotlin.collections/List<io.github.yuroyami.audiokodec.tag/RawTagEntry>) // io.github.yuroyami.audiokodec.tag/RawTagBlock.<init>|<init>(io.github.yuroyami.audiokodec.tag.TagFormat;kotlin.Long;kotlin.Long;kotlin.collections.List<io.github.yuroyami.audiokodec.tag.RawTagEntry>){}[0]
+
+    final val entries // io.github.yuroyami.audiokodec.tag/RawTagBlock.entries|{}entries[0]
+        final fun <get-entries>(): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/RawTagEntry> // io.github.yuroyami.audiokodec.tag/RawTagBlock.entries.<get-entries>|<get-entries>(){}[0]
+    final val format // io.github.yuroyami.audiokodec.tag/RawTagBlock.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.audiokodec.tag/TagFormat // io.github.yuroyami.audiokodec.tag/RawTagBlock.format.<get-format>|<get-format>(){}[0]
+    final val offset // io.github.yuroyami.audiokodec.tag/RawTagBlock.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Long // io.github.yuroyami.audiokodec.tag/RawTagBlock.offset.<get-offset>|<get-offset>(){}[0]
+    final val size // io.github.yuroyami.audiokodec.tag/RawTagBlock.size|{}size[0]
+        final fun <get-size>(): kotlin/Long // io.github.yuroyami.audiokodec.tag/RawTagBlock.size.<get-size>|<get-size>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec.tag/RawTagBlock.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec.tag/RawTagEntry { // io.github.yuroyami.audiokodec.tag/RawTagEntry|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/ByteArray? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/Int? = ...) // io.github.yuroyami.audiokodec.tag/RawTagEntry.<init>|<init>(kotlin.String;kotlin.String?;kotlin.ByteArray?;kotlin.String?;kotlin.String?;kotlin.Int?){}[0]
+
+    final val binary // io.github.yuroyami.audiokodec.tag/RawTagEntry.binary|{}binary[0]
+        final fun <get-binary>(): kotlin/ByteArray? // io.github.yuroyami.audiokodec.tag/RawTagEntry.binary.<get-binary>|<get-binary>(){}[0]
+    final val description // io.github.yuroyami.audiokodec.tag/RawTagEntry.description|{}description[0]
+        final fun <get-description>(): kotlin/String? // io.github.yuroyami.audiokodec.tag/RawTagEntry.description.<get-description>|<get-description>(){}[0]
+    final val id3FrameFlags // io.github.yuroyami.audiokodec.tag/RawTagEntry.id3FrameFlags|{}id3FrameFlags[0]
+        final fun <get-id3FrameFlags>(): kotlin/Int? // io.github.yuroyami.audiokodec.tag/RawTagEntry.id3FrameFlags.<get-id3FrameFlags>|<get-id3FrameFlags>(){}[0]
+    final val key // io.github.yuroyami.audiokodec.tag/RawTagEntry.key|{}key[0]
+        final fun <get-key>(): kotlin/String // io.github.yuroyami.audiokodec.tag/RawTagEntry.key.<get-key>|<get-key>(){}[0]
+    final val language // io.github.yuroyami.audiokodec.tag/RawTagEntry.language|{}language[0]
+        final fun <get-language>(): kotlin/String? // io.github.yuroyami.audiokodec.tag/RawTagEntry.language.<get-language>|<get-language>(){}[0]
+    final val text // io.github.yuroyami.audiokodec.tag/RawTagEntry.text|{}text[0]
+        final fun <get-text>(): kotlin/String? // io.github.yuroyami.audiokodec.tag/RawTagEntry.text.<get-text>|<get-text>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec.tag/RawTagEntry.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec.tag/RawTags { // io.github.yuroyami.audiokodec.tag/RawTags|null[0]
+    constructor <init>(kotlin.collections/List<io.github.yuroyami.audiokodec.tag/RawTagBlock>) // io.github.yuroyami.audiokodec.tag/RawTags.<init>|<init>(kotlin.collections.List<io.github.yuroyami.audiokodec.tag.RawTagBlock>){}[0]
+
+    final val blocks // io.github.yuroyami.audiokodec.tag/RawTags.blocks|{}blocks[0]
+        final fun <get-blocks>(): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/RawTagBlock> // io.github.yuroyami.audiokodec.tag/RawTags.blocks.<get-blocks>|<get-blocks>(){}[0]
+    final val formats // io.github.yuroyami.audiokodec.tag/RawTags.formats|{}formats[0]
+        final fun <get-formats>(): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagFormat> // io.github.yuroyami.audiokodec.tag/RawTags.formats.<get-formats>|<get-formats>(){}[0]
+
+    final fun blocksOf(io.github.yuroyami.audiokodec.tag/TagFormat): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/RawTagBlock> // io.github.yuroyami.audiokodec.tag/RawTags.blocksOf|blocksOf(io.github.yuroyami.audiokodec.tag.TagFormat){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec.tag/RawTags.Companion|null[0]
+        final val EMPTY // io.github.yuroyami.audiokodec.tag/RawTags.Companion.EMPTY|{}EMPTY[0]
+            final fun <get-EMPTY>(): io.github.yuroyami.audiokodec.tag/RawTags // io.github.yuroyami.audiokodec.tag/RawTags.Companion.EMPTY.<get-EMPTY>|<get-EMPTY>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.audiokodec.tag/ReplayGain { // io.github.yuroyami.audiokodec.tag/ReplayGain|null[0]
+    constructor <init>(kotlin/Double? = ..., kotlin/Double? = ..., kotlin/Double? = ..., kotlin/Double? = ..., kotlin/Boolean = ...) // io.github.yuroyami.audiokodec.tag/ReplayGain.<init>|<init>(kotlin.Double?;kotlin.Double?;kotlin.Double?;kotlin.Double?;kotlin.Boolean){}[0]
+
+    final val albumGainDb // io.github.yuroyami.audiokodec.tag/ReplayGain.albumGainDb|{}albumGainDb[0]
+        final fun <get-albumGainDb>(): kotlin/Double? // io.github.yuroyami.audiokodec.tag/ReplayGain.albumGainDb.<get-albumGainDb>|<get-albumGainDb>(){}[0]
+    final val albumPeak // io.github.yuroyami.audiokodec.tag/ReplayGain.albumPeak|{}albumPeak[0]
+        final fun <get-albumPeak>(): kotlin/Double? // io.github.yuroyami.audiokodec.tag/ReplayGain.albumPeak.<get-albumPeak>|<get-albumPeak>(){}[0]
+    final val isEmpty // io.github.yuroyami.audiokodec.tag/ReplayGain.isEmpty|{}isEmpty[0]
+        final fun <get-isEmpty>(): kotlin/Boolean // io.github.yuroyami.audiokodec.tag/ReplayGain.isEmpty.<get-isEmpty>|<get-isEmpty>(){}[0]
+    final val isR128 // io.github.yuroyami.audiokodec.tag/ReplayGain.isR128|{}isR128[0]
+        final fun <get-isR128>(): kotlin/Boolean // io.github.yuroyami.audiokodec.tag/ReplayGain.isR128.<get-isR128>|<get-isR128>(){}[0]
+    final val trackGainDb // io.github.yuroyami.audiokodec.tag/ReplayGain.trackGainDb|{}trackGainDb[0]
+        final fun <get-trackGainDb>(): kotlin/Double? // io.github.yuroyami.audiokodec.tag/ReplayGain.trackGainDb.<get-trackGainDb>|<get-trackGainDb>(){}[0]
+    final val trackPeak // io.github.yuroyami.audiokodec.tag/ReplayGain.trackPeak|{}trackPeak[0]
+        final fun <get-trackPeak>(): kotlin/Double? // io.github.yuroyami.audiokodec.tag/ReplayGain.trackPeak.<get-trackPeak>|<get-trackPeak>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec.tag/ReplayGain.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec.tag/TagBundle { // io.github.yuroyami.audiokodec.tag/TagBundle|null[0]
+    constructor <init>(kotlin.collections/Map<io.github.yuroyami.audiokodec.tag/TagField, kotlin.collections/List<kotlin/String>>, kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagPicture> = ..., kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagChapter> = ..., io.github.yuroyami.audiokodec.tag/ReplayGain? = ..., io.github.yuroyami.audiokodec.tag/RawTags = ...) // io.github.yuroyami.audiokodec.tag/TagBundle.<init>|<init>(kotlin.collections.Map<io.github.yuroyami.audiokodec.tag.TagField,kotlin.collections.List<kotlin.String>>;kotlin.collections.List<io.github.yuroyami.audiokodec.tag.TagPicture>;kotlin.collections.List<io.github.yuroyami.audiokodec.tag.TagChapter>;io.github.yuroyami.audiokodec.tag.ReplayGain?;io.github.yuroyami.audiokodec.tag.RawTags){}[0]
+
+    final val chapters // io.github.yuroyami.audiokodec.tag/TagBundle.chapters|{}chapters[0]
+        final fun <get-chapters>(): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagChapter> // io.github.yuroyami.audiokodec.tag/TagBundle.chapters.<get-chapters>|<get-chapters>(){}[0]
+    final val cover // io.github.yuroyami.audiokodec.tag/TagBundle.cover|{}cover[0]
+        final fun <get-cover>(): io.github.yuroyami.audiokodec.tag/TagPicture? // io.github.yuroyami.audiokodec.tag/TagBundle.cover.<get-cover>|<get-cover>(){}[0]
+    final val fields // io.github.yuroyami.audiokodec.tag/TagBundle.fields|{}fields[0]
+        final fun <get-fields>(): kotlin.collections/Map<io.github.yuroyami.audiokodec.tag/TagField, kotlin.collections/List<kotlin/String>> // io.github.yuroyami.audiokodec.tag/TagBundle.fields.<get-fields>|<get-fields>(){}[0]
+    final val isEmpty // io.github.yuroyami.audiokodec.tag/TagBundle.isEmpty|{}isEmpty[0]
+        final fun <get-isEmpty>(): kotlin/Boolean // io.github.yuroyami.audiokodec.tag/TagBundle.isEmpty.<get-isEmpty>|<get-isEmpty>(){}[0]
+    final val pictures // io.github.yuroyami.audiokodec.tag/TagBundle.pictures|{}pictures[0]
+        final fun <get-pictures>(): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagPicture> // io.github.yuroyami.audiokodec.tag/TagBundle.pictures.<get-pictures>|<get-pictures>(){}[0]
+    final val raw // io.github.yuroyami.audiokodec.tag/TagBundle.raw|{}raw[0]
+        final fun <get-raw>(): io.github.yuroyami.audiokodec.tag/RawTags // io.github.yuroyami.audiokodec.tag/TagBundle.raw.<get-raw>|<get-raw>(){}[0]
+    final val replayGain // io.github.yuroyami.audiokodec.tag/TagBundle.replayGain|{}replayGain[0]
+        final fun <get-replayGain>(): io.github.yuroyami.audiokodec.tag/ReplayGain? // io.github.yuroyami.audiokodec.tag/TagBundle.replayGain.<get-replayGain>|<get-replayGain>(){}[0]
+
+    final fun all(io.github.yuroyami.audiokodec.tag/TagField): kotlin.collections/List<kotlin/String> // io.github.yuroyami.audiokodec.tag/TagBundle.all|all(io.github.yuroyami.audiokodec.tag.TagField){}[0]
+    final fun edit(kotlin/Function1<io.github.yuroyami.audiokodec.tag/TagEditor, kotlin/Unit>): io.github.yuroyami.audiokodec.tag/TagBundle // io.github.yuroyami.audiokodec.tag/TagBundle.edit|edit(kotlin.Function1<io.github.yuroyami.audiokodec.tag.TagEditor,kotlin.Unit>){}[0]
+    final fun get(io.github.yuroyami.audiokodec.tag/TagField): kotlin/String? // io.github.yuroyami.audiokodec.tag/TagBundle.get|get(io.github.yuroyami.audiokodec.tag.TagField){}[0]
+    final fun number(io.github.yuroyami.audiokodec.tag/TagField): kotlin/Int? // io.github.yuroyami.audiokodec.tag/TagBundle.number|number(io.github.yuroyami.audiokodec.tag.TagField){}[0]
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagBundle.toString|toString(){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec.tag/TagBundle.Companion|null[0]
+        final val EMPTY // io.github.yuroyami.audiokodec.tag/TagBundle.Companion.EMPTY|{}EMPTY[0]
+            final fun <get-EMPTY>(): io.github.yuroyami.audiokodec.tag/TagBundle // io.github.yuroyami.audiokodec.tag/TagBundle.Companion.EMPTY.<get-EMPTY>|<get-EMPTY>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.audiokodec.tag/TagChapter { // io.github.yuroyami.audiokodec.tag/TagChapter|null[0]
+    constructor <init>(kotlin/String, kotlin/Long, kotlin/Long = ..., kotlin/String? = ..., kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagPicture> = ...) // io.github.yuroyami.audiokodec.tag/TagChapter.<init>|<init>(kotlin.String;kotlin.Long;kotlin.Long;kotlin.String?;kotlin.collections.List<io.github.yuroyami.audiokodec.tag.TagPicture>){}[0]
+
+    final val endMillis // io.github.yuroyami.audiokodec.tag/TagChapter.endMillis|{}endMillis[0]
+        final fun <get-endMillis>(): kotlin/Long // io.github.yuroyami.audiokodec.tag/TagChapter.endMillis.<get-endMillis>|<get-endMillis>(){}[0]
+    final val id // io.github.yuroyami.audiokodec.tag/TagChapter.id|{}id[0]
+        final fun <get-id>(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagChapter.id.<get-id>|<get-id>(){}[0]
+    final val pictures // io.github.yuroyami.audiokodec.tag/TagChapter.pictures|{}pictures[0]
+        final fun <get-pictures>(): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagPicture> // io.github.yuroyami.audiokodec.tag/TagChapter.pictures.<get-pictures>|<get-pictures>(){}[0]
+    final val startMillis // io.github.yuroyami.audiokodec.tag/TagChapter.startMillis|{}startMillis[0]
+        final fun <get-startMillis>(): kotlin/Long // io.github.yuroyami.audiokodec.tag/TagChapter.startMillis.<get-startMillis>|<get-startMillis>(){}[0]
+    final val title // io.github.yuroyami.audiokodec.tag/TagChapter.title|{}title[0]
+        final fun <get-title>(): kotlin/String? // io.github.yuroyami.audiokodec.tag/TagChapter.title.<get-title>|<get-title>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagChapter.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec.tag/TagEditor { // io.github.yuroyami.audiokodec.tag/TagEditor|null[0]
+    final fun add(io.github.yuroyami.audiokodec.tag/TagField, kotlin/String) // io.github.yuroyami.audiokodec.tag/TagEditor.add|add(io.github.yuroyami.audiokodec.tag.TagField;kotlin.String){}[0]
+    final fun addPicture(io.github.yuroyami.audiokodec.tag/TagPicture) // io.github.yuroyami.audiokodec.tag/TagEditor.addPicture|addPicture(io.github.yuroyami.audiokodec.tag.TagPicture){}[0]
+    final fun clear() // io.github.yuroyami.audiokodec.tag/TagEditor.clear|clear(){}[0]
+    final fun remove(io.github.yuroyami.audiokodec.tag/TagField) // io.github.yuroyami.audiokodec.tag/TagEditor.remove|remove(io.github.yuroyami.audiokodec.tag.TagField){}[0]
+    final fun removePictures(io.github.yuroyami.audiokodec.tag/PictureType? = ...) // io.github.yuroyami.audiokodec.tag/TagEditor.removePictures|removePictures(io.github.yuroyami.audiokodec.tag.PictureType?){}[0]
+    final fun set(io.github.yuroyami.audiokodec.tag/TagField, kotlin.collections/List<kotlin/String>) // io.github.yuroyami.audiokodec.tag/TagEditor.set|set(io.github.yuroyami.audiokodec.tag.TagField;kotlin.collections.List<kotlin.String>){}[0]
+    final fun set(io.github.yuroyami.audiokodec.tag/TagField, kotlin/Int) // io.github.yuroyami.audiokodec.tag/TagEditor.set|set(io.github.yuroyami.audiokodec.tag.TagField;kotlin.Int){}[0]
+    final fun set(io.github.yuroyami.audiokodec.tag/TagField, kotlin/String) // io.github.yuroyami.audiokodec.tag/TagEditor.set|set(io.github.yuroyami.audiokodec.tag.TagField;kotlin.String){}[0]
+    final fun setChapters(kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagChapter>) // io.github.yuroyami.audiokodec.tag/TagEditor.setChapters|setChapters(kotlin.collections.List<io.github.yuroyami.audiokodec.tag.TagChapter>){}[0]
+    final fun setReplayGain(io.github.yuroyami.audiokodec.tag/ReplayGain?) // io.github.yuroyami.audiokodec.tag/TagEditor.setReplayGain|setReplayGain(io.github.yuroyami.audiokodec.tag.ReplayGain?){}[0]
+}
+
+final class io.github.yuroyami.audiokodec.tag/TagPicture { // io.github.yuroyami.audiokodec.tag/TagPicture|null[0]
+    constructor <init>(io.github.yuroyami.audiokodec.tag/PictureType = ..., kotlin/String, kotlin/String = ..., kotlin/ByteArray, kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.audiokodec.tag/TagPicture.<init>|<init>(io.github.yuroyami.audiokodec.tag.PictureType;kotlin.String;kotlin.String;kotlin.ByteArray;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val bytes // io.github.yuroyami.audiokodec.tag/TagPicture.bytes|{}bytes[0]
+        final fun <get-bytes>(): kotlin/ByteArray // io.github.yuroyami.audiokodec.tag/TagPicture.bytes.<get-bytes>|<get-bytes>(){}[0]
+    final val colourCount // io.github.yuroyami.audiokodec.tag/TagPicture.colourCount|{}colourCount[0]
+        final fun <get-colourCount>(): kotlin/Int // io.github.yuroyami.audiokodec.tag/TagPicture.colourCount.<get-colourCount>|<get-colourCount>(){}[0]
+    final val colourDepth // io.github.yuroyami.audiokodec.tag/TagPicture.colourDepth|{}colourDepth[0]
+        final fun <get-colourDepth>(): kotlin/Int // io.github.yuroyami.audiokodec.tag/TagPicture.colourDepth.<get-colourDepth>|<get-colourDepth>(){}[0]
+    final val description // io.github.yuroyami.audiokodec.tag/TagPicture.description|{}description[0]
+        final fun <get-description>(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagPicture.description.<get-description>|<get-description>(){}[0]
+    final val height // io.github.yuroyami.audiokodec.tag/TagPicture.height|{}height[0]
+        final fun <get-height>(): kotlin/Int // io.github.yuroyami.audiokodec.tag/TagPicture.height.<get-height>|<get-height>(){}[0]
+    final val mimeType // io.github.yuroyami.audiokodec.tag/TagPicture.mimeType|{}mimeType[0]
+        final fun <get-mimeType>(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagPicture.mimeType.<get-mimeType>|<get-mimeType>(){}[0]
+    final val type // io.github.yuroyami.audiokodec.tag/TagPicture.type|{}type[0]
+        final fun <get-type>(): io.github.yuroyami.audiokodec.tag/PictureType // io.github.yuroyami.audiokodec.tag/TagPicture.type.<get-type>|<get-type>(){}[0]
+    final val width // io.github.yuroyami.audiokodec.tag/TagPicture.width|{}width[0]
+        final fun <get-width>(): kotlin/Int // io.github.yuroyami.audiokodec.tag/TagPicture.width.<get-width>|<get-width>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagPicture.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec.tag/TagWriteOptions { // io.github.yuroyami.audiokodec.tag/TagWriteOptions|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin.collections/Set<io.github.yuroyami.audiokodec.tag/TagFormat>? = ...) // io.github.yuroyami.audiokodec.tag/TagWriteOptions.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Boolean;kotlin.collections.Set<io.github.yuroyami.audiokodec.tag.TagFormat>?){}[0]
+
+    final val formats // io.github.yuroyami.audiokodec.tag/TagWriteOptions.formats|{}formats[0]
+        final fun <get-formats>(): kotlin.collections/Set<io.github.yuroyami.audiokodec.tag/TagFormat>? // io.github.yuroyami.audiokodec.tag/TagWriteOptions.formats.<get-formats>|<get-formats>(){}[0]
+    final val id3Version // io.github.yuroyami.audiokodec.tag/TagWriteOptions.id3Version|{}id3Version[0]
+        final fun <get-id3Version>(): kotlin/Int // io.github.yuroyami.audiokodec.tag/TagWriteOptions.id3Version.<get-id3Version>|<get-id3Version>(){}[0]
+    final val keepId3v1 // io.github.yuroyami.audiokodec.tag/TagWriteOptions.keepId3v1|{}keepId3v1[0]
+        final fun <get-keepId3v1>(): kotlin/Boolean // io.github.yuroyami.audiokodec.tag/TagWriteOptions.keepId3v1.<get-keepId3v1>|<get-keepId3v1>(){}[0]
+    final val padding // io.github.yuroyami.audiokodec.tag/TagWriteOptions.padding|{}padding[0]
+        final fun <get-padding>(): kotlin/Int // io.github.yuroyami.audiokodec.tag/TagWriteOptions.padding.<get-padding>|<get-padding>(){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec.tag/TagWriteOptions.Companion|null[0]
+        final val DEFAULT // io.github.yuroyami.audiokodec.tag/TagWriteOptions.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): io.github.yuroyami.audiokodec.tag/TagWriteOptions // io.github.yuroyami.audiokodec.tag/TagWriteOptions.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.audiokodec/AllocationGuardException : io.github.yuroyami.audiokodec/AudioKodecException { // io.github.yuroyami.audiokodec/AllocationGuardException|null[0]
+    constructor <init>(kotlin/String, kotlin/Long, kotlin/Long) // io.github.yuroyami.audiokodec/AllocationGuardException.<init>|<init>(kotlin.String;kotlin.Long;kotlin.Long){}[0]
+
+    final val limit // io.github.yuroyami.audiokodec/AllocationGuardException.limit|{}limit[0]
+        final fun <get-limit>(): kotlin/Long // io.github.yuroyami.audiokodec/AllocationGuardException.limit.<get-limit>|<get-limit>(){}[0]
+    final val requested // io.github.yuroyami.audiokodec/AllocationGuardException.requested|{}requested[0]
+        final fun <get-requested>(): kotlin/Long // io.github.yuroyami.audiokodec/AllocationGuardException.requested.<get-requested>|<get-requested>(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/AudioFormat { // io.github.yuroyami.audiokodec/AudioFormat|null[0]
+    constructor <init>(kotlin/Int, io.github.yuroyami.audiokodec/ChannelLayout) // io.github.yuroyami.audiokodec/AudioFormat.<init>|<init>(kotlin.Int;io.github.yuroyami.audiokodec.ChannelLayout){}[0]
+    constructor <init>(kotlin/Int, kotlin/Int) // io.github.yuroyami.audiokodec/AudioFormat.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+    final val channelLayout // io.github.yuroyami.audiokodec/AudioFormat.channelLayout|{}channelLayout[0]
+        final fun <get-channelLayout>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/AudioFormat.channelLayout.<get-channelLayout>|<get-channelLayout>(){}[0]
+    final val channels // io.github.yuroyami.audiokodec/AudioFormat.channels|{}channels[0]
+        final fun <get-channels>(): kotlin/Int // io.github.yuroyami.audiokodec/AudioFormat.channels.<get-channels>|<get-channels>(){}[0]
+    final val floatFrameBytes // io.github.yuroyami.audiokodec/AudioFormat.floatFrameBytes|{}floatFrameBytes[0]
+        final fun <get-floatFrameBytes>(): kotlin/Int // io.github.yuroyami.audiokodec/AudioFormat.floatFrameBytes.<get-floatFrameBytes>|<get-floatFrameBytes>(){}[0]
+    final val sampleRate // io.github.yuroyami.audiokodec/AudioFormat.sampleRate|{}sampleRate[0]
+        final fun <get-sampleRate>(): kotlin/Int // io.github.yuroyami.audiokodec/AudioFormat.sampleRate.<get-sampleRate>|<get-sampleRate>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.yuroyami.audiokodec/AudioFormat.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.yuroyami.audiokodec/AudioFormat.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec/AudioFormat.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/AudioFrame { // io.github.yuroyami.audiokodec/AudioFrame|null[0]
+    constructor <init>(io.github.yuroyami.audiokodec/AudioFormat, kotlin/FloatArray, kotlin/Int, kotlin/Long) // io.github.yuroyami.audiokodec/AudioFrame.<init>|<init>(io.github.yuroyami.audiokodec.AudioFormat;kotlin.FloatArray;kotlin.Int;kotlin.Long){}[0]
+
+    final val format // io.github.yuroyami.audiokodec/AudioFrame.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/AudioFrame.format.<get-format>|<get-format>(){}[0]
+    final val frameCount // io.github.yuroyami.audiokodec/AudioFrame.frameCount|{}frameCount[0]
+        final fun <get-frameCount>(): kotlin/Int // io.github.yuroyami.audiokodec/AudioFrame.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+    final val positionFrames // io.github.yuroyami.audiokodec/AudioFrame.positionFrames|{}positionFrames[0]
+        final fun <get-positionFrames>(): kotlin/Long // io.github.yuroyami.audiokodec/AudioFrame.positionFrames.<get-positionFrames>|<get-positionFrames>(){}[0]
+    final val sampleCount // io.github.yuroyami.audiokodec/AudioFrame.sampleCount|{}sampleCount[0]
+        final fun <get-sampleCount>(): kotlin/Int // io.github.yuroyami.audiokodec/AudioFrame.sampleCount.<get-sampleCount>|<get-sampleCount>(){}[0]
+    final val samples // io.github.yuroyami.audiokodec/AudioFrame.samples|{}samples[0]
+        final fun <get-samples>(): kotlin/FloatArray // io.github.yuroyami.audiokodec/AudioFrame.samples.<get-samples>|<get-samples>(){}[0]
+
+    final fun copySamples(): kotlin/FloatArray // io.github.yuroyami.audiokodec/AudioFrame.copySamples|copySamples(){}[0]
+    final fun get(kotlin/Int, kotlin/Int): kotlin/Float // io.github.yuroyami.audiokodec/AudioFrame.get|get(kotlin.Int;kotlin.Int){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/AudioInfo { // io.github.yuroyami.audiokodec/AudioInfo|null[0]
+    constructor <init>(io.github.yuroyami.audiokodec/AudioContainer, io.github.yuroyami.audiokodec/AudioCodec, io.github.yuroyami.audiokodec/AudioFormat, kotlin/Long?, kotlin/Int?, kotlin/Int?, kotlin/Boolean, kotlin/Long, kotlin/Long) // io.github.yuroyami.audiokodec/AudioInfo.<init>|<init>(io.github.yuroyami.audiokodec.AudioContainer;io.github.yuroyami.audiokodec.AudioCodec;io.github.yuroyami.audiokodec.AudioFormat;kotlin.Long?;kotlin.Int?;kotlin.Int?;kotlin.Boolean;kotlin.Long;kotlin.Long){}[0]
+
+    final val bitDepth // io.github.yuroyami.audiokodec/AudioInfo.bitDepth|{}bitDepth[0]
+        final fun <get-bitDepth>(): kotlin/Int? // io.github.yuroyami.audiokodec/AudioInfo.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    final val bitrate // io.github.yuroyami.audiokodec/AudioInfo.bitrate|{}bitrate[0]
+        final fun <get-bitrate>(): kotlin/Int? // io.github.yuroyami.audiokodec/AudioInfo.bitrate.<get-bitrate>|<get-bitrate>(){}[0]
+    final val codec // io.github.yuroyami.audiokodec/AudioInfo.codec|{}codec[0]
+        final fun <get-codec>(): io.github.yuroyami.audiokodec/AudioCodec // io.github.yuroyami.audiokodec/AudioInfo.codec.<get-codec>|<get-codec>(){}[0]
+    final val container // io.github.yuroyami.audiokodec/AudioInfo.container|{}container[0]
+        final fun <get-container>(): io.github.yuroyami.audiokodec/AudioContainer // io.github.yuroyami.audiokodec/AudioInfo.container.<get-container>|<get-container>(){}[0]
+    final val dataOffset // io.github.yuroyami.audiokodec/AudioInfo.dataOffset|{}dataOffset[0]
+        final fun <get-dataOffset>(): kotlin/Long // io.github.yuroyami.audiokodec/AudioInfo.dataOffset.<get-dataOffset>|<get-dataOffset>(){}[0]
+    final val dataSize // io.github.yuroyami.audiokodec/AudioInfo.dataSize|{}dataSize[0]
+        final fun <get-dataSize>(): kotlin/Long // io.github.yuroyami.audiokodec/AudioInfo.dataSize.<get-dataSize>|<get-dataSize>(){}[0]
+    final val durationFrames // io.github.yuroyami.audiokodec/AudioInfo.durationFrames|{}durationFrames[0]
+        final fun <get-durationFrames>(): kotlin/Long? // io.github.yuroyami.audiokodec/AudioInfo.durationFrames.<get-durationFrames>|<get-durationFrames>(){}[0]
+    final val durationSeconds // io.github.yuroyami.audiokodec/AudioInfo.durationSeconds|{}durationSeconds[0]
+        final fun <get-durationSeconds>(): kotlin/Double? // io.github.yuroyami.audiokodec/AudioInfo.durationSeconds.<get-durationSeconds>|<get-durationSeconds>(){}[0]
+    final val format // io.github.yuroyami.audiokodec/AudioInfo.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/AudioInfo.format.<get-format>|<get-format>(){}[0]
+    final val isVariableBitrate // io.github.yuroyami.audiokodec/AudioInfo.isVariableBitrate|{}isVariableBitrate[0]
+        final fun <get-isVariableBitrate>(): kotlin/Boolean // io.github.yuroyami.audiokodec/AudioInfo.isVariableBitrate.<get-isVariableBitrate>|<get-isVariableBitrate>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec/AudioInfo.toString|toString(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/ByteArrayAudioSink : io.github.yuroyami.audiokodec/AudioSink { // io.github.yuroyami.audiokodec/ByteArrayAudioSink|null[0]
+    constructor <init>(kotlin/Int = ...) // io.github.yuroyami.audiokodec/ByteArrayAudioSink.<init>|<init>(kotlin.Int){}[0]
+
+    final val canPatch // io.github.yuroyami.audiokodec/ByteArrayAudioSink.canPatch|{}canPatch[0]
+        final fun <get-canPatch>(): kotlin/Boolean // io.github.yuroyami.audiokodec/ByteArrayAudioSink.canPatch.<get-canPatch>|<get-canPatch>(){}[0]
+    final val position // io.github.yuroyami.audiokodec/ByteArrayAudioSink.position|{}position[0]
+        final fun <get-position>(): kotlin/Long // io.github.yuroyami.audiokodec/ByteArrayAudioSink.position.<get-position>|<get-position>(){}[0]
+
+    final fun close() // io.github.yuroyami.audiokodec/ByteArrayAudioSink.close|close(){}[0]
+    final fun patchAt(kotlin/Long, kotlin/ByteArray, kotlin/Int, kotlin/Int) // io.github.yuroyami.audiokodec/ByteArrayAudioSink.patchAt|patchAt(kotlin.Long;kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+    final fun toByteArray(): kotlin/ByteArray // io.github.yuroyami.audiokodec/ByteArrayAudioSink.toByteArray|toByteArray(){}[0]
+    final fun write(kotlin/ByteArray, kotlin/Int, kotlin/Int) // io.github.yuroyami.audiokodec/ByteArrayAudioSink.write|write(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/ChannelLayout { // io.github.yuroyami.audiokodec/ChannelLayout|null[0]
+    final val channels // io.github.yuroyami.audiokodec/ChannelLayout.channels|{}channels[0]
+        final fun <get-channels>(): kotlin.collections/List<io.github.yuroyami.audiokodec/AudioChannel> // io.github.yuroyami.audiokodec/ChannelLayout.channels.<get-channels>|<get-channels>(){}[0]
+    final val count // io.github.yuroyami.audiokodec/ChannelLayout.count|{}count[0]
+        final fun <get-count>(): kotlin/Int // io.github.yuroyami.audiokodec/ChannelLayout.count.<get-count>|<get-count>(){}[0]
+    final val isPositional // io.github.yuroyami.audiokodec/ChannelLayout.isPositional|{}isPositional[0]
+        final fun <get-isPositional>(): kotlin/Boolean // io.github.yuroyami.audiokodec/ChannelLayout.isPositional.<get-isPositional>|<get-isPositional>(){}[0]
+    final val waveMask // io.github.yuroyami.audiokodec/ChannelLayout.waveMask|{}waveMask[0]
+        final fun <get-waveMask>(): kotlin/Int // io.github.yuroyami.audiokodec/ChannelLayout.waveMask.<get-waveMask>|<get-waveMask>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // io.github.yuroyami.audiokodec/ChannelLayout.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // io.github.yuroyami.audiokodec/ChannelLayout.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec/ChannelLayout.toString|toString(){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec/ChannelLayout.Companion|null[0]
+        final val MONO // io.github.yuroyami.audiokodec/ChannelLayout.Companion.MONO|{}MONO[0]
+            final fun <get-MONO>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.MONO.<get-MONO>|<get-MONO>(){}[0]
+        final val QUAD // io.github.yuroyami.audiokodec/ChannelLayout.Companion.QUAD|{}QUAD[0]
+            final fun <get-QUAD>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.QUAD.<get-QUAD>|<get-QUAD>(){}[0]
+        final val STEREO // io.github.yuroyami.audiokodec/ChannelLayout.Companion.STEREO|{}STEREO[0]
+            final fun <get-STEREO>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.STEREO.<get-STEREO>|<get-STEREO>(){}[0]
+        final val SURROUND_3_0 // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_3_0|{}SURROUND_3_0[0]
+            final fun <get-SURROUND_3_0>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_3_0.<get-SURROUND_3_0>|<get-SURROUND_3_0>(){}[0]
+        final val SURROUND_5_0 // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_5_0|{}SURROUND_5_0[0]
+            final fun <get-SURROUND_5_0>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_5_0.<get-SURROUND_5_0>|<get-SURROUND_5_0>(){}[0]
+        final val SURROUND_5_1 // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_5_1|{}SURROUND_5_1[0]
+            final fun <get-SURROUND_5_1>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_5_1.<get-SURROUND_5_1>|<get-SURROUND_5_1>(){}[0]
+        final val SURROUND_7_1 // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_7_1|{}SURROUND_7_1[0]
+            final fun <get-SURROUND_7_1>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.SURROUND_7_1.<get-SURROUND_7_1>|<get-SURROUND_7_1>(){}[0]
+
+        final fun canonical(kotlin/Int): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.canonical|canonical(kotlin.Int){}[0]
+        final fun fromWaveMask(kotlin/Int, kotlin/Int): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.fromWaveMask|fromWaveMask(kotlin.Int;kotlin.Int){}[0]
+        final fun of(kotlin.collections/List<io.github.yuroyami.audiokodec/AudioChannel>): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.of|of(kotlin.collections.List<io.github.yuroyami.audiokodec.AudioChannel>){}[0]
+        final fun of(kotlin/Array<out io.github.yuroyami.audiokodec/AudioChannel>...): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.of|of(kotlin.Array<out|io.github.yuroyami.audiokodec.AudioChannel>...){}[0]
+        final fun unknown(kotlin/Int): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/ChannelLayout.Companion.unknown|unknown(kotlin.Int){}[0]
+    }
+}
+
+final class io.github.yuroyami.audiokodec/CorruptStreamException : io.github.yuroyami.audiokodec/AudioKodecException { // io.github.yuroyami.audiokodec/CorruptStreamException|null[0]
+    constructor <init>(kotlin/String, kotlin/Long = ...) // io.github.yuroyami.audiokodec/CorruptStreamException.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+
+    final val offset // io.github.yuroyami.audiokodec/CorruptStreamException.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Long // io.github.yuroyami.audiokodec/CorruptStreamException.offset.<get-offset>|<get-offset>(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/DecodeOptions { // io.github.yuroyami.audiokodec/DecodeOptions|null[0]
+    constructor <init>(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ...) // io.github.yuroyami.audiokodec/DecodeOptions.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+
+    final val allowSlowSeek // io.github.yuroyami.audiokodec/DecodeOptions.allowSlowSeek|{}allowSlowSeek[0]
+        final fun <get-allowSlowSeek>(): kotlin/Boolean // io.github.yuroyami.audiokodec/DecodeOptions.allowSlowSeek.<get-allowSlowSeek>|<get-allowSlowSeek>(){}[0]
+    final val maxAllocationBytes // io.github.yuroyami.audiokodec/DecodeOptions.maxAllocationBytes|{}maxAllocationBytes[0]
+        final fun <get-maxAllocationBytes>(): kotlin/Long // io.github.yuroyami.audiokodec/DecodeOptions.maxAllocationBytes.<get-maxAllocationBytes>|<get-maxAllocationBytes>(){}[0]
+    final val maxChannels // io.github.yuroyami.audiokodec/DecodeOptions.maxChannels|{}maxChannels[0]
+        final fun <get-maxChannels>(): kotlin/Int // io.github.yuroyami.audiokodec/DecodeOptions.maxChannels.<get-maxChannels>|<get-maxChannels>(){}[0]
+    final val maxSampleRate // io.github.yuroyami.audiokodec/DecodeOptions.maxSampleRate|{}maxSampleRate[0]
+        final fun <get-maxSampleRate>(): kotlin/Int // io.github.yuroyami.audiokodec/DecodeOptions.maxSampleRate.<get-maxSampleRate>|<get-maxSampleRate>(){}[0]
+    final val reuseBuffers // io.github.yuroyami.audiokodec/DecodeOptions.reuseBuffers|{}reuseBuffers[0]
+        final fun <get-reuseBuffers>(): kotlin/Boolean // io.github.yuroyami.audiokodec/DecodeOptions.reuseBuffers.<get-reuseBuffers>|<get-reuseBuffers>(){}[0]
+    final val tolerant // io.github.yuroyami.audiokodec/DecodeOptions.tolerant|{}tolerant[0]
+        final fun <get-tolerant>(): kotlin/Boolean // io.github.yuroyami.audiokodec/DecodeOptions.tolerant.<get-tolerant>|<get-tolerant>(){}[0]
+
+    final fun checkAllocation(kotlin/Long, kotlin/String) // io.github.yuroyami.audiokodec/DecodeOptions.checkAllocation|checkAllocation(kotlin.Long;kotlin.String){}[0]
+    final fun checkStreamShape(kotlin/Int, kotlin/Int, kotlin/Long = ...) // io.github.yuroyami.audiokodec/DecodeOptions.checkStreamShape|checkStreamShape(kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+    final fun copy(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ...): io.github.yuroyami.audiokodec/DecodeOptions // io.github.yuroyami.audiokodec/DecodeOptions.copy|copy(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec/DecodeOptions.Companion|null[0]
+        final val DEFAULT // io.github.yuroyami.audiokodec/DecodeOptions.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): io.github.yuroyami.audiokodec/DecodeOptions // io.github.yuroyami.audiokodec/DecodeOptions.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+    }
+}
+
+final class io.github.yuroyami.audiokodec/DecodedAudio : io.github.yuroyami.audiokodec/PcmSource { // io.github.yuroyami.audiokodec/DecodedAudio|null[0]
+    constructor <init>(io.github.yuroyami.audiokodec/AudioFormat, kotlin/FloatArray, kotlin/Int, io.github.yuroyami.audiokodec/AudioInfo) // io.github.yuroyami.audiokodec/DecodedAudio.<init>|<init>(io.github.yuroyami.audiokodec.AudioFormat;kotlin.FloatArray;kotlin.Int;io.github.yuroyami.audiokodec.AudioInfo){}[0]
+
+    final val durationSeconds // io.github.yuroyami.audiokodec/DecodedAudio.durationSeconds|{}durationSeconds[0]
+        final fun <get-durationSeconds>(): kotlin/Double // io.github.yuroyami.audiokodec/DecodedAudio.durationSeconds.<get-durationSeconds>|<get-durationSeconds>(){}[0]
+    final val format // io.github.yuroyami.audiokodec/DecodedAudio.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/DecodedAudio.format.<get-format>|<get-format>(){}[0]
+    final val frameCount // io.github.yuroyami.audiokodec/DecodedAudio.frameCount|{}frameCount[0]
+        final fun <get-frameCount>(): kotlin/Long // io.github.yuroyami.audiokodec/DecodedAudio.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+    final val frames // io.github.yuroyami.audiokodec/DecodedAudio.frames|{}frames[0]
+        final fun <get-frames>(): kotlin/Int // io.github.yuroyami.audiokodec/DecodedAudio.frames.<get-frames>|<get-frames>(){}[0]
+    final val info // io.github.yuroyami.audiokodec/DecodedAudio.info|{}info[0]
+        final fun <get-info>(): io.github.yuroyami.audiokodec/AudioInfo // io.github.yuroyami.audiokodec/DecodedAudio.info.<get-info>|<get-info>(){}[0]
+    final val samples // io.github.yuroyami.audiokodec/DecodedAudio.samples|{}samples[0]
+        final fun <get-samples>(): kotlin/FloatArray // io.github.yuroyami.audiokodec/DecodedAudio.samples.<get-samples>|<get-samples>(){}[0]
+
+    final fun read(kotlin/FloatArray, kotlin/Int, kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/DecodedAudio.read|read(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+    final fun rewind() // io.github.yuroyami.audiokodec/DecodedAudio.rewind|rewind(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/EncodeTarget { // io.github.yuroyami.audiokodec/EncodeTarget|null[0]
+    final val bitDepth // io.github.yuroyami.audiokodec/EncodeTarget.bitDepth|{}bitDepth[0]
+        final fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.audiokodec/EncodeTarget.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    final val blockAlign // io.github.yuroyami.audiokodec/EncodeTarget.blockAlign|{}blockAlign[0]
+        final fun <get-blockAlign>(): kotlin/Int // io.github.yuroyami.audiokodec/EncodeTarget.blockAlign.<get-blockAlign>|<get-blockAlign>(){}[0]
+    final val codec // io.github.yuroyami.audiokodec/EncodeTarget.codec|{}codec[0]
+        final fun <get-codec>(): io.github.yuroyami.audiokodec/AudioCodec // io.github.yuroyami.audiokodec/EncodeTarget.codec.<get-codec>|<get-codec>(){}[0]
+    final val container // io.github.yuroyami.audiokodec/EncodeTarget.container|{}container[0]
+        final fun <get-container>(): io.github.yuroyami.audiokodec/AudioContainer // io.github.yuroyami.audiokodec/EncodeTarget.container.<get-container>|<get-container>(){}[0]
+    final val dither // io.github.yuroyami.audiokodec/EncodeTarget.dither|{}dither[0]
+        final fun <get-dither>(): io.github.yuroyami.audiokodec/Dither // io.github.yuroyami.audiokodec/EncodeTarget.dither.<get-dither>|<get-dither>(){}[0]
+
+    final fun toString(): kotlin/String // io.github.yuroyami.audiokodec/EncodeTarget.toString|toString(){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec/EncodeTarget.Companion|null[0]
+        final fun aiff(kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.aiff|aiff(kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
+        final fun aiffALaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.aiffALaw|aiffALaw(){}[0]
+        final fun aiffFloat(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.aiffFloat|aiffFloat(kotlin.Int){}[0]
+        final fun aiffMuLaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.aiffMuLaw|aiffMuLaw(){}[0]
+        final fun au(kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.au|au(kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
+        final fun auALaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.auALaw|auALaw(){}[0]
+        final fun auFloat(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.auFloat|auFloat(kotlin.Int){}[0]
+        final fun auMuLaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.auMuLaw|auMuLaw(){}[0]
+        final fun flac(kotlin/Int = ..., kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.flac|flac(kotlin.Int;kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
+        final fun wav(kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wav|wav(kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
+        final fun wavALaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavALaw|wavALaw(){}[0]
+        final fun wavFloat(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavFloat|wavFloat(kotlin.Int){}[0]
+        final fun wavImaAdpcm(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavImaAdpcm|wavImaAdpcm(kotlin.Int){}[0]
+        final fun wavMsAdpcm(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavMsAdpcm|wavMsAdpcm(kotlin.Int){}[0]
+        final fun wavMuLaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavMuLaw|wavMuLaw(){}[0]
+    }
+}
+
+final class io.github.yuroyami.audiokodec/IntAudioFrame { // io.github.yuroyami.audiokodec/IntAudioFrame|null[0]
+    constructor <init>(io.github.yuroyami.audiokodec/AudioFormat, kotlin/IntArray, kotlin/Int, kotlin/Long, kotlin/Int) // io.github.yuroyami.audiokodec/IntAudioFrame.<init>|<init>(io.github.yuroyami.audiokodec.AudioFormat;kotlin.IntArray;kotlin.Int;kotlin.Long;kotlin.Int){}[0]
+
+    final val bitDepth // io.github.yuroyami.audiokodec/IntAudioFrame.bitDepth|{}bitDepth[0]
+        final fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.audiokodec/IntAudioFrame.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    final val format // io.github.yuroyami.audiokodec/IntAudioFrame.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/IntAudioFrame.format.<get-format>|<get-format>(){}[0]
+    final val frameCount // io.github.yuroyami.audiokodec/IntAudioFrame.frameCount|{}frameCount[0]
+        final fun <get-frameCount>(): kotlin/Int // io.github.yuroyami.audiokodec/IntAudioFrame.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+    final val positionFrames // io.github.yuroyami.audiokodec/IntAudioFrame.positionFrames|{}positionFrames[0]
+        final fun <get-positionFrames>(): kotlin/Long // io.github.yuroyami.audiokodec/IntAudioFrame.positionFrames.<get-positionFrames>|<get-positionFrames>(){}[0]
+    final val sampleCount // io.github.yuroyami.audiokodec/IntAudioFrame.sampleCount|{}sampleCount[0]
+        final fun <get-sampleCount>(): kotlin/Int // io.github.yuroyami.audiokodec/IntAudioFrame.sampleCount.<get-sampleCount>|<get-sampleCount>(){}[0]
+    final val samples // io.github.yuroyami.audiokodec/IntAudioFrame.samples|{}samples[0]
+        final fun <get-samples>(): kotlin/IntArray // io.github.yuroyami.audiokodec/IntAudioFrame.samples.<get-samples>|<get-samples>(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/TruncatedStreamException : io.github.yuroyami.audiokodec/AudioKodecException { // io.github.yuroyami.audiokodec/TruncatedStreamException|null[0]
+    constructor <init>(kotlin/String, kotlin/Long = ...) // io.github.yuroyami.audiokodec/TruncatedStreamException.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+
+    final val offset // io.github.yuroyami.audiokodec/TruncatedStreamException.offset|{}offset[0]
+        final fun <get-offset>(): kotlin/Long // io.github.yuroyami.audiokodec/TruncatedStreamException.offset.<get-offset>|<get-offset>(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/UnsupportedFeatureException : io.github.yuroyami.audiokodec/AudioKodecException { // io.github.yuroyami.audiokodec/UnsupportedFeatureException|null[0]
+    constructor <init>(kotlin/String, kotlin/String = ...) // io.github.yuroyami.audiokodec/UnsupportedFeatureException.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val feature // io.github.yuroyami.audiokodec/UnsupportedFeatureException.feature|{}feature[0]
+        final fun <get-feature>(): kotlin/String // io.github.yuroyami.audiokodec/UnsupportedFeatureException.feature.<get-feature>|<get-feature>(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/UnsupportedFormatException : io.github.yuroyami.audiokodec/AudioKodecException { // io.github.yuroyami.audiokodec/UnsupportedFormatException|null[0]
+    constructor <init>(io.github.yuroyami.audiokodec/AudioContainer?, kotlin/String) // io.github.yuroyami.audiokodec/UnsupportedFormatException.<init>|<init>(io.github.yuroyami.audiokodec.AudioContainer?;kotlin.String){}[0]
+
+    final val format // io.github.yuroyami.audiokodec/UnsupportedFormatException.format|{}format[0]
+        final fun <get-format>(): io.github.yuroyami.audiokodec/AudioContainer? // io.github.yuroyami.audiokodec/UnsupportedFormatException.format.<get-format>|<get-format>(){}[0]
+}
+
+open class io.github.yuroyami.audiokodec/AudioKodecException : kotlin/Exception { // io.github.yuroyami.audiokodec/AudioKodecException|null[0]
+    constructor <init>(kotlin/String, kotlin/Throwable? = ...) // io.github.yuroyami.audiokodec/AudioKodecException.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+}
+
+final object io.github.yuroyami.audiokodec/AudioKodec { // io.github.yuroyami.audiokodec/AudioKodec|null[0]
+    final const val SNIFF_HEADER_BYTES // io.github.yuroyami.audiokodec/AudioKodec.SNIFF_HEADER_BYTES|{}SNIFF_HEADER_BYTES[0]
+        final fun <get-SNIFF_HEADER_BYTES>(): kotlin/Int // io.github.yuroyami.audiokodec/AudioKodec.SNIFF_HEADER_BYTES.<get-SNIFF_HEADER_BYTES>|<get-SNIFF_HEADER_BYTES>(){}[0]
+
+    final fun decode(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/DecodedAudio // io.github.yuroyami.audiokodec/AudioKodec.decode|decode(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun decode(kotlin/ByteArray, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/DecodedAudio // io.github.yuroyami.audiokodec/AudioKodec.decode|decode(kotlin.ByteArray;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun encode(io.github.yuroyami.audiokodec/PcmSource, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(io.github.yuroyami.audiokodec.PcmSource;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
+    final fun encode(io.github.yuroyami.audiokodec/PcmSource, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec/AudioSink, io.github.yuroyami.audiokodec.tag/TagBundle? = ...) // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(io.github.yuroyami.audiokodec.PcmSource;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.AudioSink;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
+    final fun encode(kotlin/FloatArray, io.github.yuroyami.audiokodec/AudioFormat, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(kotlin.FloatArray;io.github.yuroyami.audiokodec.AudioFormat;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
+    final fun open(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/AudioDecoder // io.github.yuroyami.audiokodec/AudioKodec.open|open(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun open(kotlin/ByteArray, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/AudioDecoder // io.github.yuroyami.audiokodec/AudioKodec.open|open(kotlin.ByteArray;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun probe(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/AudioInfo // io.github.yuroyami.audiokodec/AudioKodec.probe|probe(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun probe(kotlin/ByteArray, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/AudioInfo // io.github.yuroyami.audiokodec/AudioKodec.probe|probe(kotlin.ByteArray;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun readTags(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec.tag/TagBundle // io.github.yuroyami.audiokodec/AudioKodec.readTags|readTags(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun readTags(kotlin/ByteArray, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec.tag/TagBundle // io.github.yuroyami.audiokodec/AudioKodec.readTags|readTags(kotlin.ByteArray;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun sniff(kotlin/ByteArray): io.github.yuroyami.audiokodec/AudioContainer? // io.github.yuroyami.audiokodec/AudioKodec.sniff|sniff(kotlin.ByteArray){}[0]
+    final fun verifyFlacMd5(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): kotlin/Boolean? // io.github.yuroyami.audiokodec/AudioKodec.verifyFlacMd5|verifyFlacMd5(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun verifyFlacMd5(kotlin/ByteArray, io.github.yuroyami.audiokodec/DecodeOptions = ...): kotlin/Boolean? // io.github.yuroyami.audiokodec/AudioKodec.verifyFlacMd5|verifyFlacMd5(kotlin.ByteArray;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun writeTags(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec.tag/TagBundle, io.github.yuroyami.audiokodec/AudioSink, io.github.yuroyami.audiokodec.tag/TagWriteOptions = ..., io.github.yuroyami.audiokodec/DecodeOptions = ...) // io.github.yuroyami.audiokodec/AudioKodec.writeTags|writeTags(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.tag.TagBundle;io.github.yuroyami.audiokodec.AudioSink;io.github.yuroyami.audiokodec.tag.TagWriteOptions;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun writeTags(kotlin/ByteArray, io.github.yuroyami.audiokodec.tag/TagBundle, io.github.yuroyami.audiokodec.tag/TagWriteOptions = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.writeTags|writeTags(kotlin.ByteArray;io.github.yuroyami.audiokodec.tag.TagBundle;io.github.yuroyami.audiokodec.tag.TagWriteOptions){}[0]
+}
+
+final object io.github.yuroyami.audiokodec/Pcm { // io.github.yuroyami.audiokodec/Pcm|null[0]
+    final fun clampInPlace(kotlin/FloatArray, kotlin/Int = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.clampInPlace|clampInPlace(kotlin.FloatArray;kotlin.Int){}[0]
+    final fun deinterleave(kotlin/FloatArray, kotlin/Int, kotlin/Int): kotlin/Array<kotlin/FloatArray> // io.github.yuroyami.audiokodec/Pcm.deinterleave|deinterleave(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+    final fun floatFromInt(kotlin/IntArray, kotlin/Int, kotlin/Int = ..., kotlin/FloatArray? = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.floatFromInt|floatFromInt(kotlin.IntArray;kotlin.Int;kotlin.Int;kotlin.FloatArray?){}[0]
+    final fun intFromFloat(kotlin/FloatArray, kotlin/Int, kotlin/Int = ..., kotlin/IntArray? = ..., io.github.yuroyami.audiokodec/Dither = ...): kotlin/IntArray // io.github.yuroyami.audiokodec/Pcm.intFromFloat|intFromFloat(kotlin.FloatArray;kotlin.Int;kotlin.Int;kotlin.IntArray?;io.github.yuroyami.audiokodec.Dither){}[0]
+    final fun interleave(kotlin/Array<kotlin/FloatArray>, kotlin/Int, kotlin/FloatArray? = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.interleave|interleave(kotlin.Array<kotlin.FloatArray>;kotlin.Int;kotlin.FloatArray?){}[0]
+    final fun maxValueOf(kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/Pcm.maxValueOf|maxValueOf(kotlin.Int){}[0]
+    final fun minValueOf(kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/Pcm.minValueOf|minValueOf(kotlin.Int){}[0]
+    final fun remapChannels(kotlin/FloatArray, kotlin/Int, io.github.yuroyami.audiokodec/ChannelLayout, io.github.yuroyami.audiokodec/ChannelLayout, kotlin/FloatArray? = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.remapChannels|remapChannels(kotlin.FloatArray;kotlin.Int;io.github.yuroyami.audiokodec.ChannelLayout;io.github.yuroyami.audiokodec.ChannelLayout;kotlin.FloatArray?){}[0]
+    final fun scaleOf(kotlin/Int): kotlin/Double // io.github.yuroyami.audiokodec/Pcm.scaleOf|scaleOf(kotlin.Int){}[0]
+}
+
+final fun (kotlin/ByteArray).io.github.yuroyami.audiokodec/asAudioSource(): io.github.yuroyami.audiokodec/AudioSource // io.github.yuroyami.audiokodec/asAudioSource|asAudioSource@kotlin.ByteArray(){}[0]
+final fun (kotlin/FloatArray).io.github.yuroyami.audiokodec/asPcmSource(io.github.yuroyami.audiokodec/AudioFormat, kotlin/Int = ...): io.github.yuroyami.audiokodec/PcmSource // io.github.yuroyami.audiokodec/asPcmSource|asPcmSource@kotlin.FloatArray(io.github.yuroyami.audiokodec.AudioFormat;kotlin.Int){}[0]

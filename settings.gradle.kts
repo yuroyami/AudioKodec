@@ -19,15 +19,15 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-rootProject.name = "AudioKodecs-KMP"
+rootProject.name = "AudioKodec-KMP"
 
-// :audiokodecs is the pure-Kotlin audio core (stdlib only). Container parsing,
+// :audiokodec is the pure-Kotlin audio core (stdlib only). Container parsing,
 // codecs, tag handling, the PCM model and the hostile-input guards all live
 // here and port cleanly to every KMP target.
-include(":audiokodecs")
+include(":audiokodec")
 
-// :audiokodecs-io is the optional kotlinx-io bridge: read a file as an
+// :audiokodec-io is the optional kotlinx-io bridge: read a file as an
 // AudioSource, write an encoder's output to a Sink. It keeps kotlinx-io off
 // the classpath of consumers that already have their own byte plumbing. Its
 // target list is kotlinx-io's, which is smaller than the core's.
-include(":audiokodecs-io")
+include(":audiokodec-io")

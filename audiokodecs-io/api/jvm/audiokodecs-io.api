@@ -1,9 +1,0 @@
-public final class io/github/yuroyami/audiokodecs/io/AudioKodecsIoKt {
-	public static final fun asAudioSink (Lkotlinx/io/RawSink;)Lio/github/yuroyami/audiokodecs/AudioSink;
-	public static final fun asAudioSink (Lkotlinx/io/files/Path;)Lio/github/yuroyami/audiokodecs/AudioSink;
-	public static final fun readAudioSource (Lkotlinx/io/RawSource;J)Lio/github/yuroyami/audiokodecs/AudioSource;
-	public static final fun readAudioSource (Lkotlinx/io/files/Path;J)Lio/github/yuroyami/audiokodecs/AudioSource;
-	public static synthetic fun readAudioSource$default (Lkotlinx/io/RawSource;JILjava/lang/Object;)Lio/github/yuroyami/audiokodecs/AudioSource;
-	public static synthetic fun readAudioSource$default (Lkotlinx/io/files/Path;JILjava/lang/Object;)Lio/github/yuroyami/audiokodecs/AudioSource;
-}
-

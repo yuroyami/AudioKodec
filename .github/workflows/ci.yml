@@ -42,20 +42,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Core tests (JVM)
-        run: ./gradlew :audiokodecs:jvmTest :audiokodecs-io:jvmTest --stacktrace
+        run: ./gradlew :audiokodec:jvmTest :audiokodec-io:jvmTest --stacktrace
 
       - name: Core tests (JS + wasm)
         run: >-
           ./gradlew
-          :audiokodecs:jsNodeTest
-          :audiokodecs:wasmJsNodeTest
-          :audiokodecs:wasmWasiNodeTest
-          :audiokodecs-io:wasmJsNodeTest
-          :audiokodecs-io:wasmWasiNodeTest
+          :audiokodec:jsNodeTest
+          :audiokodec:wasmJsNodeTest
+          :audiokodec:wasmWasiNodeTest
+          :audiokodec-io:wasmJsNodeTest
+          :audiokodec-io:wasmWasiNodeTest
           --stacktrace
 
       - name: Core tests (native)
-        run: ./gradlew :audiokodecs:linuxX64Test :audiokodecs-io:linuxX64Test --stacktrace
+        run: ./gradlew :audiokodec:linuxX64Test :audiokodec-io:linuxX64Test --stacktrace
 
       - name: Public API check
         run: ./gradlew checkKotlinAbi --stacktrace
@@ -84,7 +84,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: MinGW x64 tests
-        run: .\gradlew.bat :audiokodecs:mingwX64Test :audiokodecs-io:mingwX64Test --stacktrace
+        run: .\gradlew.bat :audiokodec:mingwX64Test :audiokodec-io:mingwX64Test --stacktrace
 
       - name: Upload test reports
         if: failure()
@@ -112,10 +112,10 @@ jobs:
       - name: Native tests
         run: >-
           ./gradlew
-          :audiokodecs:macosArm64Test
-          :audiokodecs:iosSimulatorArm64Test
-          :audiokodecs-io:macosArm64Test
-          :audiokodecs-io:iosSimulatorArm64Test
+          :audiokodec:macosArm64Test
+          :audiokodec:iosSimulatorArm64Test
+          :audiokodec-io:macosArm64Test
+          :audiokodec-io:iosSimulatorArm64Test
           --stacktrace
 
       - name: Upload test reports
@@ -140,10 +140,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Android host tests
-        run: ./gradlew :audiokodecs:testAndroidHostTest :audiokodecs-io:testAndroidHostTest --stacktrace
+        run: ./gradlew :audiokodec:testAndroidHostTest :audiokodec-io:testAndroidHostTest --stacktrace
 
       - name: Assemble every target
-        run: ./gradlew :audiokodecs:assemble :audiokodecs-io:assemble --stacktrace
+        run: ./gradlew :audiokodec:assemble :audiokodec-io:assemble --stacktrace
 
   docs:
     name: API documentation

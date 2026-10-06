@@ -1,6 +1,6 @@
 # References
 
-What AudioKodecs was written from, and what it may be written from next.
+What AudioKodec was written from, and what it may be written from next.
 
 Nothing listed here is redistributed. Specifications are read; implementations
 are either studied under a permissive licence or left unopened. The
@@ -171,7 +171,7 @@ Things that look like transcription errors and are not:
   skips seven levels where its first group has them.
 - The standard prints two of the seventeen C constants truncated rather than
   rounded: 1.77777777777 where correct rounding gives ...778, and 1.06666666666
-  where it gives ...667. This is the same class of tie as D[196] above. AudioKodecs
+  where it gives ...667. This is the same class of tie as D[196] above. AudioKodec
   computes the dequantisation rather than transcribing it, which sidesteps both.
 
 One source disagreement found, recorded because it is exactly the failure mode
@@ -201,7 +201,7 @@ freely published and may be implemented from without qualification.
 RFC 6716 also carries the complete reference implementation in its body, under a
 BSD-style licence stated in the RFC itself, and the same code is published as
 libopus under BSD-3-Clause. That is permissive and not on the never-opened list,
-so it may be ported from. Where AudioKodecs follows it rather than the prose, the
+so it may be ported from. Where AudioKodec follows it rather than the prose, the
 comment says so.
 
 The range decoder is the one place where following the reference exactly matters
@@ -225,7 +225,7 @@ was written, as rule 2 asks.
 | Files | `celt/` and `silk/` decoder sources, `src/opus_decoder.c`, `src/opus_multistream_decoder.c`, `src/opus_projection_decoder.c`, `src/mapping_matrix.c` |
 | Not ported | Every encoder source, the `dnn/` tree (deep PLC, DRED and OSCE), and the architecture-specific `x86/`, `arm/` and `mips/` variants |
 
-The licence text, which a binary release of AudioKodecs has to carry because
+The licence text, which a binary release of AudioKodec has to carry because
 the port is a derivative of it:
 
 ```
@@ -280,7 +280,7 @@ applies to them.
 The test oracles for this work are the reference programs built from the same
 commit and run: `opus_demo`, `opus_compare`, and a small command line over the
 multistream and projection API written for these tests
-(`audiokodecs/src/jvmTest/resources/opus_multistream_oracle.c`).
+(`audiokodec/src/jvmTest/resources/opus_multistream_oracle.c`).
 
 `opus_compare.c` is also translated, into the test suite as `OpusCompare.kt`,
 because its measure is part of the specification rather than a tool around it:
@@ -305,7 +305,7 @@ there and checks its digest, and skips itself when none of that is possible.
 ## ALAC
 
 There is no published specification of Apple Lossless beyond its source code,
-which Apple released under the Apache License 2.0, the licence AudioKodecs
+which Apple released under the Apache License 2.0, the licence AudioKodec
 ships under. The decoder is a translation of it, recorded here before the
 first line was written.
 

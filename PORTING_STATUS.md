@@ -1,4 +1,4 @@
-# AudioKodecs format status
+# AudioKodec format status
 
 Updated 2026-07-28. This file lists the support level for every format and
 feature, and what comes next. For install instructions, targets and limits,
@@ -7,7 +7,7 @@ read the [README](README.md).
 ## Test and target summary
 
 The complete common and JVM suites run green, including the optional
-`audiokodecs-io` bridge and external-tool oracle suites. The common tests also
+`audiokodec-io` bridge and external-tool oracle suites. The common tests also
 run green on JS (Node), wasmJs (Node), wasmWasi (Node), and Kotlin/Native on
 macOS arm64 and the iOS simulator. CI additionally executes the Linux x64 and
 MinGW x64 native suites on their required hosts.
@@ -21,13 +21,13 @@ passing one. Within them:
   Microsoft ADPCM all decode **bit-identically to ffmpeg**. IMA ADPCM does
   not, for a reason recorded under [Known differences](#known-differences).
 - Tags written by ffmpeg into real MP3 files are read back field for field,
-  and tags AudioKodecs writes are read back by `ffprobe`, in both ID3v2.3 and
+  and tags AudioKodec writes are read back by `ffprobe`, in both ID3v2.3 and
   ID3v2.4 and including text outside ISO-8859-1.
 - Tagging an MP3 is checked to leave the decoded audio identical sample for
   sample, by decoding the file with ffmpeg before and after.
 - FLAC files written by the reference encoder decode **bit-exactly** at 8, 16
   and 24 bits, 1, 2 and 6 channels, and every compression level from 0 to 8.
-- FLAC files AudioKodecs writes pass `flac --test`, which verifies every frame
+- FLAC files AudioKodec writes pass `flac --test`, which verifies every frame
   checksum and the stream MD5, and `flac --decode` returns the samples that
   went in.
 - CAF files from `afconvert` decode bit-exactly across its uncompressed data
@@ -60,7 +60,7 @@ passing one. Within them:
   read with either bit, a book ending on a 32-bit codeword, and a book
   declaring more lookup values than the stream holds.
 
-`audiokodecs` builds for 22 targets and `audiokodecs-io` for 21. The README lists
+`audiokodec` builds for 22 targets and `audiokodec-io` for 21. The README lists
 them.
 
 ## Containers
@@ -98,8 +98,8 @@ them.
 | **IMA ADPCM (QuickTime `ima4`)** | ✅ | ❌ | 34-byte packets of 64 frames, one packet per channel |
 | **Microsoft ADPCM** | ✅ | ✅ | Seven standard coefficient sets, plus a table carried by the file. Bit-identical to ffmpeg |
 | **FLAC** | ✅ | ✅ | Constant, verbatim, fixed and linear predictors up to order 32; Rice and Rice2 residuals with escaped partitions; all four stereo arrangements; wasted-bits subframes; 8 to 32-bit decode and 8, 16 and 24-bit encode. Decodes inside Ogg as well as natively |
-| **Vorbis** | ✅ | ❌ | Floor type 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodecs's channel order. Floor type 0 is parsed and refused: no encoder has emitted it since the format's 2001 betas, and none exists to make a file to test one against |
-| **Opus** | ✅ | ❌ | SILK, CELT and hybrid frames, mode and bandwidth changes with their redundant frames, concealment and recovery from in-band redundancy, mapping families 0, 1, 2, 3 and 255 with surround reordered into AudioKodecs's channel order. Pre-skip, start offset, end trim and output gain applied; seeking with 80 ms of run-up. Bit-exact against libopus 1.5.2 |
+| **Vorbis** | ✅ | ❌ | Floor type 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodec's channel order. Floor type 0 is parsed and refused: no encoder has emitted it since the format's 2001 betas, and none exists to make a file to test one against |
+| **Opus** | ✅ | ❌ | SILK, CELT and hybrid frames, mode and bandwidth changes with their redundant frames, concealment and recovery from in-band redundancy, mapping families 0, 1, 2, 3 and 255 with surround reordered into AudioKodec's channel order. Pre-skip, start offset, end trim and output gain applied; seeking with 80 ms of run-up. Bit-exact against libopus 1.5.2 |
 | Speex | ❌ | ❌ | Its Ogg carriage is done: headers, length and comments are read. The codec itself is #18 |
 | **ALAC** | ✅ | ❌ | Translated from Apple's Apache-2.0 reference: adaptive Golomb residues, the adaptive predictor in every order, mixed stereo pairs, shifted-off low bytes at 24 and 32 bits, uncompressed escape frames, one to eight channels reordered from ALAC's order. Every file Apple's `alacconvert` encodes at 16, 24 and 32 bits with one to eight channels decodes to exactly its input, and every ffmpeg file in MP4 to exactly ffmpeg's decode. 20-bit decoding follows the reference, but neither tool here writes a 20-bit file to check it against. Encoding is #11 |
 | WavPack, APE, TTA | ❌ | ❌ | #14, #15 and #16 |
@@ -110,7 +110,7 @@ them.
 
 ## Tags
 
-Tags are read from any file, including formats AudioKodecs cannot decode. A tag
+Tags are read from any file, including formats AudioKodec cannot decode. A tag
 block does not need a decoder, so unsupported audio can still have its metadata
 inspected and edited.
 
@@ -211,21 +211,21 @@ three separately truncated shifts of the step size. ffmpeg computes
 is replacing the reference implementation's series of jumps with a multiply.
 The two agree in exact arithmetic and differ by the truncation, and because
 the predictor is a running sum, the difference accumulates. Measured over half
-a second it reaches about 44 parts in 32768, or roughly -57 dBFS. AudioKodecs
+a second it reaches about 44 parts in 32768, or roughly -57 dBFS. AudioKodec
 follows the specification, which is also what libsndfile and Microsoft's
 documentation describe. The oracle test allows that difference and nothing
 larger.
 
 **ADPCM frame counts against ffmpeg.** The last ADPCM block in a WAV file is
 padded with silence, and the `fact` chunk states how many frames were real.
-AudioKodecs stops there. ffmpeg decodes the padding as well, so it returns up to
-one block more than the file declares. AudioKodecs's behaviour is what gapless
+AudioKodec stops there. ffmpeg decodes the padding as well, so it returns up to
+one block more than the file declares. AudioKodec's behaviour is what gapless
 playback needs.
 
 **Vorbis frame counts against ffmpeg.** An Ogg page states how many samples of
 final output exist once it has been decoded, and the last page of a file is
 what says how long the file is. The extra samples an encoder pads its final
-block with are not part of the recording, and AudioKodecs drops them, which is
+block with are not part of the recording, and AudioKodec drops them, which is
 what makes one file follow another with no gap. ffmpeg's raw output does not
 always agree: on some files it keeps that padding, and on a Vorbis stream whose
 audio fits in a single Ogg page it drops 128 real samples from the end instead.
@@ -237,15 +237,15 @@ fields, so they go in a user text frame whose description names them. Some
 programs use a fixed set of descriptions for that. Others, ffmpeg among them,
 write whatever metadata key they were given, using the names Vorbis comments
 use, which means a comment can arrive as a `TXXX` called `comment` rather than
-as a `COMM` frame. AudioKodecs understands both, because reading only the first
+as a `COMM` frame. AudioKodec understands both, because reading only the first
 loses fields from files that are perfectly ordinary.
 
 ## Where the code went its own way
 
 Settled decisions, kept here so nobody has to work out the reasons again.
 
-1. **`AudioSource` and `AudioSink`, not `AudioKodecsSource` and
-   `AudioKodecsSink`.** The plan used both naming styles in different sections.
+1. **`AudioSource` and `AudioSink`, not `AudioKodecSource` and
+   `AudioKodecSink`.** The plan used both naming styles in different sections.
    The short names match `AudioFormat`, `AudioFrame` and `AudioDecoder`, and
    the framework prefix that Kotlin/Native adds keeps Objective-C interop
    unambiguous.
@@ -253,7 +253,7 @@ Settled decisions, kept here so nobody has to work out the reasons again.
    sample is one channel of one frame.
 3. **`IntPcmAccess.nextIntFrame()`, not `readIntFrame()`.** It matches
    `AudioDecoder.nextFrame()`, which is the call it parallels.
-4. **`audiokodecs-io` reads a file into memory rather than streaming it.**
+4. **`audiokodec-io` reads a file into memory rather than streaming it.**
    kotlinx-io has no random-access file handle, and decoding needs one. The
    functions are named `readAudioSource` so the cost is visible, and the
    README points a caller with a large file at implementing `AudioSource` over

@@ -34,7 +34,7 @@ audio and Ogg.
   sample-accurate seeking with or without a seek table, and verification against
   the MD5 the encoding program stored.
 - Apple Core Audio Format, read, including packet-table priming and remainder
-  trimming, and named channel layouts reordered into AudioKodecs's channel
+  trimming, and named channel layouts reordered into AudioKodec's channel
   order.
 - The Ogg container, read in full: pages and checksums, packet reassembly
   across pages, several logical streams at once, chained streams and granule
@@ -50,12 +50,12 @@ audio and Ogg.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames
   that smooth a change of codec, concealment of lost packets and recovery from
   the redundant copy the next packet carries, and every channel mapping,
-  surround in AudioKodecs's channel order and ambisonics with or without a
+  surround in AudioKodec's channel order and ambisonics with or without a
   demixing matrix. Pre-skip, end trim and the header's output gain are
   applied, and seeking runs 80 ms ahead of its target. Identical to libopus,
   sample for sample, and passes the RFC 8251 conformance vectors.
 - Vorbis, decoded: floor type 1, residue types 0, 1 and 2, channel coupling,
-  block switching, and up to eight channels reordered into AudioKodecs's channel
+  block switching, and up to eight channels reordered into AudioKodec's channel
   order. Checked against libvorbis sample for sample at every quality level.
   Floor type 0 is parsed and refused, because no encoder has emitted it since
   the format's 2001 beta releases.
@@ -70,4 +70,4 @@ audio and Ogg.
   `Xing`, `Info` and `VBRI` headers, LAME gapless trimming, and exact
   durations for constant and variable bitrate files alike. Layers I, II and
   III all decode, with sample-accurate seeking.
-- `audiokodecs-io`, the optional kotlinx-io bridge.
+- `audiokodec-io`, the optional kotlinx-io bridge.
