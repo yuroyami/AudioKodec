@@ -214,6 +214,7 @@ Truncation and mutation sweeps cover independent artwork layouts.
 | `3/12` split into a number and a total, and joined again on write | ✅ |
 | Comment and lyric whitespace retained in the merged view; unchanged ID3 text keeps every distinct language/description pair | ✅ v2.2/v2.3/v2.4 inputs and v2.3/v2.4 output, with all legal text encodings; Mutagen checks v2.3/v2.4 |
 | Reserved iTunes `COM`/`COMM` frames kept separate from editable user comments | ✅ case-insensitive `iTun` description family retained across comment edits and version conversion; common encoding/hostile cases and Mutagen on real MP3 files |
+| Multiple native text values retained during encoding and edits | ✅ repeated RIFF INFO and AIFF annotations; singular AIFF title/author/copyright with ID3 fallback or named refusal; WAV/RF64/AIFF/AIFF-C, ExifTool, Mutagen and hostile cases |
 | Encoding software, human credit and explicit settings kept separate | ✅ ID3 `TSSE`/`TENC`/`TXXX:ENCODERSETTINGS`, native Vorbis/APE and RIFF conventions; combined strings retained intact; common version/edit/hostile cases, Mutagen and FFprobe |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
 | Equivalent artwork copies merged without growth on repeated edits | ✅ distinct image bytes, roles and rich captions retained; chapter scope kept separate |

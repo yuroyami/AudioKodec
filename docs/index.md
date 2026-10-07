@@ -455,6 +455,24 @@ AudioKodec.writeTags(
 )
 ```
 
+### Multiple values in native text chunks
+
+WAV and RF64 write each non-empty modelled RIFF INFO value in a separate
+subchunk, preserving the field's value order. AIFF and AIFF-C write each
+comment in a separate `ANNO` chunk. An empty first value does not hide later
+non-empty values.
+
+AIFF permits only one native title (`NAME`), author (`AUTH`) and copyright
+(`(c) `) chunk. Several distinct values need an ID3 carrier. The default
+rewrite adds an ID3 chunk when none exists, keeping the complete list there.
+The native chunk holds the first non-empty value for readers using native text.
+Fresh encoding uses the same native chunk rules and already includes ID3.
+
+An explicit `setOf(TagFormat.AIFF_TEXT)` selection refuses a singleton list
+before writing output. Include `TagFormat.ID3V2_4`, or select it alone, to retain
+the complete list. ID3v2.3 still refuses lists it cannot represent.
+Repeated copies of the same singleton value need no fallback.
+
 ### Encoding software and credits
 
 `TagField.ENCODER` identifies the encoding software or hardware.

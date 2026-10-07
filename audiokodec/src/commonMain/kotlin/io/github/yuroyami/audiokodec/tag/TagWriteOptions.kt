@@ -46,8 +46,10 @@ public class TagWriteOptions(
      * Which tag formats to write, or null to use what suits the container.
      *
      * The default writes an ID3v2 block for bare codec streams, a `LIST INFO`
-     * chunk for RIFF files, and text chunks for AIFF. A non-null set is the
-     * complete selection of writable formats. For example, use
+     * chunk for RIFF files, and text chunks for AIFF. Multiple AIFF title,
+     * author or copyright values also need ID3, which the default adds when
+     * none exists. A native-text-only selection refuses those lists before
+     * output. A non-null set selects every writable format to keep. For example, use
      * `setOf(RIFF_INFO, ID3V2_4)` to put both kinds in a WAV file, or an empty
      * set to remove its writable tag chunks. Read-only blocks such as `bext`
      * and Lyrics3 are preserved.

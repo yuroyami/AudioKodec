@@ -37,6 +37,29 @@ class HostileTagTest {
     }
 
     @Test
+    fun repeatedNativeTextKeepsTypedFailuresUnderTruncationAndMutation() {
+        val sources = listOf(NativeTextListFixtures.wave(), NativeTextListFixtures.rf64(),
+            NativeTextListFixtures.aiff(), NativeTextListFixtures.aiff(EncodeTarget.aiffFloat()))
+        for (source in sources) {
+            val original = NativeTextListFixtures.withComments(source)
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("native text truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    expectOnlyKiteFailures("native text byte $at set to $byte") {
+                        val mutated = original.copyOf().also { it[at] = byte }
+                        val tags = AudioKodec.readTags(mutated)
+                        AudioKodec.writeTags(mutated, tags.edit { remove(TagField.COMMENT) })
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun encoderMetadataKeepsTypedFailuresUnderTruncationAndMutation() {
         for (version in 2..4) {
             val original = EncoderTagFixtures.id3(version, 1)

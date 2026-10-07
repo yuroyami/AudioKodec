@@ -571,7 +571,9 @@ internal object ContainerWriter {
             else -> target.bitDepth
         }
         val actualTags = tags?.takeUnless { it.isEmpty }
-        val textChunks = actualTags?.let { TagWriter.buildAiffTextChunks(it) }.orEmpty()
+        val textChunks = actualTags?.let {
+            TagWriter.buildAiffTextChunks(it, singletonValuesInId3 = true)
+        }.orEmpty()
         val id3 = actualTags?.let { Id3v2Writer.build(it, major = 4, padding = 0) }
         var metadataBytes = 0L
         for (chunk in textChunks) {

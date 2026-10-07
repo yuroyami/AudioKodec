@@ -83,6 +83,11 @@ AUDIOKODEC_MUTAGEN_PYTHON=/tmp/audiokodec-tag-oracle/bin/python ./gradlew :audio
 Mutagen is a test executable only. Its implementation source must stay
 unopened under the same boundary as every other copyleft oracle.
 
+The native text suite also needs ExifTool on `PATH` to read every repeated
+RIFF INFO and AIFF text chunk. It reports an actual skip when ExifTool is
+missing. On macOS, install it with `brew install exiftool`. Only its public
+command-line interface is used; implementation source stays unopened.
+
 The R128 suite also calls libopusfile's documented tag and gain API through
 Python. Install libopusfile or set `AUDIOKODEC_OPUSFILE_LIBRARY` to its shared
 library. A missing library produces an actual test skip; a configured library

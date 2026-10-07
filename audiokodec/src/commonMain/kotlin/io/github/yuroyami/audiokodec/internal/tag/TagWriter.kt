@@ -82,9 +82,13 @@ internal object TagWriter {
             false
         }
         val hadTrailingId3 = externalTrailing.any { isId3v2(it.block.format) }
+        val aiffNeedsId3 = container == AudioContainer.AIFF && options.formats == null &&
+            aiffSingletonListField(tags) != null
+        val addAiffId3Chunk = aiffNeedsId3 && !hadLeadingId3 && !hadTrailingId3 &&
+            existing.none { isId3v2(it.format) }
         val willWriteId3 = if (containerHasSeparateMetadata) {
             options.formats?.any { isId3v2(it) }
-                ?: (hadLeadingId3 || hadTrailingId3 || existing.any { isId3v2(it.format) })
+                ?: (hadLeadingId3 || hadTrailingId3 || existing.any { isId3v2(it.format) } || aiffNeedsId3)
         } else {
             options.formats == null || options.formats.any { isId3v2(it) }
         }
@@ -105,7 +109,7 @@ internal object TagWriter {
         }
         val picturesPreservedElsewhere = if (containerHasSeparateMetadata) {
             container == AudioContainer.FLAC || container == AudioContainer.OGG ||
-                hadLeadingId3 || hadTrailingId3 || existing.any { isId3v2(it.format) }
+                hadLeadingId3 || hadTrailingId3 || existing.any { isId3v2(it.format) } || addAiffId3Chunk
         } else {
             options.formats == null || options.formats.any { isId3v2(it) }
         }
@@ -132,7 +136,10 @@ internal object TagWriter {
             AudioContainer.RF64 ->
                 writeRiff(reader, artworkTags, sink, options, rf64 = true, sourceEnd = containerEnd)
             AudioContainer.AIFF ->
-                writeAiff(reader, artworkTags, sink, options, sourceEnd = containerEnd)
+                writeAiff(
+                    reader, artworkTags, sink, options, sourceEnd = containerEnd,
+                    singletonValuesInId3 = willWriteId3, addId3Chunk = addAiffId3Chunk,
+                )
             AudioContainer.FLAC -> io.github.yuroyami.audiokodec.internal.flac.FlacTagWriter.write(
                 reader,
                 artworkTags,
@@ -654,9 +661,9 @@ internal object TagWriter {
         val entries = ArrayList<Pair<String, ByteArray>>()
         for ((field, values) in tags.fields) {
             val key = TagMapping.riffInfoKeyFor(field) ?: continue
-            val value = values.firstOrNull() ?: continue
-            if (value.isEmpty()) continue
-            entries.add(key to TagText.encodeLatin1(value))
+            for (value in values) {
+                if (value.isNotEmpty()) entries.add(key to TagText.encodeLatin1(value))
+            }
         }
         for (block in tags.raw.blocksOf(TagFormat.RIFF_INFO)) {
             for (entry in block.entries) {
@@ -709,26 +716,49 @@ internal object TagWriter {
         return out.copyOf(position)
     }
 
-    /** Builds the complete native text chunks used by both AIFF write paths. */
-    internal fun buildAiffTextChunks(tags: TagBundle): List<ByteArray> {
+    /** Finds a list that cannot fit the singleton NAME, AUTH or copyright chunk. */
+    private fun aiffSingletonListField(tags: TagBundle): Pair<TagField, String>? {
+        for ((field, values) in tags.fields) {
+            val id = TagMapping.aiffChunkFor(field) ?: continue
+            if (id == "ANNO") continue
+            val first = values.firstOrNull { it.isNotEmpty() } ?: continue
+            if (values.any { it.isNotEmpty() && it != first }) return field to id
+        }
+        return null
+    }
+
+    /**
+     * Builds repeated annotations and singular native title, author and copyright chunks.
+     * Extra singleton values need a complete ID3 carrier in the same file.
+     */
+    internal fun buildAiffTextChunks(tags: TagBundle, singletonValuesInId3: Boolean = false): List<ByteArray> {
+        val multiple = aiffSingletonListField(tags)
+        if (multiple != null && !singletonValuesInId3) {
+            throw UnsupportedFeatureException(
+                "multiple values for AIFF ${multiple.first.name} (${multiple.second})",
+                "AIFF ${multiple.first.name} needs an ID3v2.4 chunk to retain its complete list.",
+            )
+        }
         val text = ArrayList<ByteArray>()
         for ((field, values) in tags.fields) {
             val id = TagMapping.aiffChunkFor(field) ?: continue
-            val value = values.firstOrNull() ?: continue
-            if (value.isEmpty()) continue
-            val encoded = TagText.encodeLatin1(value)
-            val chunkSize = 8L + encoded.size + encoded.size % 2
-            if (chunkSize > Int.MAX_VALUE) {
-                throw AudioKodecException("an AIFF text chunk is too large for a Kotlin array")
+            for (value in values) {
+                if (value.isEmpty()) continue
+                val encoded = TagText.encodeLatin1(value)
+                val chunkSize = 8L + encoded.size + encoded.size % 2
+                if (chunkSize > Int.MAX_VALUE) {
+                    throw AudioKodecException("an AIFF text chunk is too large for a Kotlin array")
+                }
+                val chunk = ByteArray(chunkSize.toInt())
+                for (i in 0 until 4) chunk[i] = id[i].code.toByte()
+                chunk[4] = (encoded.size ushr 24).toByte()
+                chunk[5] = (encoded.size ushr 16).toByte()
+                chunk[6] = (encoded.size ushr 8).toByte()
+                chunk[7] = encoded.size.toByte()
+                encoded.copyInto(chunk, 8)
+                text.add(chunk)
+                if (id != "ANNO") break
             }
-            val chunk = ByteArray(chunkSize.toInt())
-            for (i in 0 until 4) chunk[i] = id[i].code.toByte()
-            chunk[4] = (encoded.size ushr 24).toByte()
-            chunk[5] = (encoded.size ushr 16).toByte()
-            chunk[6] = (encoded.size ushr 8).toByte()
-            chunk[7] = encoded.size.toByte()
-            encoded.copyInto(chunk, 8)
-            text.add(chunk)
         }
         return text
     }
@@ -740,6 +770,8 @@ internal object TagWriter {
         sink: AudioSink,
         options: TagWriteOptions,
         sourceEnd: Long,
+        singletonValuesInId3: Boolean,
+        addId3Chunk: Boolean,
     ) {
         val size = sourceEnd
         reader.seek(0)
@@ -748,7 +780,7 @@ internal object TagWriter {
         val formType = reader.readFourCc()
 
         val text = if (options.formats == null || TagFormat.AIFF_TEXT in options.formats) {
-            buildAiffTextChunks(tags)
+            buildAiffTextChunks(tags, singletonValuesInId3)
         } else {
             emptyList()
         }
@@ -816,7 +848,7 @@ internal object TagWriter {
             reader.seek(next)
             if (size in 1..next) break
         }
-        val id3 = if (explicitlyWantsId3 || options.formats == null && hadId3Chunk) {
+        val id3 = if (explicitlyWantsId3 || options.formats == null && hadId3Chunk || addId3Chunk) {
             Id3v2Writer.build(tags, requestedId3Version(options), 0)
                 .takeIf { it.size > 10 }
         } else {

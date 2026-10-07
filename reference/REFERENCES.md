@@ -28,7 +28,7 @@ can hold checkouts without them ever reaching the repository.
 | WAVE_FORMAT_EXTENSIBLE | Microsoft multichannel WAVE documentation, `KSDATAFORMAT_SUBTYPE` GUIDs |
 | RF64 and BW64 | EBU Tech 3306 (RF64), EBU Tech 3285 (Broadcast Wave Format) |
 | Wave64 | Sony Pictures Digital Wave64 specification |
-| AIFF | Apple Audio Interchange File Format 1.3 |
+| AIFF | [Apple Audio Interchange File Format 1.3](https://blog.zamzar.com/wp-content/uploads/2014/10/aiffspecs.pdf), including the text chunk cardinalities on pages 23 and 24 |
 | AIFF-C | Apple AIFF-C specification, including the compression type registry; [Inside Macintosh: Common Chunks](https://dev.os9.ca/techpubs/mac/Sound/Sound-82.html) for the compressed sample width field. Writer conventions are checked with `afconvert` and ffmpeg |
 | AU | Sun and NeXT audio file format documentation |
 | A-law and mu-law | ITU-T Recommendation G.711 |
@@ -61,6 +61,7 @@ Run as programs, never read as source.
 |---|---|
 | ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write |
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites |
+| ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
 | alacconvert | ALAC, built from Apple's reference at the commit the port follows |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
