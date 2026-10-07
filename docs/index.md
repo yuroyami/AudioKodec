@@ -402,6 +402,10 @@ so colliding string hashes do not change its comparison bound. Existing
 allocation limits still apply. Reading time also depends on file size and
 text length.
 
+`COMMENT` and `LYRICS` retain surrounding whitespace, including tabs and line
+endings. Texts that differ by whitespace remain separate values. Other ordinary
+text fields trim surrounding whitespace. Zero-length values are omitted.
+
 ### Editing
 
 Editing rewrites the tag blocks and copies the audio across unchanged. It never
@@ -421,6 +425,13 @@ val updated = AudioKodec.writeTags(bytes, edited)
 This produces a new file rather than editing one in place. Write it to a
 temporary file and move that over the original, which is what makes the
 operation safe against a crash halfway through.
+
+An unrelated ID3 edit preserves each comment or lyric's exact text, language
+and description. Original frames with identical text retain their distinct
+language and description pairs. Changing whitespace is an explicit text change.
+Replacement text with no exact original match receives the language `xxx` and
+an empty description, or a numbered description when that identity is occupied.
+Removing the field removes its frames.
 
 `TagWriteOptions` controls the details:
 

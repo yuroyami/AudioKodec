@@ -177,6 +177,53 @@ class MutagenTagOracleTest {
     }
 
     @Test
+    fun commentAndLyricWhitespaceAgreesInBothDirectionsAfterEdits() {
+        val python = python
+        for (inputVersion in 3..4) {
+            val file = plainMp3("whitespace-$inputVersion")
+            val originalAudio = file.readBytes()
+            run(listOf(python, "-c", WRITE_WHITESPACE, file.path, inputVersion.toString()))
+            val original = file.readBytes()
+            val tags = AudioKodec.readTags(original)
+            assertEquals(setOf("\t bonjour \r\n", "\u00A0 padded \u00A0", "gleich\n", " \t\r\n "), tags.all(TagField.COMMENT).toSet())
+            assertEquals(setOf(" 日本語\n", "la la\n", "\tla la\r\n"), tags.all(TagField.LYRICS).toSet())
+            fun identities(bundle: TagBundle) = bundle.raw.blocks.flatMap { it.entries }
+                .filter { it.key == "COMM" || it.key == "USLT" }
+                .map { listOf(it.key, it.language, it.description, it.text) }.toSet()
+            assertEquals(9, identities(tags).size)
+            for (outputVersion in 3..4) {
+                val options = TagWriteOptions(id3Version = outputVersion, padding = 0)
+                val edited = AudioKodec.writeTags(original, tags.edit { set(TagField.TITLE, "Changed") }, options)
+                file.writeBytes(edited)
+                run(listOf(python, "-c", CHECK_WHITESPACE, file.path, "preserved"))
+                val after = AudioKodec.readTags(edited)
+                assertEquals(tags.all(TagField.COMMENT), after.all(TagField.COMMENT))
+                assertEquals(tags.all(TagField.LYRICS), after.all(TagField.LYRICS))
+                assertEquals(identities(tags), identities(after))
+                assertContentEquals(originalAudio, edited.takeLast(originalAudio.size).toByteArray())
+
+                val replaced = AudioKodec.writeTags(original, tags.edit {
+                    set(TagField.COMMENT, "bonjour")
+                    set(TagField.LYRICS, "la la")
+                }, options)
+                file.writeBytes(replaced)
+                run(listOf(python, "-c", CHECK_WHITESPACE, file.path, "replaced"))
+                assertContentEquals(originalAudio, replaced.takeLast(originalAudio.size).toByteArray())
+
+                val fields = mapOf(
+                    TagField.COMMENT to listOf(" fresh \n", "\t"),
+                    TagField.LYRICS to listOf("日本語\n", "\n\n"),
+                )
+                val fresh = AudioKodec.writeTags(originalAudio, TagBundle(fields), options)
+                file.writeBytes(fresh)
+                run(listOf(python, "-c", CHECK_WHITESPACE, file.path, "fresh"))
+                assertEquals(fields, AudioKodec.readTags(fresh).fields)
+                assertContentEquals(originalAudio, fresh.takeLast(originalAudio.size).toByteArray())
+            }
+        }
+    }
+
+    @Test
     fun largeFlacArtistListsAndDuplicateControlsAgreeWithMutagen() {
         val python = python
         val count = 64_000
@@ -214,6 +261,47 @@ class MutagenTagOracleTest {
 
     private companion object {
         val directory = File(System.getProperty("java.io.tmpdir"), "audiokodec-mutagen-oracle").also { it.mkdirs() }
+        const val WRITE_WHITESPACE = """
+import sys
+from mutagen.id3 import ID3, COMM, USLT
+t = ID3()
+comments = [('fra', 'review', '\t bonjour \r\n'), ('eng', 'padding', '\u00a0 padded \u00a0'),
+            ('deu', 'a', 'gleich\n'), ('deu', 'b', 'gleich\n'), ('ita', 'blank', ' \t\r\n ')]
+lyrics = [('jpn', 'verse', ' 日本語\n'), ('eng', 'verse', 'la la\n'),
+          ('fra', 'verse', 'la la\n'), ('deu', 'verse', '\tla la\r\n')]
+for lang, desc, text in comments:
+    t.add(COMM(encoding=3, lang=lang, desc=desc, text=[text]))
+for lang, desc, text in lyrics:
+    t.add(USLT(encoding=3, lang=lang, desc=desc, text=text))
+if sys.argv[2] == '3':
+    t.update_to_v23()
+t.save(sys.argv[1], v2_version=int(sys.argv[2]), v1=0)
+"""
+        const val CHECK_WHITESPACE = """
+import sys
+from mutagen.id3 import ID3
+t = ID3(sys.argv[1])
+mode = sys.argv[2]
+if mode == 'preserved':
+    comments = [('fra', 'review', '\t bonjour \r\n'), ('eng', 'padding', '\u00a0 padded \u00a0'),
+                ('deu', 'a', 'gleich\n'), ('deu', 'b', 'gleich\n'), ('ita', 'blank', ' \t\r\n ')]
+    lyrics = [('jpn', 'verse', ' 日本語\n'), ('eng', 'verse', 'la la\n'),
+              ('fra', 'verse', 'la la\n'), ('deu', 'verse', '\tla la\r\n')]
+    assert t['TIT2'].text == ['Changed']
+elif mode == 'replaced':
+    comments = [('xxx', '', 'bonjour')]
+    lyrics = [('xxx', '', 'la la')]
+else:
+    assert mode == 'fresh'
+    comments = [('xxx', '', ' fresh \n'), ('xxx', '2', '\t')]
+    lyrics = [('xxx', '', '日本語\n'), ('xxx', '2', '\n\n')]
+assert len(t.getall('COMM')) == len(comments)
+assert len(t.getall('USLT')) == len(lyrics)
+for lang, desc, text in comments:
+    assert t['COMM:' + desc + ':' + lang].text == [text]
+for lang, desc, text in lyrics:
+    assert t['USLT:' + desc + ':' + lang].text == text
+"""
         const val WRITE_MANY_IDENTITIES = """
 import sys
 from mutagen.id3 import ID3, COMM, USLT

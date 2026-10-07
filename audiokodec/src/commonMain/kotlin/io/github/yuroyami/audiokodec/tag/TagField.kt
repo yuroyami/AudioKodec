@@ -73,10 +73,10 @@ public enum class TagField {
     /** Remixer or arranger. */
     REMIXER,
 
-    /** Free comment. */
+    /** Free comment. Surrounding whitespace is retained. */
     COMMENT,
 
-    /** Unsynchronised lyrics. */
+    /** Unsynchronised lyrics. Surrounding whitespace and line endings are retained. */
     LYRICS,
 
     /** Work or content group the track belongs to. */

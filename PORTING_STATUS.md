@@ -167,6 +167,7 @@ scaling test records timings without a machine-dependent pass threshold.
 |---|---|
 | ID3 genre reference runs, refinements, `((` escapes, bare codes, `RX` and `CR` | ✅ separate merged values; unknown syntax stays literal |
 | `3/12` split into a number and a total, and joined again on write | ✅ |
+| Comment and lyric whitespace retained in the merged view; unchanged ID3 text keeps every distinct language/description pair | ✅ v2.2/v2.3/v2.4 inputs and v2.3/v2.4 output, with all legal text encodings; Mutagen checks v2.3/v2.4 |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
 | Media type sniffed when a format stores a picture without naming one | ✅ |
 | Chapters from ID3v2 `CHAP`, with their nested titles and artwork | ✅ |

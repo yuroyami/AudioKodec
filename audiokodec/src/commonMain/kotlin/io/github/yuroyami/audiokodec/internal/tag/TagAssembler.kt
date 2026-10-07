@@ -74,7 +74,10 @@ internal object TagAssembler {
                     continue
                 }
                 if (field == TagField.COMPILATION) value = normaliseFlag(value)
-                addValue(fields, claimedBy, field, value.trim(), precedence, options)
+                // Free-form text carries meaningful spaces and line endings.
+                // Keeping it exact also lets ID3 recognise unchanged frames.
+                if (field != TagField.COMMENT && field != TagField.LYRICS) value = value.trim()
+                addValue(fields, claimedBy, field, value, precedence, options)
             }
 
             when (block.format) {
