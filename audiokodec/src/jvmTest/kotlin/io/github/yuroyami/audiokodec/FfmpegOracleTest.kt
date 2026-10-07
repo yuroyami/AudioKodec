@@ -108,6 +108,24 @@ class FfmpegOracleTest {
         }
     }
 
+    @Test
+    fun everyMicrosoftAdpcmPredictorMatchesFfmpegExactly() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (predictor in 0..6) {
+            for (channels in 1..2) {
+                for (sign in intArrayOf(-1, 1)) {
+                    val what = "MS ADPCM predictor $predictor, $channels channels, sign $sign"
+                    val predictors = IntArray(channels) { (predictor + it * 3) % 7 }
+                    val bytes = MsAdpcmPredictionFixture.file(predictors, sign, blocks = 3)
+                    val file = temp("ms-predictor-$predictor-$channels-$sign.wav").also { it.writeBytes(bytes) }
+                    val reference = decodeWithFfmpeg(ffmpeg, file)
+                    val decoded = AudioKodec.decode(bytes)
+                    TestSignals.assertExact(reference, decoded.samples, what)
+                }
+            }
+        }
+    }
+
     /**
      * Compares an ADPCM decoding against ffmpeg's.
      *

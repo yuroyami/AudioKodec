@@ -33,7 +33,7 @@ can hold checkouts without them ever reaching the repository.
 | AU | Sun and NeXT audio file format documentation |
 | A-law and mu-law | ITU-T Recommendation G.711 |
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
-| Microsoft ADPCM | Microsoft ADPCM WAVE type documentation |
+| Microsoft ADPCM | [Microsoft Multimedia Data Standards Update, 15 April 1994](https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/RIFFNEW.pdf), pages 22 to 26 |
 | QuickTime IMA (`ima4`) | Apple QuickTime File Format documentation |
 | FLAC | RFC 9639 |
 | Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex |

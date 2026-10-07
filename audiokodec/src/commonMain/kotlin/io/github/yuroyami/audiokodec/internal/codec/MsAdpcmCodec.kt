@@ -292,8 +292,9 @@ private const val MIN_DELTA: Int = 16
 private const val MAX_DELTA: Int = Int.MAX_VALUE / 768
 
 private fun predict(sample1: Int, sample2: Int, coefficient1: Int, coefficient2: Int): Int {
+    // Signed 8.8 prediction truncates towards zero; a shift floors negative sums.
     val value =
-        (sample1.toLong() * coefficient1 + sample2.toLong() * coefficient2) shr 8
+        (sample1.toLong() * coefficient1 + sample2.toLong() * coefficient2) / 256
     return value.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 }
 
