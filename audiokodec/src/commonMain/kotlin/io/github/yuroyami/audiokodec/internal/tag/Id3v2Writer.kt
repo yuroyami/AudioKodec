@@ -35,6 +35,16 @@ internal object Id3v2Writer {
                 throw UnsupportedFeatureException("null characters in ID3 ${field.name}")
             }
             when (field) {
+                TagField.DATE, TagField.ORIGINAL_DATE -> {
+                    if (major == 3) {
+                        for ((key, value) in Id3Dates.legacyFields(field, values)) {
+                            frames.add(textFrame(key, listOf(value), major))
+                        }
+                    } else {
+                        val key = TagMapping.id3FrameFor(field, major)!!
+                        frames.add(textFrame(key, textValues(key, values, major), major))
+                    }
+                }
                 TagField.TRACK_TOTAL, TagField.DISC_TOTAL -> {
                     // A missing number or several totals needs its own field;
                     // pairing lists would invent relationships the caller never stated.
@@ -95,8 +105,9 @@ internal object Id3v2Writer {
         for (chapter in tags.chapters) {
             frames.add(chapterFrame(chapter, major))
         }
-        frames.addAll(unmodelledFrames(tags, major))
-        frames.addAll(opaqueFrames(tags, major, frames))
+        val datesUnchanged = primaryDatesUnchanged(tags)
+        frames.addAll(unmodelledFrames(tags, major, datesUnchanged))
+        frames.addAll(opaqueFrames(tags, major, frames, datesUnchanged))
 
         var body = 0L
         for (frame in frames) body += frame.size
@@ -488,7 +499,7 @@ internal object Id3v2Writer {
      * Binary/private frames have no such view, so dropping them would make an
      * unrelated title edit destructive.
      */
-    private fun unmodelledFrames(tags: TagBundle, major: Int): List<ByteArray> {
+    private fun unmodelledFrames(tags: TagBundle, major: Int, datesUnchanged: Boolean): List<ByteArray> {
         val frames = ArrayList<ByteArray>()
         val userText = LinkedHashMap<String, MutableList<String>>()
         val ordinaryText = LinkedHashMap<String, MutableList<String>>()
@@ -497,6 +508,7 @@ internal object Id3v2Writer {
                 block.format == TagFormat.ID3V2_3 ||
                 block.format == TagFormat.ID3V2_4
             if (!isId3) continue
+            val combinedDate = Id3Dates.combined(block)
             for (entry in block.entries) {
                 if (entry.id3FrameFlags != null) continue
                 if (TagMapping.fieldFor(block.format, entry) != null) continue
@@ -506,8 +518,16 @@ internal object Id3v2Writer {
                     entry.description?.let { isModelledLoudnessName(it) } == true
                 ) continue
 
+                if (Id3Dates.isAuxiliary(entry.key)) {
+                    if (!datesUnchanged) continue
+                    val key = Id3Dates.auxiliaryKey(entry.key)
+                    if (key != "TRDA" && combinedDate != null) continue
+                    if (major != 3 || block.format == TagFormat.ID3V2_4) Id3Dates.cannotConvert(key)
+                }
+
                 val key = when {
                     entry.key.length == 4 -> entry.key
+                    Id3Dates.isAuxiliary(entry.key) -> Id3Dates.auxiliaryKey(entry.key)
                     entry.key == "UFI" -> "UFID"
                     entry.key == "TXX" -> "TXXX"
                     entry.key == "COM" -> "COMM"
@@ -556,7 +576,7 @@ internal object Id3v2Writer {
      * identifier this writer has just written from the caller's values is
      * superseded by it.
      */
-    private fun opaqueFrames(tags: TagBundle, major: Int, written: List<ByteArray>): List<ByteArray> {
+    private fun opaqueFrames(tags: TagBundle, major: Int, written: List<ByteArray>, datesUnchanged: Boolean): List<ByteArray> {
         val writtenIds = written.mapTo(HashSet()) { it.decodeToString(0, 4) }
         val frames = ArrayList<ByteArray>()
         for (block in tags.raw.blocks) {
@@ -568,6 +588,7 @@ internal object Id3v2Writer {
             }
             for (entry in block.entries) {
                 val flags = entry.id3FrameFlags ?: continue
+                if (!datesUnchanged && (Id3Dates.isAuxiliary(entry.key) || Id3Dates.isYear(entry.key))) continue
                 val payload = entry.binary ?: continue
                 val discardOnTagAlter = if (sourceMajor == 4) 0x4000 else 0x8000
                 if (flags and discardOnTagAlter != 0) continue
@@ -591,6 +612,13 @@ internal object Id3v2Writer {
             }
         }
         return frames
+    }
+
+    private fun primaryDatesUnchanged(tags: TagBundle): Boolean {
+        if (tags.raw.blocks.none { block ->
+            Id3Dates.isId3(block.format) && block.entries.any { Id3Dates.isAuxiliary(it.key) }
+        }) return true
+        return tags.all(TagField.DATE) == TagAssembler.primaryDates(tags.raw.blocks)
     }
 
     private fun rawFrame(

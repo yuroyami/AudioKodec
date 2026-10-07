@@ -37,6 +37,33 @@ class HostileTagTest {
     }
 
     @Test
+    fun legacyDatesKeepTypedFailuresUnderTruncationAndMutation() {
+        for (version in 2..3) {
+            val values = if (version == 2) listOf("TYE" to "2020", "TDA" to "0102", "TIM" to "1230")
+                else listOf("TYER" to "2020", "TDAT" to "0102", "TIME" to "1230")
+            for (encoding in 0..1) {
+                val original = DateConversionFixtures.stream(version, values, encoding)
+                for (length in 0..original.size) {
+                    expectOnlyKiteFailures("legacy date truncated to $length bytes") {
+                        AudioKodec.readTags(original.copyOf(length))
+                    }
+                }
+                for (at in original.indices) {
+                    for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                        for (target in 3..4) {
+                            expectOnlyKiteFailures("legacy date byte $at set to $byte, target $target") {
+                                val mutated = original.copyOf().also { it[at] = byte }
+                                val tags = AudioKodec.readTags(mutated)
+                                AudioKodec.writeTags(mutated, tags, io.github.yuroyami.audiokodec.tag.TagWriteOptions(id3Version = target))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun distinctDateIdentitiesKeepTypedFailuresUnderTruncationAndMutation() {
         for (encoding in 0..3) {
             val original = DateIdentityFixtures.stream("2000-01-02T03:04:05", "2026-10-06T12:34:56", encoding)

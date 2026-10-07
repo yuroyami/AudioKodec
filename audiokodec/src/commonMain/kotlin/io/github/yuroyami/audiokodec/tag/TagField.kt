@@ -44,11 +44,13 @@ public enum class TagField {
      * ID3v2.4 uses `TDRC`, the recording timestamp. Music taggers also use
      * this frame for their main release date. An explicit `TDRL` release
      * timestamp belongs to [RELEASE_DATE], so the two facts remain separate.
-     * Vorbis comments use `DATE`; ID3v2.3 uses `TYER` for the year.
+     * Vorbis comments use `DATE`. ID3v2.3 combines `TYER`, `TDAT` and `TIME`
+     * into a timestamp with the precision stated. Version 2.3 writes years,
+     * complete calendar dates and minute precision; other precision is refused.
      */
     DATE,
 
-    /** Date the recording was made, when it differs from the release date. */
+    /** Original release date. ID3v2.3 can retain only its four-digit year in `TORY`. */
     ORIGINAL_DATE,
 
     /**

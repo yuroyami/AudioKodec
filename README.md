@@ -305,7 +305,9 @@ See [the tag writing rules](docs/index.md#metadata-that-needs-a-richer-carrier).
 
 The primary `DATE` field retains ID3 `TDRC`. An explicit `TDRL` release
 timestamp uses `RELEASE_DATE`, so editing or removing either date leaves the
-other intact. See [date fields](docs/index.md#primary-and-explicit-release-dates)
+other intact. Split legacy dates retain their month, day and minute precision
+when upgraded. Version 2.3 refuses date precision its native fields cannot
+represent. See [date fields](docs/index.md#primary-and-explicit-release-dates)
 for native keys and migration from previously merged date lists.
 
 MusicBrainz recording IDs use `UFID:http://musicbrainz.org` in ID3; the other

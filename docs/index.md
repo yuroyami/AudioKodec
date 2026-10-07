@@ -464,7 +464,7 @@ field, `RELEASE_DATE`, so an unrelated edit keeps both meanings.
 
 | Field | ID3v2.4 | ID3v2.3 | Vorbis and APE |
 |---|---|---|---|
-| `DATE` | `TDRC` | `TYER` | `DATE`, or APE `YEAR` on input |
+| `DATE` | `TDRC` | `TYER` + optional `TDAT` and `TIME` | `DATE`, or APE `YEAR` on input |
 | `RELEASE_DATE` | `TDRL` | `TXXX:RELEASEDATE` | `RELEASEDATE` |
 | `ORIGINAL_DATE` | `TDOR` | `TORY` | `ORIGINALDATE` |
 
@@ -478,10 +478,41 @@ combined `TDRC` and `TDRL` into `DATE`. Read the source tags again when
 migrating a cached merged date list, because the list alone cannot recover
 the original frame identities.
 
-Legacy primary date conversion is still limited: full dates in ID3v2.3 year
-frames and the conversion of split `TYER`/`TDAT`/`TIME` dates need repair.
-Use version 2.4 for new full primary dates, and retain version 2.3 when an
-existing split date must remain in that version.
+### Converting legacy dates
+
+Reading `TYER=2020`, `TDAT=0102` and `TIME=1230` returns
+`DATE=2020-02-01T12:30`. `TDAT` stores day before month. The timestamp keeps
+the stated minute precision; the reader does not add seconds. ID3v2.2
+`TYE`/`TDA`/`TIM` groups follow the same rule.
+
+A default rewrite emits one ID3v2.4 `TDRC` value and consumes the split
+legacy frames. Writing version 2.3 splits a representable date into its
+native components. It never stores a full timestamp in `TYER` or `TORY`.
+
+| Requested `DATE` precision | ID3v2.3 output |
+|---|---|
+| `2020` | `TYER=2020` |
+| `2020-02-01` | `TYER=2020`, `TDAT=0102` |
+| `2020-02-01T12:30` | `TYER=2020`, `TDAT=0102`, `TIME=1230` |
+| Month only, hour only, seconds, offsets, date ranges or multiple distinct dates | Named refusal before output |
+
+`ORIGINAL_DATE` requires one four-digit year for version 2.3. Full original
+release dates need version 2.4. Calendar dates and times must be valid;
+the writer checks leap years and the native hour/minute ranges.
+`RELEASE_DATE` uses its independent user-text value in version 2.3, which
+can retain its timestamp precision.
+
+Incomplete or conflicting legacy groups stay in `raw`. A time without a
+calendar date cannot become a complete timestamp. Free-form `TRDA` notes
+also stay raw because their wording cannot define one unambiguous date.
+Use version 2.3 to retain such auxiliary information where representable.
+An upgrade that would lose it fails by name before writing any bytes.
+
+Explicitly setting, adding or removing `DATE` clears its old stored ID3
+components, including orphan and opaque frames. This also clears free-form
+recording-date notes. The resulting values define the replacement date;
+`ORIGINAL_DATE` and `RELEASE_DATE` remain independent. Other field edits
+retain the raw components until they can be converted or preserved safely.
 
 ### Metadata that needs a richer carrier
 

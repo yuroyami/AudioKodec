@@ -1,5 +1,7 @@
 package io.github.yuroyami.audiokodec.tag
 
+import io.github.yuroyami.audiokodec.internal.tag.Id3Dates
+
 /**
  * A tag format, meaning the way a block of metadata is laid out.
  *
@@ -360,6 +362,8 @@ public class TagBundle(
      *
      * The result keeps [raw], so writing it back can preserve the entries
      * AudioKodec does not model. Editing a field replaces every value it had.
+     * Editing [TagField.DATE] also removes its stored ID3 date components,
+     * including incomplete and opaque values, so old components cannot return.
      * [TagEditor.clear] also removes the raw blocks.
      */
     public fun edit(block: TagEditor.() -> Unit): TagBundle {
@@ -397,11 +401,13 @@ public class TagEditor internal constructor(private val original: TagBundle) {
 
     /** Replaces every value of [field] with [value]. */
     public fun set(field: TagField, value: String) {
+        if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         fields[field] = mutableListOf(value)
     }
 
     /** Replaces every value of [field] with [values]. */
     public fun set(field: TagField, values: List<String>) {
+        if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         if (values.isEmpty()) fields.remove(field) else fields[field] = values.toMutableList()
     }
 
@@ -412,11 +418,13 @@ public class TagEditor internal constructor(private val original: TagBundle) {
 
     /** Adds another value to [field], keeping the ones already there. */
     public fun add(field: TagField, value: String) {
+        if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         fields.getOrPut(field) { mutableListOf() }.add(value)
     }
 
     /** Removes [field] entirely. */
     public fun remove(field: TagField) {
+        if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         fields.remove(field)
     }
 

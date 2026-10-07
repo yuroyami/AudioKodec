@@ -51,6 +51,7 @@ internal object TagAssembler {
 
         for (block in ordered) {
             val precedence = block.format.precedence
+            val combinedDate = Id3Dates.combined(block)
             for (entry in block.entries) {
                 gain.consider(block.format, entry)
 
@@ -70,6 +71,9 @@ internal object TagAssembler {
 
                 val field = TagMapping.fieldFor(block.format, entry) ?: continue
                 var value = entry.text ?: continue
+                if (field == TagField.DATE && Id3Dates.isYear(entry.key) && combinedDate != null) {
+                    value = combinedDate
+                }
                 if (
                     field == TagField.GENRE &&
                     (block.format == TagFormat.ID3V2_2 || block.format == TagFormat.ID3V2_3 || block.format == TagFormat.ID3V2_4)
@@ -113,6 +117,23 @@ internal object TagAssembler {
             replayGain = if (replayGain.isEmpty) null else replayGain,
             raw = RawTags(blocks),
         )
+    }
+
+    /** Reconstructs only primary dates when a writer compares fields with raw components. */
+    internal fun primaryDates(blocks: List<RawTagBlock>): List<String> {
+        val fields = LinkedHashMap<TagField, FieldValues>()
+        val claimedBy = HashMap<TagField, Int>()
+        val options = DecodeOptions.DEFAULT
+        for (block in blocks.sortedByDescending { it.format.precedence }) {
+            val combined = Id3Dates.combined(block)
+            for (entry in block.entries) {
+                if (TagMapping.fieldFor(block.format, entry) != TagField.DATE) continue
+                val text = entry.text ?: continue
+                val value = if (Id3Dates.isYear(entry.key) && combined != null) combined else text.trim()
+                addValue(fields, claimedBy, TagField.DATE, value, block.format.precedence, options)
+            }
+        }
+        return fields[TagField.DATE]?.values.orEmpty()
     }
 
     /**
