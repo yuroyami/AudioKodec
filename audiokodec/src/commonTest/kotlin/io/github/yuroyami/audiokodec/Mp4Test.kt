@@ -1,5 +1,6 @@
 package io.github.yuroyami.audiokodec
 
+import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4Reader
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,6 +21,83 @@ import kotlin.test.assertTrue
  * ffmpeg on the JVM.
  */
 class Mp4Test {
+
+    @Test
+    fun pcmIndexMemoryTracksCoalescedPackets() {
+        val options = DecodeOptions(maxAllocationBytes = 1L shl 20)
+        val files = listOf(
+            build(240_000, 1, 240_000) to 8,
+            build(240_000, 1, 50_000, gap = 13) to 10,
+            buildFragmented(240_000, 1, 60_000) to 8,
+        )
+        for ((file, packets) in files) {
+            val parsed = Mp4Reader.parse(SourceReader(file.asAudioSource(), options), options)
+            assertEquals(packets, parsed.audio.sizes.size)
+            assertTrue(parsed.audio.sizes.all { it in 1..65_536 })
+            assertEquals(480_000L, parsed.audioBytes)
+            assertEquals(240_000L, parsed.audio.times.last())
+            assertEquals(240_000L, AudioKodec.probe(file, options).durationFrames)
+            assertSamples(file, 1, 0, 240_000, "$packets coalesced packets", options)
+            AudioKodec.open(file, options).use { decoder ->
+                for (target in longArrayOf(0, 32_767, 32_768, 49_999, 50_000, 59_999, 60_000, 239_999)) {
+                    assertEquals(target, decoder.seek(target))
+                    val frame = (decoder as IntPcmAccess).nextIntFrame()
+                    assertNotNull(frame)
+                    assertEquals(target, frame.positionFrames)
+                    assertEquals(sample(target.toInt(), 0), frame.samples[0])
+                }
+            }
+        }
+    }
+
+    @Test
+    fun pcmRunAggregationPreservesTimingChanges() {
+        val file = build(240_000, 1, 50_000, gap = 13, timeRuns = listOf(0 to 99, 10_000 to 1, 10_000 to 2, 220_000 to 1))
+        val options = DecodeOptions(maxAllocationBytes = 1L shl 20)
+        val parsed = Mp4Reader.parse(SourceReader(file.asAudioSource(), options), options)
+        assertEquals(10, parsed.audio.sizes.size)
+        assertEquals(250_000L, parsed.audio.times.last())
+        assertEquals(480_000L, parsed.audioBytes)
+        val shortTimes = build(240_000, 1, 240_000, timeRuns = listOf(20_000 to 2))
+        assertFailsWith<CorruptStreamException> { AudioKodec.probe(shortTimes, options) }
+        assertEquals(480_000L, AudioKodec.probe(shortTimes, options.copy(tolerant = true)).durationFrames)
+    }
+
+    @Test
+    fun pcmIndexGrowthRespectsTheAllocationLimit() {
+        val options = DecodeOptions(maxAllocationBytes = 1_024)
+        val fits = build(51, 1, 1, gap = 1)
+        assertEquals(51L, AudioKodec.probe(fits, options).durationFrames)
+        assertSamples(fits, 1, 0, 51, "51 packets at the index limit", options)
+        val failure = assertFailsWith<AllocationGuardException> { AudioKodec.probe(build(100, 1, 1, gap = 1), options) }
+        assertTrue("indexing" in failure.message.orEmpty())
+        assertEquals(1_040L, failure.requested)
+        assertEquals(1_024L, failure.limit)
+    }
+
+    @Test
+    fun largeConstantPcmClaimsDoNotRequirePerFrameWork() {
+        val ordinary = build(5, 1, 5)
+        patchU32(ordinary, "stsz", 12, Int.MAX_VALUE)
+        patchU32(ordinary, "stsc", 16, Int.MAX_VALUE)
+        patchU32(ordinary, "stts", 12, Int.MAX_VALUE)
+        val fragmented = buildFragmented(5, 1, 5)
+        patchU32(fragmented, "trun", 8, Int.MAX_VALUE)
+        val zeroSize = fragmented.copyOf()
+        patchU32(zeroSize, "trex", 20, 0)
+        val options = DecodeOptions(maxAllocationBytes = 2L shl 20)
+        for (file in listOf(ordinary, fragmented, zeroSize)) {
+            val parsed = Mp4Reader.parse(SourceReader(file.asAudioSource(), options), options)
+            assertEquals(Int.MAX_VALUE.toLong(), parsed.audio.times.last())
+            assertEquals(if (file === zeroSize) 1 else 65_536, parsed.audio.sizes.size)
+            assertEquals(Int.MAX_VALUE.toLong(), AudioKodec.probe(file, options).durationFrames)
+        }
+        val overflowingTime = buildFragmented(10, 1, 5)
+        patchU32(overflowingTime, "trun", 8, Int.MAX_VALUE)
+        patchU32(overflowingTime, "trex", 20, 0)
+        patchU32(overflowingTime, "trex", 16, -1)
+        assertFailsWith<CorruptStreamException> { AudioKodec.probe(overflowingTime, options) }
+    }
 
     @Test
     fun fragmentDefaultsMustResolveToExactlyOneTrack() {
@@ -423,8 +501,8 @@ class Mp4Test {
 
     private fun sample(frame: Int, channel: Int): Int = ((frame * 37 + channel * 1_001) % 30_001) - 15_000
 
-    private fun assertSamples(file: ByteArray, channels: Int, firstFrame: Int, frames: Int, what: String) {
-        AudioKodec.open(file).use { decoder ->
+    private fun assertSamples(file: ByteArray, channels: Int, firstFrame: Int, frames: Int, what: String, options: DecodeOptions = DecodeOptions.DEFAULT) {
+        AudioKodec.open(file, options).use { decoder ->
             val ints = decoder as IntPcmAccess
             var at = 0
             while (true) {
@@ -487,6 +565,7 @@ class Mp4Test {
         sampleEntryRate: Int = RATE,
         sampleEntryBoxes: ByteArray = ByteArray(0),
         editVersion: Int = 0,
+        timeRuns: List<Pair<Int, Int>>? = null,
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
         require(!singlePacket || chunkCount == 1)
@@ -523,7 +602,9 @@ class Mp4Test {
             val stbl = box(
                 "stbl",
                 fullBox("stsd", 0, 0, u32(1), entry),
-                fullBox("stts", 0, 0, u32(1), u32(if (singlePacket) 1 else frames), u32(if (singlePacket) frames else 1)),
+                fullBox("stts", 0, 0, u32(timeRuns?.size ?: 1),
+                    *(timeRuns?.map { (count, delta) -> u32(count) + u32(delta) }
+                        ?: listOf(u32(if (singlePacket) 1 else frames) + u32(if (singlePacket) frames else 1))).toTypedArray()),
                 stsc,
                 if (singlePacket) fullBox("stsz", 0, 0, u32(0), u32(1), u32(data.size))
                 else fullBox("stsz", 0, 0, u32(1), u32(frames)),
@@ -637,6 +718,12 @@ class Mp4Test {
     private fun u64(value: Long): ByteArray = u32((value ushr 32).toInt()) + u32(value.toInt())
 
     private fun sampleFieldCount(flags: Int): Int = listOf(0x100, 0x200, 0x400, 0x800).count { flags and it != 0 }
+
+    private fun patchU32(bytes: ByteArray, type: String, afterType: Int, value: Int) {
+        val positions = (0..bytes.size - 4).filter { at -> (0..3).all { k -> bytes[at + k] == type[k].code.toByte() } }
+        assertTrue(positions.isNotEmpty(), "no $type box to change")
+        for (at in positions) u32(value).copyInto(bytes, at + afterType)
+    }
 
     private companion object {
         const val RATE = 8_000

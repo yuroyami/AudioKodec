@@ -50,6 +50,26 @@ class Mp4OracleTest {
     )
 
     @Test
+    fun fiveSecondPcmMovStreamsUnderOneMibAndMatchesFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val ffprobe = ffprobe ?: return skip()
+        val file = encode(ffmpeg, "pcm_small_index.mov", 1, listOf("-ar", "48000", "-c:a", "pcm_s16le"), seconds = 5.0)
+        val bytes = file.readBytes()
+        val options = DecodeOptions(maxAllocationBytes = 1L shl 20)
+        val parsed = Mp4Reader.parse(SourceReader(bytes.asAudioSource(), options), options)
+        assertEquals(8, parsed.audio.sizes.size)
+        assertTrue(parsed.audio.sizes.all { it in 1..65_536 })
+        assertEquals(streamOf(ffprobe, file).getValue("duration_ts").toLong(), AudioKodec.probe(bytes, options).durationFrames)
+        val ours = AudioKodec.decode(bytes, options)
+        val reference = temp("pcm_small_index.f32")
+        run(listOf(ffmpeg, "-y", "-v", "error", "-i", file.path, "-f", "f32le", reference.path))
+        val theirs = ByteBuffer.wrap(reference.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+        assertEquals(240_000, ours.frames)
+        assertEquals(ours.frames, theirs.remaining())
+        for (i in 0 until ours.frames) assertEquals(theirs[i], ours.samples[i], "PCM sample $i")
+    }
+
+    @Test
     fun everyPacketIsWhereFfprobeFindsIt() {
         val ffmpeg = ffmpeg ?: return skip()
         val ffprobe = ffprobe ?: return skip()

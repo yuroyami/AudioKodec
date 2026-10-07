@@ -461,17 +461,24 @@ internal object Mp4Reader {
             if (needed <= offsets.size) return
             options.checkAllocation(needed * 20, "indexing $needed MP4 packets")
             if (needed > Int.MAX_VALUE - 8) throw CorruptStreamException("the file indexes $needed packets")
-            val capacity = maxOf(needed, minOf(offsets.size * 2L, Int.MAX_VALUE - 8L)).toInt()
+            val capacity = maxOf(needed, minOf(offsets.size * 2L, Int.MAX_VALUE - 8L, options.maxAllocationBytes / 20)).toInt()
             offsets = offsets.copyOf(capacity)
             sizes = sizes.copyOf(capacity)
             durations = durations.copyOf(capacity)
         }
 
+        /** Only uncoalesced samples need an index entry each. */
+        fun reserveSamples(more: Long) {
+            if (!coalesce) reserve(more)
+        }
+
         fun add(offset: Long, size: Long, duration: Long) {
             if (size > Int.MAX_VALUE || size < 0) throw CorruptStreamException("a packet states $size bytes", offset)
+            if (duration < 0 || totalBytes > Long.MAX_VALUE - size) throw CorruptStreamException("the packets' sizes or durations overflow 64 bits", offset)
             if (coalesce && count > 0) {
                 val last = count - 1
-                if (offsets[last] + sizes[last] == offset && sizes[last] + size <= COALESCED_BYTES) {
+                if (offsets[last] <= Long.MAX_VALUE - sizes[last] && offsets[last] + sizes[last] == offset && sizes[last] + size <= COALESCED_BYTES) {
+                    if (duration > Long.MAX_VALUE - durations[last]) throw CorruptStreamException("the packets' durations overflow 64 bits", offset)
                     sizes[last] += size.toInt()
                     durations[last] += duration
                     totalBytes += size
@@ -484,6 +491,37 @@ internal object Mp4Reader {
             durations[count] = duration
             count++
             totalBytes += size
+        }
+
+        /** Adds a constant run in work proportional to its read packets. */
+        fun addRun(offset: Long, size: Long, duration: Long, samples: Int) {
+            if (samples == 0) return
+            if (size !in 0..Int.MAX_VALUE.toLong()) throw CorruptStreamException("a packet states $size bytes", offset)
+            if (offset < 0 || size * samples > Long.MAX_VALUE - offset) throw CorruptStreamException("a packet run's data offsets overflow 64 bits", offset)
+            if (duration < 0 || duration > Long.MAX_VALUE / samples) throw CorruptStreamException("a packet run's durations overflow 64 bits", offset)
+            val last = count - 1
+            val adjacent = coalesce && last >= 0 && sizes[last] <= COALESCED_BYTES &&
+                offsets[last] <= Long.MAX_VALUE - sizes[last] && offsets[last] + sizes[last] == offset
+            val prefix = if (!adjacent) 0 else if (size == 0L) samples else minOf(samples.toLong(), (COALESCED_BYTES - sizes[last]) / size).toInt()
+            val perPacket = if (coalesce && size in 1..COALESCED_BYTES.toLong()) (COALESCED_BYTES / size).toInt() else 1
+            var left = samples - prefix
+            val packets = if (coalesce && size == 0L && left > 0) 1L else (left.toLong() + perPacket - 1) / perPacket
+            reserve(packets)
+            var at = offset
+            if (prefix > 0) {
+                add(at, size * prefix, duration * prefix)
+                at += size * prefix
+            }
+            if (coalesce && size == 0L && left > 0) {
+                add(at, 0, duration * left)
+                return
+            }
+            while (left > 0) {
+                val take = minOf(left, perPacket)
+                add(at, size * take, duration * take)
+                at += size * take
+                left -= take
+            }
         }
 
         fun offsets(): LongArray = offsets.copyOf(count)
@@ -591,27 +629,45 @@ internal object Mp4Reader {
         times.requireEntries(timeRuns, 8)
         var runLeft = 0L
         var delta = 0L
-        fun nextDuration(): Long {
+        fun nextDurationRun() {
             while (runLeft == 0L) {
                 if (timeRuns == 0) {
                     if (!options.tolerant) throw CorruptStreamException("the 'stts' box gives durations for fewer packets than there are", base + stts.offset)
-                    return delta
+                    runLeft = Long.MAX_VALUE
+                    return
                 }
                 runLeft = times.u32()
                 delta = times.u32()
                 timeRuns--
             }
+        }
+        fun nextDuration(): Long {
+            nextDurationRun()
             runLeft--
             return delta
         }
 
-        into.reserve(sampleCount.toLong())
+        into.reserveSamples(sampleCount.toLong())
         var sample = 0
         var run = -1
         chunkLoop@ for (chunk in 1..chunkCount) {
             while (run + 1 < runs && firstChunks[run + 1] <= chunk) run++
             if (run < 0) throw CorruptStreamException("the 'stsc' box does not start at the first chunk", base + stsc.offset)
             var offset = if (co64 != null) chunks.u64() else chunks.u32()
+            if (frameBytes != null && constantSize != 0L) {
+                var left = minOf(perChunk[run], sampleCount.toLong() - sample)
+                while (left > 0) {
+                    nextDurationRun()
+                    val take = minOf(left, runLeft).toInt()
+                    into.addRun(offset, constantSize, delta, take)
+                    offset += constantSize * take
+                    sample += take
+                    runLeft -= take
+                    left -= take
+                }
+                if (sample == sampleCount) break@chunkLoop
+                continue
+            }
             for (k in 0L until perChunk[run]) {
                 if (sample >= sampleCount) break@chunkLoop
                 val size = nextSize()
@@ -674,7 +730,13 @@ internal object Mp4Reader {
                     run.skip(count * perSample)
                     continue
                 }
-                if (id == trackId) into.reserve(count.toLong())
+                if (id == trackId && perSample == 0) {
+                    val end = fragmentOffset(data, count.toLong() * defaultSize, base + trun.offset)
+                    into.addRun(data, defaultSize, defaultDuration, count)
+                    data = end
+                    continue
+                }
+                if (id == trackId) into.reserveSamples(count.toLong())
                 repeat(count) {
                     val duration = if (runFlags and 0x100 != 0) run.u32() else defaultDuration
                     val size = if (runFlags and 0x200 != 0) run.u32() else defaultSize
