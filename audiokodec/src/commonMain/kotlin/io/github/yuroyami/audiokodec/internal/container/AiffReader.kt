@@ -332,7 +332,7 @@ internal object AiffReader {
             }
 
             "alaw", "ALAW" -> {
-                requireSampleSize(sampleSize, 16, compression, start)
+                requireSampleSize(sampleSize, intArrayOf(8, 16), compression, start)
                 Common(
                     codec = AudioCodec.A_LAW,
                     audioFormat = audioFormat,
@@ -343,7 +343,7 @@ internal object AiffReader {
             }
 
             "ulaw", "ULAW" -> {
-                requireSampleSize(sampleSize, 16, compression, start)
+                requireSampleSize(sampleSize, intArrayOf(8, 16), compression, start)
                 Common(
                     codec = AudioCodec.MU_LAW,
                     audioFormat = audioFormat,
@@ -354,12 +354,16 @@ internal object AiffReader {
             }
 
             "ima4" -> {
-                requireSampleSize(sampleSize, 16, compression, start)
+                // Apple writes an unspecified width of zero; other writers
+                // state the coded four bits or the decoded sixteen bits.
+                requireSampleSize(sampleSize, intArrayOf(0, 4, 16), compression, start)
                 Common(
                     codec = AudioCodec.IMA_ADPCM,
                     audioFormat = audioFormat,
                     sampleCodec = ImaAdpcmQuickTimeCodec(channels),
-                    frames = frames,
+                    // COMM counts interleaved packet groups for this coding.
+                    // Its unsigned 32-bit count times 64 fits Long exactly.
+                    frames = frames * 64,
                     storedBitDepth = null,
                 )
             }
@@ -394,6 +398,15 @@ internal object AiffReader {
         if (actual != expected) {
             throw CorruptStreamException(
                 "AIFF-C '$compression' samples are $expected bits, this file says $actual",
+                at,
+            )
+        }
+    }
+
+    private fun requireSampleSize(actual: Int, expected: IntArray, compression: String, at: Long) {
+        if (actual !in expected) {
+            throw CorruptStreamException(
+                "AIFF-C '$compression' sample width must be ${expected.joinToString(" or ")} bits, this file says $actual",
                 at,
             )
         }

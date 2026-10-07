@@ -101,18 +101,31 @@ class AiffAndAuTest {
     }
 
     @Test
-    fun aiffCompressedHeadersMustStateTheirDecodedSampleWidth() {
+    fun aiffCompressedHeadersAcceptTheObservedWriterWidths() {
         for (target in listOf(EncodeTarget.aiffMuLaw(), EncodeTarget.aiffALaw())) {
-            val file = AudioKodec.encode(
+            val original = AudioKodec.encode(
                 FloatArray(8),
                 AudioFormat(8_000, 1),
                 target,
             )
-            val commAt = file.indexOfChunk("COMM")
-            file[commAt + 14] = 0
-            file[commAt + 15] = 8
-            assertFailsWith<CorruptStreamException>(target.toString()) {
-                AudioKodec.probe(file)
+            val expected = AudioKodec.decode(original).samples
+            val commAt = original.indexOfChunk("COMM")
+            for (width in intArrayOf(8, 16)) {
+                val file = original.copyOf()
+                file[commAt + 14] = 0
+                file[commAt + 15] = width.toByte()
+                assertEquals(8L, AudioKodec.probe(file).durationFrames)
+                TestSignals.assertExact(expected, AudioKodec.decode(file).samples, "$target at width $width")
+            }
+            for (width in intArrayOf(0, 1, 4, 12, 24, 32, 65_535)) {
+                val file = original.copyOf()
+                file[commAt + 14] = (width ushr 8).toByte()
+                file[commAt + 15] = width.toByte()
+                for (tolerant in listOf(false, true)) {
+                    assertFailsWith<CorruptStreamException>("$target at width $width") {
+                        AudioKodec.probe(file, DecodeOptions(tolerant = tolerant))
+                    }
+                }
             }
         }
     }

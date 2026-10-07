@@ -6,6 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -180,7 +181,7 @@ class HandBuiltFileTest {
         packet[0] = 0
         packet[1] = 0
         for (i in 2 until 34) packet[i] = 0x18
-        val file = buildAiffC("ima4", sampleRate = 22_050, channels = 1, frames = 64, data = packet)
+        val file = buildAiffC("ima4", sampleRate = 22_050, channels = 1, frames = 1, data = packet)
 
         val info = AudioKodec.probe(file)
         assertEquals(AudioCodec.IMA_ADPCM, info.codec)
@@ -190,6 +191,56 @@ class HandBuiltFileTest {
         // The nibbles alternate a small step up and a large one, so the
         // result has to move rather than sit at zero.
         assertTrue(decoded.samples.any { it != 0f }, "the decoded packet is silent")
+    }
+
+    @Test
+    fun aiffCImaCountsPacketGroupsAndAcceptsTheObservedWidths() {
+        for (channels in 1..2) {
+            for (packets in intArrayOf(0, 1, 2, 129)) {
+                val data = ByteArray(packets * channels * 34) { at ->
+                    if (at % 34 < 2) 0 else if (at / 34 % channels == 0) 0x18 else 0x81.toByte()
+                }
+                for (width in intArrayOf(0, 4, 16)) {
+                    val file = buildAiffC("ima4", 22_050, channels, packets, data, sampleSize = width)
+                    val frames = packets * 64
+                    assertEquals(frames.toLong(), AudioKodec.probe(file).durationFrames)
+                    val decoded = AudioKodec.decode(file)
+                    assertEquals(frames, decoded.frames)
+                    AudioKodec.open(file).use { decoder ->
+                        assertEquals(frames.toLong(), decoder.durationFrames)
+                        for (target in longArrayOf(0, 1, 63, 64, 8_191, frames - 1L, frames.toLong()).filter { it in 0..frames.toLong() }) {
+                            assertEquals(target, decoder.seek(target))
+                            val frame = decoder.nextFrame()
+                            if (target == frames.toLong()) {
+                                assertEquals(null, frame)
+                            } else {
+                                assertNotNull(frame)
+                                assertEquals(target, frame.positionFrames)
+                                for (c in 0 until channels) assertEquals(decoded.samples[target.toInt() * channels + c], frame.samples[c])
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (width in intArrayOf(1, 8, 12, 24, 32, 65_535)) {
+            val file = buildAiffC("ima4", 22_050, 1, 1, ByteArray(34), sampleSize = width)
+            assertFailsWith<CorruptStreamException> { AudioKodec.probe(file) }
+        }
+    }
+
+    @Test
+    fun aiffCImaPacketCountsUseTheExistingTruncationRules() {
+        val tolerant = DecodeOptions(tolerant = true, maxAllocationBytes = 1_024)
+        for (packets in intArrayOf(3, -1)) {
+            for (bytes in intArrayOf(68, 85)) {
+                val file = buildAiffC("ima4", 22_050, 1, packets, ByteArray(bytes))
+                assertEquals((packets.toLong() and 0xFFFF_FFFFL) * 64, AudioKodec.probe(file).durationFrames)
+                assertFailsWith<TruncatedStreamException> { AudioKodec.open(file).close() }
+                AudioKodec.open(file, tolerant).use { assertEquals(128L, it.durationFrames) }
+                assertEquals(128, AudioKodec.decode(file, tolerant).frames)
+            }
+        }
     }
 
     @Test
@@ -714,6 +765,7 @@ class HandBuiltFileTest {
         channels: Int,
         frames: Int,
         data: ByteArray,
+        sampleSize: Int = 16,
     ): ByteArray {
         val out = Builder()
         out.ascii("FORM")
@@ -731,7 +783,7 @@ class HandBuiltFileTest {
         out.u32Be(commBody.toLong())
         out.u16Be(channels)
         out.u32Be(frames.toLong())
-        out.u16Be(16)
+        out.u16Be(sampleSize)
         out.extended(sampleRate.toDouble())
         out.ascii(compression)
         out.u8(name.length)
@@ -743,6 +795,7 @@ class HandBuiltFileTest {
         out.u32Be(0)
         out.u32Be(0)
         out.bytes(data)
+        if (data.size % 2 == 1) out.u8(0)
 
         val bytes = out.toByteArray()
         writeU32Be(bytes, formSizeAt, (bytes.size - 8).toLong())

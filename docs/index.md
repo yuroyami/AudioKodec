@@ -44,6 +44,13 @@ println(info.durationSeconds)
 `probe` reads headers only. Scanning a folder of music costs a few kilobytes
 of reads per file rather than a full decode of each one.
 
+AIFF-C QuickTime IMA (`ima4`) stores its length as groups of compressed
+packets. AudioKodec reports the decoded length, with 64 frames per group.
+Both Apple's and ffmpeg's files are accepted: IMA sample widths may be 0, 4
+or 16, and A-law and mu-law widths may be 8 or 16. A short IMA payload still
+raises `TruncatedStreamException` in strict mode; tolerant mode returns only
+the complete packet groups available.
+
 ## Stream and seek
 
 Whole-file decoding allocates the whole file, so use the streaming decoder for

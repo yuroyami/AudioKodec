@@ -29,7 +29,7 @@ can hold checkouts without them ever reaching the repository.
 | RF64 and BW64 | EBU Tech 3306 (RF64), EBU Tech 3285 (Broadcast Wave Format) |
 | Wave64 | Sony Pictures Digital Wave64 specification |
 | AIFF | Apple Audio Interchange File Format 1.3 |
-| AIFF-C | Apple AIFF-C specification, including the compression type registry |
+| AIFF-C | Apple AIFF-C specification, including the compression type registry; [Inside Macintosh: Common Chunks](https://dev.os9.ca/techpubs/mac/Sound/Sound-82.html) for the compressed sample width field. Writer conventions are checked with `afconvert` and ffmpeg |
 | AU | Sun and NeXT audio file format documentation |
 | A-law and mu-law | ITU-T Recommendation G.711 |
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
@@ -50,7 +50,7 @@ Run as programs, never read as source.
 |---|---|
 | ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write |
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions |
-| afconvert (macOS) | CAF, and reserved for the ALAC work |
+| afconvert (macOS) | CAF and compressed AIFF-C, and reserved for the ALAC work |
 | alacconvert | ALAC, built from Apple's reference at the commit the port follows |
 
 ## Permissively licensed implementations for the work still to come

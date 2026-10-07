@@ -74,7 +74,7 @@ them.
 | **RF64 and BW64** | ✅ | ✅ | `ds64` RIFF/data sizes, sample count and additional oversized-chunk entries. A 36-byte slot is always reserved after `WAVE`, so a file that passes 4 GiB is upgraded in place; existing table entries survive tag edits |
 | **Wave64** | ✅ | ❌ | GUID chunk identifiers, 64-bit sizes, 8-byte padding |
 | **AIFF** | ✅ | ✅ | `COMM`, `SSND` with its offset and block size, 80-bit extended sample rate |
-| **AIFF-C** | ✅ | ✅ | `FVER`, compression type and name. Written when the coding is not plain PCM |
+| **AIFF-C** | ✅ | ✅ | `FVER`, compression type and name. IMA duration converts packet groups to decoded frames; G.711 and IMA accept the widths observed in Apple and ffmpeg files, with length, sample and seek comparisons for mono and stereo. Written when the coding is not plain PCM |
 | **AU** | ✅ | ✅ | Six-field header. A data size of `0xFFFFFFFF` reads to end of input |
 | **FLAC** | ✅ | ✅ | Metadata block chain, stream information, seek table, cue sheet and application blocks carried across a tag edit, stream MD5 verification |
 | **CAF** | ✅ | ❌ | 64-bit chunk sizes, the description chunk, Apple's named channel-layout tags reordered from their stored speaker order into the canonical one, and packet-table valid/priming/remainder frame counts; codec priming and remainder are excluded from decode and seek output. ALAC is read through its magic cookie and its packet table of variable-size packets. Above two channels a file without a layout chunk has unknown speakers, because CAF assumes no order. Bitmap, explicit-description and unmapped layouts are named and refused rather than relabelled |
