@@ -259,6 +259,9 @@ internal class SourceReader(
     }
 
     private fun fill(at: Long): Boolean {
+        // A short read can overwrite part of the old window before a later read fails.
+        // Publish the new range only after the whole refill succeeds.
+        bufferLength = 0
         var got = 0
         while (got < buffer.size) {
             val logical = if (got > Long.MAX_VALUE - at) return false else at + got
