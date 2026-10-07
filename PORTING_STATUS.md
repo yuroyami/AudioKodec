@@ -262,10 +262,14 @@ loses fields from files that are perfectly ordinary.
 MusicBrainz-owner `UFID`, including reads of v2.2 `UFI` and the old
 `MUSICBRAINZ_RECORDING_ID` user-text alias. Other MusicBrainz IDs use Picard's
 exact `TXXX` descriptions. V2.4 user-text lists use one frame and retain all
-values. Unmodelled raw lists preserve order and repetitions. Independent
-fixtures and Mutagen cover all four encodings, both UTF-16 BOM byte orders,
+values. Unmodelled raw lists preserve order, repetitions and valid empty
+strings; malformed UTF-8 and UTF-16 text segments with an odd byte count are
+skipped. Independent fixtures and Mutagen cover all four encodings, both
+UTF-16 BOM byte orders,
 mapped and custom descriptions, ordinary text controls and unrelated edits.
-V2.3 raw slash lists retain repetitions; other raw lists are refused before writing.
+V2.3 raw slash lists retain repetitions and empty pieces; other raw lists are
+refused before writing. Empty-value layouts include optional final termination
+and BOM-only final empties, with exact audio payload checks.
 V2.3 named slash lists and genre reference runs are supported; other multi-value text writes
 are explicitly refused. Mutagen 1.47.0 checks both directions, both versions,
 Unicode and unchanged MP3 audio bytes, including raw user-text lists and

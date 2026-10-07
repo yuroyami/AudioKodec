@@ -307,8 +307,8 @@ internal object Id3v2Reader {
                 val encoding = body[start].toInt() and 0xFF
                 forEachTextValue(body, start + 1, end, encoding, major, options) { value ->
                     if (TagMapping.id3UsesSlashList(name, major)) {
-                        for (part in value.split('/')) if (part.isNotEmpty()) into.add(RawTagEntry(name, text = part))
-                    } else if (value.isNotEmpty()) {
+                        for (part in value.split('/')) into.add(RawTagEntry(name, text = part))
+                    } else {
                         into.add(RawTagEntry(name, text = value))
                     }
                 }
@@ -367,15 +367,30 @@ internal object Id3v2Reader {
         consume: (String) -> Unit,
     ) {
         if (major < 4) {
-            consume(TagText.decode(body, start, end - start, encoding, options))
+            val terminator = TagText.findTerminator(body, start, end, encoding)
+            decodeTextValue(body, start, terminator, encoding, options)?.let(consume)
             return
         }
         var position = start
         while (position < end) {
             val terminator = TagText.findTerminator(body, position, end, encoding)
-            consume(TagText.decode(body, position, terminator - position, encoding, options))
+            decodeTextValue(body, position, terminator, encoding, options)?.let(consume)
             position = terminator + TagText.terminatorSize(encoding)
         }
+    }
+
+    /** Keeps an encoded empty string distinct from malformed text. */
+    private fun decodeTextValue(
+        body: ByteArray,
+        start: Int,
+        end: Int,
+        encoding: Int,
+        options: DecodeOptions,
+    ): String? {
+        val length = end - start
+        if (encoding == TagText.UTF8) return TagText.decodeUtf8OrNull(body, start, length, options)
+        if ((encoding == TagText.UTF16_BOM || encoding == TagText.UTF16_BE) && length % 2 != 0) return null
+        return TagText.decode(body, start, length, encoding, options)
     }
 
     private fun readUserText(
@@ -389,13 +404,7 @@ internal object Id3v2Reader {
     ) {
         val encoding = body[start].toInt() and 0xFF
         val descriptionEnd = TagText.findTerminator(body, start + 1, end, encoding)
-        val description = TagText.decode(
-            body,
-            start + 1,
-            descriptionEnd - start - 1,
-            encoding,
-            options,
-        )
+        val description = decodeTextValue(body, start + 1, descriptionEnd, encoding, options) ?: return
         val valueStart = descriptionEnd + TagText.terminatorSize(encoding)
         if (valueStart > end) return
         if (valueStart == end) {

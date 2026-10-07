@@ -194,7 +194,9 @@ internal object Id3v2Writer {
         val encoding = encodingFor(values, major)
         val terminator = TagText.terminatorSize(encoding)
         val parts = values.map { encodeText(it, encoding) }
-        var size = 1L
+        // A separator after the previous value is also an optional final
+        // terminator, so an empty last value needs its own terminator.
+        var size = 1L + if (values.lastOrNull() == "") terminator else 0
         for (i in parts.indices) {
             size += parts[i].size
             if (i < parts.size - 1) size += terminator
@@ -229,6 +231,7 @@ internal object Id3v2Writer {
         val parts = supported.map { encodeText(it, encoding) }
         val terminator = TagText.terminatorSize(encoding)
         var size = 1L + descriptionBytes.size + terminator
+        if (supported.lastOrNull() == "") size += terminator
         for (part in parts) size += part.size
         size += maxOf(0, parts.size - 1).toLong() * terminator
         val body = ByteArray(

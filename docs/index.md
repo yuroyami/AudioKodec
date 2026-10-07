@@ -459,9 +459,13 @@ Use `TagWriteOptions(id3Version = 4)` to preserve those values separately.
 
 Read mapped user-text lists with `tags.all(field)`. The raw view has one entry
 per decoded value, with the same frame key and description. Unmodelled raw
-lists retain their order and repeated values through an unrelated edit.
+lists retain their order, repeated values and valid empty strings through an
+unrelated edit. A single final terminator ends the preceding value; an empty
+last value has its own terminator. Malformed UTF-8 and UTF-16 text segments
+with an odd byte count are skipped. The merged fields omit empty values.
 All four v2.4 text encodings are supported, including both UTF-16 BOM byte orders.
-V2.3 slash-list frames retain raw repetitions. Other raw lists need v2.4,
+V2.3 slash-list frames retain raw repetitions and empty slash-separated pieces.
+Other raw lists need v2.4,
 even when every item has the same text; an unsupported downgrade is refused
 before writing.
 

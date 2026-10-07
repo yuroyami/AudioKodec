@@ -1,5 +1,8 @@
 package io.github.yuroyami.audiokodec
 
+import io.github.yuroyami.audiokodec.tag.RawTagBlock
+import io.github.yuroyami.audiokodec.tag.RawTags
+import io.github.yuroyami.audiokodec.tag.TagFormat
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
 import io.github.yuroyami.audiokodec.tag.TagWriteOptions
@@ -212,6 +215,57 @@ class MutagenTagOracleTest {
     }
 
     @Test
+    fun emptyRawTextValuesAgreeWithMutagenAfterAnUnrelatedEdit() {
+        val python = python
+        val file = plainMp3("empty-text-values")
+        val originalAudio = file.readBytes()
+        for (encoding in Id3TextListFixtures.encodings) {
+            for (values in Id3EmptyValueFixtures.valuesFor(encoding)) {
+                val independent = Id3EmptyValueFixtures.tag(encoding, values) + originalAudio
+                file.writeBytes(independent)
+                run(listOf(python, "-c", CHECK_EMPTY_VALUES, file.path) + values)
+                val tags = AudioKodec.readTags(independent)
+                val rewritten = AudioKodec.writeTags(independent, tags.edit { set(TagField.TITLE, "Changed") }, TagWriteOptions(id3Version = 4, padding = 0))
+                file.writeBytes(rewritten)
+                run(listOf(python, "-c", CHECK_EMPTY_VALUES, file.path) + values)
+                assertContentEquals(originalAudio, rewritten.takeLast(originalAudio.size).toByteArray())
+
+                // Mutagen omits a frame containing exactly one empty value.
+                // Independent bytes above cover its reader for that case.
+                if (values == listOf("") || encoding.code == 1 && encoding.bigEndian) continue
+                file.writeBytes(originalAudio)
+                run(listOf(python, "-c", WRITE_EMPTY_VALUES, file.path, encoding.code.toString()) + values)
+                val fromMutagen = file.readBytes()
+                val read = AudioKodec.readTags(fromMutagen)
+                for (key in listOf("TOPE", "TXXX")) {
+                    assertEquals(values, read.raw.blocks.flatMap { it.entries }.filter { it.key == key }.map { it.text })
+                }
+                val edited = AudioKodec.writeTags(fromMutagen, read.edit { set(TagField.TITLE, "Changed") }, TagWriteOptions(id3Version = 4, padding = 0))
+                file.writeBytes(edited)
+                run(listOf(python, "-c", CHECK_EMPTY_VALUES, file.path) + values)
+                assertContentEquals(originalAudio, edited.takeLast(originalAudio.size).toByteArray())
+            }
+        }
+        for (values in Id3EmptyValueFixtures.lists + Id3EmptyValueFixtures.unicodeLists) {
+            val read = AudioKodec.readTags(Id3EmptyValueFixtures.tag(Id3TextListFixtures.Encoding(1), values) + originalAudio)
+            val entries = read.raw.blocks.flatMap { it.entries }.filter { it.key == "TOPE" }
+            val tags = TagBundle(emptyMap(), raw = RawTags(listOf(RawTagBlock(TagFormat.ID3V2_4, 0, 0, entries))))
+            val written = AudioKodec.writeTags(originalAudio, tags, TagWriteOptions(id3Version = 3, padding = 0))
+            file.writeBytes(written)
+            run(listOf(python, "-c", CHECK_EMPTY_SLASH_VALUES, file.path) + values)
+            assertContentEquals(originalAudio, written.takeLast(originalAudio.size).toByteArray())
+        }
+        val unicodeEmpty = Id3EmptyValueFixtures.tag(Id3TextListFixtures.Encoding(1), listOf(""), customDescription = "Private 日本語") + originalAudio
+        val unicodeTags = AudioKodec.readTags(unicodeEmpty)
+        for (version in 3..4) {
+            val written = AudioKodec.writeTags(unicodeEmpty, unicodeTags.edit { set(TagField.TITLE, "Changed") }, TagWriteOptions(id3Version = version, padding = 0))
+            file.writeBytes(written)
+            run(listOf(python, "-c", CHECK_UNICODE_EMPTY, file.path))
+            assertContentEquals(originalAudio, written.takeLast(originalAudio.size).toByteArray())
+        }
+    }
+
+    @Test
     fun commentAndLyricWhitespaceAgreesInBothDirectionsAfterEdits() {
         val python = python
         for (inputVersion in 3..4) {
@@ -295,6 +349,39 @@ class MutagenTagOracleTest {
         ?.map { File(it, name) }?.firstOrNull { it.canExecute() }?.absolutePath
 
     private companion object {
+        const val CHECK_UNICODE_EMPTY = """
+import sys
+from mutagen.id3 import ID3
+tag = ID3(sys.argv[1])
+assert tag['TXXX:Private 日本語'].text == [''], tag['TXXX:Private 日本語'].text
+assert tag['TOPE'].text == [''], tag['TOPE'].text
+"""
+        const val CHECK_EMPTY_SLASH_VALUES = """
+import sys
+from mutagen.id3 import ID3
+actual = ID3(sys.argv[1])['TOPE'].text
+expected = ['/'.join(sys.argv[2:])]
+assert actual == expected, (actual, expected)
+"""
+        const val CHECK_EMPTY_VALUES = """
+import sys
+from mutagen.id3 import ID3
+tag = ID3(sys.argv[1])
+expected = sys.argv[2:]
+assert tag['TOPE'].text == expected, (tag['TOPE'].text, expected)
+assert tag['TXXX:Private empty values'].text == expected, (tag['TXXX:Private empty values'].text, expected)
+"""
+        const val WRITE_EMPTY_VALUES = """
+import sys
+from mutagen.id3 import ID3, TOPE, TXXX
+tag = ID3()
+encoding = int(sys.argv[2])
+values = sys.argv[3:]
+tag.add(TOPE(encoding=encoding, text=values))
+tag.add(TXXX(encoding=encoding, desc='Private empty values', text=values))
+tag.save(sys.argv[1], v2_version=4, padding=lambda info: 0)
+"""
+
         val directory = File(System.getProperty("java.io.tmpdir"), "audiokodec-mutagen-oracle").also { it.mkdirs() }
         const val WRITE_TEXT_LIST_MATRIX = """
 import sys
