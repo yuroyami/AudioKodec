@@ -28,6 +28,34 @@ class TagPreservationTest {
     private val stream = ByteArray(32) { 0x55 }
 
     @Test
+    fun clearingTagsRemovesPrivateEntriesAndCanStartAFreshTag() {
+        val original = id3v24(
+            listOf(
+                Frame("TIT2", byteArrayOf(3) + "Old".encodeToByteArray()),
+                Frame("PRIV", "owner\u0000private bytes".encodeToByteArray()),
+                Frame("TXXX", byteArrayOf(3) + "Internal Note\u0000secret".encodeToByteArray()),
+                Frame("UFID", "owner\u0000identifier".encodeToByteArray()),
+            ),
+        ) + stream
+        val before = AudioKodec.readTags(original)
+        assertTrue(before.raw.blocks.flatMap { it.entries }.any { it.key == "PRIV" })
+        val cleared = before.edit { clear() }
+        assertTrue(cleared.isEmpty)
+        assertTrue(cleared.raw.blocks.isEmpty())
+        val stripped = AudioKodec.writeTags(original, cleared)
+        assertContentEquals(AudioKodec.writeTags(original, TagBundle.EMPTY), stripped)
+        assertTrue(AudioKodec.readTags(stripped).raw.blocks.all { it.entries.isEmpty() })
+        assertContentEquals(stream, stripped.takeLast(stream.size).toByteArray())
+
+        val fresh = before.edit { clear(); set(TagField.TITLE, "New") }
+        val written = AudioKodec.writeTags(original, fresh)
+        val read = AudioKodec.readTags(written)
+        assertEquals("New", read[TagField.TITLE])
+        assertEquals(listOf("TIT2"), read.raw.blocks.flatMap { it.entries }.map { it.key })
+        assertContentEquals(stream, written.takeLast(stream.size).toByteArray())
+    }
+
+    @Test
     fun urlFramesHoldTheUrlWithNoEncodingByte() {
         val urls = listOf("https://example.com/artist", "https://example.org/other")
         val tags = TagBundle(mapOf(TagField.URL to urls))
@@ -229,6 +257,10 @@ class TagPreservationTest {
         // Choosing formats that leave INFO out is still a way to remove it.
         val removed = AudioKodec.writeTags(original, edited, TagWriteOptions(formats = emptySet()))
         assertTrue(AudioKodec.readTags(removed).raw.blocksOf(TagFormat.RIFF_INFO).isEmpty())
+
+        val cleared = AudioKodec.writeTags(original, before.edit { clear() })
+        assertTrue(AudioKodec.readTags(cleared).raw.blocksOf(TagFormat.RIFF_INFO).isEmpty())
+        assertContentEquals(payload(original), payload(cleared))
     }
 
     @Test

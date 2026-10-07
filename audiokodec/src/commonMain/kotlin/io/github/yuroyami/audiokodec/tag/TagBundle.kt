@@ -351,6 +351,7 @@ public class TagBundle(
      *
      * The result keeps [raw], so writing it back can preserve the entries
      * AudioKodec does not model. Editing a field replaces every value it had.
+     * [TagEditor.clear] also removes the raw blocks.
      */
     public fun edit(block: TagEditor.() -> Unit): TagBundle {
         val editor = TagEditor(this)
@@ -383,6 +384,7 @@ public class TagEditor internal constructor(private val original: TagBundle) {
     private val pictures: MutableList<TagPicture> = original.pictures.toMutableList()
     private val chapters: MutableList<TagChapter> = original.chapters.toMutableList()
     private var replayGain: ReplayGain? = original.replayGain
+    private var raw: RawTags = original.raw
 
     /** Replaces every value of [field] with [value]. */
     public fun set(field: TagField, value: String) {
@@ -409,12 +411,13 @@ public class TagEditor internal constructor(private val original: TagBundle) {
         fields.remove(field)
     }
 
-    /** Removes every field, picture and chapter. */
+    /** Removes every field, picture, chapter, loudness value and raw tag block. */
     public fun clear() {
         fields.clear()
         pictures.clear()
         chapters.clear()
         replayGain = null
+        raw = RawTags.EMPTY
     }
 
     /** Adds a picture. */
@@ -443,6 +446,6 @@ public class TagEditor internal constructor(private val original: TagBundle) {
         pictures = pictures.toList(),
         chapters = chapters.toList(),
         replayGain = replayGain,
-        raw = original.raw,
+        raw = raw,
     )
 }

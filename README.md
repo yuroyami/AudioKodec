@@ -269,6 +269,10 @@ val edited = tags.edit {
 val updated = AudioKodec.writeTags(bytes, edited)
 ```
 
+To discard all entries in the tag bundle, including private entries and
+unknown fields, use `tags.edit { clear() }` and write the result. You can set
+new fields after `clear()` to create a fresh tag without preserving previous entries.
+
 Tags are read from ID3v2.2, 2.3 and 2.4, ID3v1 and v1.1, APEv1 and APEv2,
 Vorbis comments in both FLAC and Ogg, FLAC picture blocks, Lyrics3v2, the
 `LIST INFO` and `bext` chunks of a WAV, the text chunks of an AIFF, and an
