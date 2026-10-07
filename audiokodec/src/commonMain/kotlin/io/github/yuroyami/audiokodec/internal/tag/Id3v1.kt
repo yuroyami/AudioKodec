@@ -94,7 +94,7 @@ internal object Id3v1 {
             put(out, 97, 30, comment)
         }
         // 255 is the code for "no genre", which is what an unknown name gets.
-        val code = genre?.let { Id3Genres.codeOf(Id3Genres.resolve(it)) } ?: -1
+        val code = genre?.let { Id3Genres.codeOf(it) } ?: -1
         out[127] = (if (code >= 0) code else 255).toByte()
         return out
     }

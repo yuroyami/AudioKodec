@@ -50,6 +50,7 @@ internal object Id3v2Writer {
                 TagField.COMMENT -> frames.addAll(commentLikeFrames("COMM", "COM", values, tags, major))
                 TagField.LYRICS -> frames.addAll(commentLikeFrames("USLT", "ULT", values, tags, major))
                 TagField.MUSICBRAINZ_RECORDING_ID -> frames.add(recordingFrame(values, major))
+                TagField.GENRE -> frames.add(textFrame("TCON", Id3Genres.storedValues(values, major), major))
                 else -> {
                     val frameId = TagMapping.id3FrameFor(field, major)
                     if (frameId != null && frameId.startsWith("W")) {

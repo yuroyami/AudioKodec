@@ -99,6 +99,59 @@ class MutagenTagOracleTest {
         }
     }
 
+    @Test
+    fun genreReferencesAndEscapesAgreeInBothDirectionsAndAfterAnEdit() {
+        val python = python
+        val cases = mapOf(
+            "(51)(39)" to listOf("Techno-Industrial", "Noise"),
+            "(51)(39)Eurodisco" to listOf("Techno-Industrial", "Noise", "Eurodisco"),
+            "(4)Eurodisco" to listOf("Disco", "Eurodisco"),
+            "(17)Rock" to listOf("Rock"),
+            "(RX)(CR)" to listOf("Remix", "Cover"),
+            "((I Love You)" to listOf("(I Love You)"),
+            "(55)((I think...)" to listOf("Dream", "(I think...)"),
+        )
+        for (version in 3..4) {
+            val file = plainMp3("genres-$version")
+            val originalAudio = file.readBytes()
+            for ((stored, expected) in cases) {
+                file.writeBytes(originalAudio)
+                run(listOf(python, "-c", WRITE_GENRE, file.path, version.toString(), stored))
+                run(listOf(python, "-c", CHECK_GENRES, file.path) + expected)
+                val tags = AudioKodec.readTags(file.readBytes())
+                assertEquals(expected, tags.all(TagField.GENRE))
+                file.writeBytes(AudioKodec.writeTags(file.readBytes(), tags.edit { set(TagField.TITLE, "Edited") }, TagWriteOptions(id3Version = version)))
+                run(listOf(python, "-c", CHECK_GENRES, file.path) + expected)
+                assertEquals(expected, AudioKodec.readTags(file.readBytes()).all(TagField.GENRE))
+                assertContentEquals(originalAudio, file.readBytes().takeLast(originalAudio.size).toByteArray())
+
+                file.writeBytes(AudioKodec.writeTags(originalAudio, TagBundle(mapOf(TagField.GENRE to expected)), TagWriteOptions(id3Version = version)))
+                run(listOf(python, "-c", CHECK_GENRES, file.path) + expected)
+                assertContentEquals(originalAudio, file.readBytes().takeLast(originalAudio.size).toByteArray())
+            }
+        }
+    }
+
+    @Test
+    fun version24CustomGenreListsKeepTheirOrderUnicodeAndLiteralParentheses() {
+        val python = python
+        val file = plainMp3("custom-genres")
+        val originalAudio = file.readBytes()
+        val expected = listOf("日本語 genre", "Rock", "(51)", "((Literal)")
+        file.writeBytes(AudioKodec.writeTags(originalAudio, TagBundle(mapOf(TagField.GENRE to expected)), TagWriteOptions(id3Version = 4)))
+        run(listOf(python, "-c", CHECK_STORED_GENRES, file.path) + expected)
+        assertEquals(expected, AudioKodec.readTags(file.readBytes()).all(TagField.GENRE))
+        assertContentEquals(originalAudio, file.readBytes().takeLast(originalAudio.size).toByteArray())
+        assertFailsWith<UnsupportedFeatureException> {
+            AudioKodec.writeTags(originalAudio, TagBundle(mapOf(TagField.GENRE to expected)), TagWriteOptions(id3Version = 3))
+        }
+        val numericRefinement = listOf("Rock", "17")
+        file.writeBytes(AudioKodec.writeTags(originalAudio, TagBundle(mapOf(TagField.GENRE to numericRefinement)), TagWriteOptions(id3Version = 3)))
+        run(listOf(python, "-c", CHECK_STORED_GENRES, file.path) + numericRefinement)
+        assertEquals(numericRefinement, AudioKodec.readTags(file.readBytes()).all(TagField.GENRE))
+        assertContentEquals(originalAudio, file.readBytes().takeLast(originalAudio.size).toByteArray())
+    }
+
     private fun plainMp3(name: String): File {
         val ffmpeg = findOnPath("ffmpeg")
         assumeTrue("ffmpeg is required for the ID3 oracle's audio fixture", ffmpeg != null)
@@ -121,6 +174,30 @@ class MutagenTagOracleTest {
 
     private companion object {
         val directory = File(System.getProperty("java.io.tmpdir"), "audiokodec-mutagen-oracle").also { it.mkdirs() }
+        const val WRITE_GENRE = """
+import sys
+from mutagen.id3 import ID3, TCON
+t = ID3()
+t.add(TCON(encoding=1, text=[sys.argv[3]]))
+t.save(sys.argv[1], v2_version=int(sys.argv[2]), v1=0)
+"""
+        const val CHECK_GENRES = """
+import sys
+from mutagen.id3 import ID3
+t = ID3(sys.argv[1])
+assert len(t.getall('TCON')) == 1
+assert t['TCON'].genres == sys.argv[2:], (t['TCON'].text, t['TCON'].genres, sys.argv[2:])
+"""
+        // Default loading normalises TCON text first, so calling genres can
+        // interpret a literal "(51)" twice. Disable that conversion when
+        // checking the stored escape grammar independently.
+        const val CHECK_STORED_GENRES = """
+import sys
+from mutagen.id3 import ID3
+t = ID3(sys.argv[1], translate=False)
+assert len(t.getall('TCON')) == 1
+assert t['TCON'].genres == sys.argv[2:], (t['TCON'].text, t['TCON'].genres, sys.argv[2:])
+"""
         const val WRITE_IDENTIFIERS = """
 import sys
 from mutagen.id3 import ID3, UFID, TXXX

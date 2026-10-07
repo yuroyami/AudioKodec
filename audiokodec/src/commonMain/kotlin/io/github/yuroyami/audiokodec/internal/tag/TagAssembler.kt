@@ -64,7 +64,15 @@ internal object TagAssembler {
 
                 val field = TagMapping.fieldFor(block.format, entry) ?: continue
                 var value = entry.text ?: continue
-                if (field == TagField.GENRE) value = Id3Genres.resolve(value)
+                if (
+                    field == TagField.GENRE &&
+                    (block.format == TagFormat.ID3V2_2 || block.format == TagFormat.ID3V2_3 || block.format == TagFormat.ID3V2_4)
+                ) {
+                    for (genre in Id3Genres.resolveAll(value)) {
+                        addValue(fields, claimedBy, field, genre, precedence)
+                    }
+                    continue
+                }
                 if (field == TagField.COMPILATION) value = normaliseFlag(value)
                 addValue(fields, claimedBy, field, value.trim(), precedence)
             }

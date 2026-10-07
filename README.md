@@ -300,6 +300,10 @@ MusicBrainz IDs use Picard's `TXXX` descriptions. ID3v2.4 stores multiple text
 values in one frame. ID3v2.3 uses slash lists for artists, composers and
 lyricists, and refuses lists or literal slashes it cannot preserve
 unambiguously. Use `TagWriteOptions(id3Version = 4)` for those values.
+ID3 genre references and refinements become separate `all(TagField.GENRE)`
+values. V2.3 writes known genre references followed by one optional free-text
+refinement; v2.4 supports separate free-text genres. See the docs for genre
+escaping and reserved-code limits.
 
 ## Name a format
 

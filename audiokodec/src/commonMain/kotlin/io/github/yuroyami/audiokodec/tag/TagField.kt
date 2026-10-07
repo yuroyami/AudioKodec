@@ -50,7 +50,12 @@ public enum class TagField {
     /** Date the recording was made, when it differs from the release date. */
     ORIGINAL_DATE,
 
-    /** Genre. */
+    /**
+     * Genre names, including separate ID3 references and refinements.
+     *
+     * Use [TagBundle.all] to retain every genre. The first-value accessor
+     * returns the first reference when the file also states a refinement.
+     */
     GENRE,
 
     /** Composer. */

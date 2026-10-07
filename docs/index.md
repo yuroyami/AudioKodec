@@ -434,10 +434,35 @@ AudioKodec.writeTags(
 
 ID3v2.4 stores each text field or user-text description in one frame, with
 null-separated values. ID3v2.3 defines slash lists for artists, composers,
-lyricists, original artists and original lyricists. Other v2.3 text fields
-and user-text frames require one distinct value. Writing an unsupported list
+lyricists, original artists and original lyricists. Genres use the reference
+grammar described below. Other v2.3 text fields and user-text frames require
+one distinct value. Writing an unsupported list
 or a literal slash in a slash-list value raises `UnsupportedFeatureException`.
 Use `TagWriteOptions(id3Version = 4)` to preserve those values separately.
+
+Read every genre with `tags.all(TagField.GENRE)`. ID3 references and refinements
+remain separate values in file order. For example, `(51)(39)Eurodisco` becomes
+`Techno-Industrial`, `Noise`, `Eurodisco`; `(4)Eurodisco` keeps both `Disco` and
+`Eurodisco`. Repeated identical values are deduplicated. Unknown syntax stays
+literal, including the remaining text after an unknown reference. The raw
+view retains the stored spelling. Other tag formats keep their free-text
+genres without interpreting ID3 codes.
+
+Supply genre names when writing, rather than stored codes such as `17` or
+`RX`. V2.3 stores known names as references, followed by at most one free-text
+refinement. It refuses multiple refinements or a list that would need
+reordering. V2.4 stores separate values. Standalone literals that coincide
+with recognised numeric codes, `RX` or `CR` are ambiguous and refused.
+A numeric refinement after known v2.3 references remains literal.
+
+The reader accepts the older bracket grammar in v2.4 tags for compatibility.
+Writing a literal leading parenthesis uses the older `((` escape in both
+versions, matching readers such as Mutagen. A v2.4 reader that treats every
+parenthesised string as plain text may display the extra parenthesis.
+Mutagen's default loading normalises genre text before `genres` parses it.
+For literals resembling codes, such as `(51)`, use `ID3(path, translate=False)`
+when inspecting the original genre grammar; default conversion can interpret
+that literal again.
 
 MusicBrainz identifiers use Picard's ID3 identities:
 

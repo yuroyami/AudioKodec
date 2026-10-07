@@ -454,19 +454,10 @@ class TagTest {
     }
 
     @Test
-    fun theGenreTableIsUsedWhereverAFileRefersToIt() {
-        val cases = mapOf(
-            "(17)" to "Rock",
-            "(17)Rock" to "Rock",
-            "17" to "Rock",
-            "Rock" to "Rock",
-            "(4)Eurodisco" to "Eurodisco",
-            "Some Unlisted Genre" to "Some Unlisted Genre",
-            "(RX)" to "Remix",
-        )
-        for ((stored, expected) in cases) {
-            val read = AudioKodec.readTags(taggedStream(TagBundle(mapOf(TagField.GENRE to listOf(stored)))))
-            assertEquals(expected, read[TagField.GENRE], "genre '$stored'")
+    fun namedGenresRoundTripWithoutBeingTreatedAsStoredCodes() {
+        for (name in listOf("Rock", "Eurodisco", "Some Unlisted Genre", "Remix", "(17)")) {
+            val read = AudioKodec.readTags(taggedStream(TagBundle(mapOf(TagField.GENRE to listOf(name)))))
+            assertEquals(name, read[TagField.GENRE])
         }
     }
 

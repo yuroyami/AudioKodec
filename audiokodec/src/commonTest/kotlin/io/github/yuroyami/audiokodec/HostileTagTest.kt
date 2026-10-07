@@ -29,6 +29,7 @@ class HostileTagTest {
                     TagField.COMMENT to listOf("A comment that is reasonably long"),
                     TagField.MUSICBRAINZ_RECORDING_ID to listOf("ebf79ba5-085e-48d2-9eb8-2d992fbf0f6d"),
                     TagField.CATALOG_NUMBER to listOf("first", "日本語 second"),
+                    TagField.GENRE to listOf("Techno-Industrial", "Noise", "(Literal genre)"),
                 ),
             ),
         )

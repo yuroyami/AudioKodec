@@ -121,7 +121,7 @@ inspected and edited.
 | Tag format | Read | Write | Notes |
 |---|---|---|---|
 | **ID3v2.4** | ✅ | ✅ | Text frames, multi-value frames, `TXXX`, `COMM`, `USLT`, `APIC`, `UFID`, `CHAP`, all four text encodings, frame-level unsynchronisation, extended header, appended blocks |
-| **ID3v2.3** | ✅ | ✅ | The same set, with the version's own flag bits, size form and frame differences. Named artist/composer/lyricist lists use slashes; unsupported multi-value fields and literal slashes in list values are refused rather than written with duplicate identities |
+| **ID3v2.3** | ✅ | ✅ | The same set, with the version's own flag bits, size form and frame differences. Named artist/composer/lyricist lists use slashes; genres use references and an optional refinement; unsupported multi-value fields and literal slashes in list values are refused rather than written with duplicate identities |
 | **ID3v2.2** | ✅ | upgraded | Three-character frames and three-byte sizes. Writing produces a 2.3 block, which is what every other tagger does |
 | **ID3v1 and v1.1** | ✅ | update only | Never created. An existing block is kept in step with the real tag, and the 1.1 track number is detected rather than assumed |
 | **APEv2** | ✅ | ✅ | Header and footer, multi-value text items, binary items, cover art. Found at either end of a file |
@@ -154,7 +154,7 @@ keys, so nothing is lost by the merge and an unusual entry is still reachable.
 
 | Feature | Status |
 |---|---|
-| Numbered genres, including `(17)`, `(17)Rock`, `17` and `RX` | ✅ |
+| ID3 genre reference runs, refinements, `((` escapes, bare codes, `RX` and `CR` | ✅ separate merged values; unknown syntax stays literal |
 | `3/12` split into a number and a total, and joined again on write | ✅ |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
 | Media type sniffed when a format stores a picture without naming one | ✅ |
@@ -250,10 +250,23 @@ loses fields from files that are perfectly ordinary.
 MusicBrainz-owner `UFID`, including reads of v2.2 `UFI` and the old
 `MUSICBRAINZ_RECORDING_ID` user-text alias. Other MusicBrainz IDs use Picard's
 exact `TXXX` descriptions. V2.4 user-text lists use one frame and retain all
-values. V2.3 named slash lists are supported; other multi-value text writes
+values. V2.3 named slash lists and genre reference runs are supported; other multi-value text writes
 are explicitly refused. Mutagen 1.47.0 checks both directions, both versions,
 Unicode and unchanged MP3 audio bytes, including raw user-text lists and
 unrelated binary identifier owners.
+
+**ID3 genres.** V2.2, v2.3 and legacy-style v2.4 references are read as
+separate genres, retaining refinements and deduplicating repeated names.
+Unknown syntax stays literal. V2.3 writes a known reference run followed by
+one optional free-text refinement; other orders or several refinements are
+refused. V2.4 writes separate values. Literal leading parentheses use the
+older escape in both versions for compatibility with readers such as Mutagen.
+Strict plain-text v2.4 readers may display the extra parenthesis. Recognised
+standalone numeric-code and RX/CR literals are refused. Eight common tests
+cover grammar, malformed input, non-ID3 controls and exact audio bytes;
+Mutagen checks both writable versions and both directions. Literal code-like
+parentheses are checked with `translate=False`, because default conversion
+normalises text before `genres` and can interpret the literal again.
 
 ## Where the code went its own way
 

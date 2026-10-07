@@ -1,5 +1,7 @@
 package io.github.yuroyami.audiokodec.internal.tag
 
+import io.github.yuroyami.audiokodec.UnsupportedFeatureException
+
 /**
  * The numbered genre list ID3v1 defined and Winamp extended twice.
  *
@@ -63,36 +65,81 @@ internal object Id3Genres {
     }
 
     /**
-     * Turns whatever a `TCON` frame holds into a readable genre.
+     * Resolves the leading reference run and its optional literal refinement.
      *
-     * The frame may hold a name, a bare number, a number in brackets, a number
-     * in brackets followed by a name, or `RX` and `CR` for remix and cover.
-     * Anything that resolves to a table entry becomes that entry's name, and
-     * anything else is returned as it was.
+     * V2.2 and v2.3 use brackets; v2.4 uses separate numeric strings. Older
+     * bracket syntax is also accepted in v2.4 for compatibility. Unknown
+     * syntax ends the run and remains literal, rather than becoming "Unknown".
      */
-    fun resolve(value: String): String {
-        val trimmed = value.trim()
-        if (trimmed.isEmpty()) return trimmed
-
-        // "(17)Rock" and "(17)": the text after the brackets wins when it is
-        // there, because a writer that included both meant the words.
-        if (trimmed.startsWith("(")) {
-            val close = trimmed.indexOf(')')
-            if (close > 1) {
-                val inside = trimmed.substring(1, close)
-                val after = trimmed.substring(close + 1).trim()
-                if (after.isNotEmpty()) return after
-                when (inside.uppercase()) {
-                    "RX" -> return "Remix"
-                    "CR" -> return "Cover"
-                }
-                inside.toIntOrNull()?.let { code -> nameOf(code)?.let { return it } }
-                return trimmed
+    fun resolveAll(value: String): List<String> {
+        val text = value.trim()
+        if (text.isEmpty()) return emptyList()
+        val genres = LinkedHashSet<String>()
+        var at = 0
+        while (at < text.length && text[at] == '(') {
+            if (at + 1 < text.length && text[at + 1] == '(') {
+                genres.add(text.substring(at + 1))
+                return genres.toList()
+            }
+            val close = text.indexOf(')', at + 1)
+            if (close < 0) break
+            val name = referenceName(text.substring(at + 1, close)) ?: break
+            genres.add(name)
+            at = close + 1
+        }
+        if (at < text.length) {
+            val refinement = text.substring(at).trim()
+            // Only a standalone string is a bare code. A numeric refinement
+            // after a bracket run is free text, such as "(17)17".
+            if (refinement.isNotEmpty()) {
+                genres.add(if (at == 0) referenceName(refinement) ?: refinement else refinement)
             }
         }
-
-        // A bare number is a code, which is how ID3v2.4 writes one.
-        trimmed.toIntOrNull()?.let { code -> nameOf(code)?.let { return it } }
-        return trimmed
+        return genres.toList()
     }
+
+    private fun referenceName(value: String): String? = when (value) {
+        "RX" -> "Remix"
+        "CR" -> "Cover"
+        else -> if (value.isNotEmpty() && value.all { it in '0'..'9' }) {
+            value.toIntOrNull()?.let { nameOf(it) }
+        } else null
+    }
+
+    /** Encodes named genres without changing their meaning or order. */
+    fun storedValues(values: List<String>, major: Int): List<String> {
+        val distinct = values.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        if (distinct.any { '\u0000' in it }) unsupported("a null inside a genre value")
+        if (major == 4) return distinct.map { value ->
+            if (referenceName(value) != null) unsupported("a literal reserved genre code '$value'")
+            escapeRefinement(value)
+        }
+        val stored = StringBuilder()
+        for ((index, value) in distinct.withIndex()) {
+            val code = codeOf(value)
+            val reference = when {
+                code >= 0 && nameOf(code) == value -> code.toString()
+                value == "Remix" -> "RX"
+                value == "Cover" -> "CR"
+                else -> null
+            }
+            if (reference != null) {
+                stored.append('(').append(reference).append(')')
+            } else {
+                if (index != distinct.lastIndex) unsupported("several or interleaved free-text genres in ID3v2.3")
+                if (stored.isEmpty() && referenceName(value) != null) unsupported("a literal reserved genre code '$value'")
+                stored.append(escapeRefinement(value))
+            }
+        }
+        return listOf(stored.toString())
+    }
+
+    // Retain the older escape in v2.4 too, for readers that accept legacy
+    // reference syntax there. Otherwise a literal "(17)" becomes "Rock".
+    private fun escapeRefinement(value: String): String = if (value.startsWith("(")) "($value" else value
+
+    private fun unsupported(detail: String): Nothing = throw UnsupportedFeatureException(
+        "representing ID3 genres",
+        "ID3 cannot preserve $detail unambiguously; use named genres or ID3v2.4 for supported free-text lists",
+    )
 }
