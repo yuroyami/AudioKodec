@@ -21,6 +21,28 @@ import kotlin.test.assertTrue
 class Mp4Test {
 
     @Test
+    fun pcmPacketAndChannelScratchAllocationsAreGuardedBeforeConstruction() {
+        val options = DecodeOptions(maxAllocationBytes = 4_096)
+        for (frames in intArrayOf(750, 1_500)) {
+            for (channelTag in listOf(null, (101 shl 16) or 2)) {
+                val file = build(frames, 2, frames, channelTag = channelTag, singlePacket = true)
+                if (frames == 750 && channelTag == null) {
+                    AudioKodec.open(file, options).use { assertEquals(frames.toLong(), it.durationFrames) }
+                } else {
+                    val failure = assertFailsWith<AllocationGuardException>("$frames frames, chan=$channelTag") {
+                        AudioKodec.open(file, options).close()
+                    }
+                    // The input packet is checked before any codec state. When
+                    // it fits, the expanded channel scratch still needs a guard.
+                    assertEquals(6_000L, failure.requested)
+                    assertEquals(4_096L, failure.limit)
+                }
+                AudioKodec.open(file).use { assertEquals(frames.toLong(), it.durationFrames) }
+            }
+        }
+    }
+
+    @Test
     fun theSamplesComeBackWhereverTheIndexSits() {
         for (channels in intArrayOf(1, 2)) {
             for (moovFirst in listOf(true, false)) {
@@ -195,8 +217,11 @@ class Mp4Test {
         edit: Pair<Long, Long>? = null,
         chapters: List<Pair<Long, String>> = emptyList(),
         format: String = "sowt",
+        channelTag: Int? = null,
+        singlePacket: Boolean = false,
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
+        require(!singlePacket || chunkCount == 1)
         val ftyp = box("ftyp", ascii("qt  "), u32(0), ascii("qt  "))
         fun payload(): Pair<ByteArray, IntArray> {
             val out = ArrayList<ByteArray>()
@@ -218,19 +243,21 @@ class Mp4Test {
         fun moov(dataAt: Int): ByteArray {
             val lastFrames = frames - (chunkCount - 1) * chunkFrames
             val stsc = if (lastFrames == chunkFrames || chunkCount == 1) {
-                fullBox("stsc", 0, 0, u32(1), u32(1), u32(minOf(chunkFrames, frames)), u32(1))
+                fullBox("stsc", 0, 0, u32(1), u32(1), u32(if (singlePacket) 1 else minOf(chunkFrames, frames)), u32(1))
             } else {
                 fullBox("stsc", 0, 0, u32(2), u32(1), u32(chunkFrames), u32(1), u32(chunkCount), u32(lastFrames), u32(1))
             }
             val entry = box(
                 format, ByteArray(6), u16(1), u16(0), u16(0), u32(0), u16(channels), u16(16), u16(0), u16(0), u32(RATE shl 16),
+                channelTag?.let { fullBox("chan", 0, 0, u32(it), u32(0), u32(0)) } ?: ByteArray(0),
             )
             val stbl = box(
                 "stbl",
                 fullBox("stsd", 0, 0, u32(1), entry),
-                fullBox("stts", 0, 0, u32(1), u32(frames), u32(1)),
+                fullBox("stts", 0, 0, u32(1), u32(if (singlePacket) 1 else frames), u32(if (singlePacket) frames else 1)),
                 stsc,
-                fullBox("stsz", 0, 0, u32(1), u32(frames)),
+                if (singlePacket) fullBox("stsz", 0, 0, u32(0), u32(1), u32(data.size))
+                else fullBox("stsz", 0, 0, u32(1), u32(frames)),
                 fullBox("stco", 0, 0, u32(chunkCount), *starts.map { u32(dataAt + it) }.toTypedArray()),
             )
             val mdia = box(

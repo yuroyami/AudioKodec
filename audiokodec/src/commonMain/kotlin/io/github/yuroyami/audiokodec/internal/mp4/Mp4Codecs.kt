@@ -62,7 +62,7 @@ internal object Mp4Codecs {
             "Opus" -> opus(entry)
             "fLaC" -> flac(entry, reader, options)
             else -> {
-                val pcm = pcmCodec(entry) ?: return named(AudioCodec.UNKNOWN, "'${entry.format}'")
+                val pcm = pcmCodec(entry, options) ?: return named(AudioCodec.UNKNOWN, "'${entry.format}'")
                 pcm
             }
         }
@@ -356,7 +356,7 @@ internal object Mp4Codecs {
         }
     }
 
-    private fun pcmCodec(entry: Mp4Reader.SampleEntry): Choice? {
+    private fun pcmCodec(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice? {
         val (layout, aLaw) = pcmLayout(entry) ?: return null
         val channels = entry.channels
         if (channels < 1) throw CorruptStreamException("an uncompressed track declares no channels", entry.offset)
@@ -378,7 +378,7 @@ internal object Mp4Codecs {
         }
         val format = AudioFormat(entry.sampleRate, layoutOut)
         return Choice(codec, codec.displayName, format, inner.storedBitDepth, 0) { largest ->
-            PcmPackets(format, inner, order, largest / inner.blockBytes)
+            PcmPackets(format, inner, order, largest / inner.blockBytes, options)
         }
     }
 
@@ -405,12 +405,16 @@ internal object Mp4Codecs {
         /** Which stored channel each output channel comes from, or null when they agree. */
         private val order: IntArray?,
         override val maxFramesPerPacket: Int,
+        options: DecodeOptions,
     ) : PacketCodec {
         private val channels = format.channels
         override val storedBitDepth: Int? = inner.storedBitDepth
         override val preRollFrames: Long = 0
-        private val floatScratch = if (order != null) FloatArray(maxFramesPerPacket * channels) else null
-        private val intScratch = if (order != null && storedBitDepth != null) IntArray(maxFramesPerPacket * channels) else null
+        private val scratchSamples = if (order == null) 0 else (maxFramesPerPacket.toLong() * channels).also {
+            options.checkAllocation(it * Float.SIZE_BYTES, "reordering an MP4 PCM packet")
+        }.toInt()
+        private val floatScratch = if (order != null) FloatArray(scratchSamples) else null
+        private val intScratch = if (order != null && storedBitDepth != null) IntArray(scratchSamples) else null
 
         private fun frames(length: Int): Int {
             if (length % inner.blockBytes != 0) {

@@ -38,7 +38,9 @@ internal object Mp4Container {
             "this MP4 file holds ${opened.choice.name}, which AudioKodec cannot decode yet. " +
                 "Its headers, length and chapters are readable.",
         )
-        val codec = build(opened.index.largestPacket)
+        val largestPacket = opened.index.largestPacket
+        options.checkAllocation(largestPacket.toLong(), "reading a $largestPacket-byte packet")
+        val codec = build(largestPacket)
         return PacketStreamDecoder.of(reader, opened.index, codec, opened.info, opened.trimStart, opened.playFrames, options)
     }
 
