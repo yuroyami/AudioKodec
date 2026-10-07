@@ -57,8 +57,8 @@ internal object TagMapping {
         "TKEY" to TagField.KEY,
         "TSRC" to TagField.ISRC,
         "TCOP" to TagField.COPYRIGHT,
-        "TENC" to TagField.ENCODER,
-        "TSSE" to TagField.ENCODING_SETTINGS,
+        "TENC" to TagField.ENCODED_BY,
+        "TSSE" to TagField.ENCODER,
         "TPUB" to TagField.PUBLISHER,
         "TLAN" to TagField.LANGUAGE,
         "TMOO" to TagField.MOOD,
@@ -94,8 +94,8 @@ internal object TagMapping {
         "TKE" to TagField.KEY,
         "TRC" to TagField.ISRC,
         "TCR" to TagField.COPYRIGHT,
-        "TEN" to TagField.ENCODER,
-        "TSS" to TagField.ENCODING_SETTINGS,
+        "TEN" to TagField.ENCODED_BY,
+        "TSS" to TagField.ENCODER,
         "TPB" to TagField.PUBLISHER,
         "TLA" to TagField.LANGUAGE,
         "TMT" to TagField.MEDIA,
@@ -146,9 +146,10 @@ internal object TagMapping {
         "ISRC" to TagField.ISRC,
         "COPYRIGHT" to TagField.COPYRIGHT,
         "ENCODER" to TagField.ENCODER,
-        "ENCODED-BY" to TagField.ENCODER,
-        "ENCODEDBY" to TagField.ENCODER,
-        "ENCODING" to TagField.ENCODING_SETTINGS,
+        "ENCODEDBY" to TagField.ENCODED_BY,
+        "ENCODED-BY" to TagField.ENCODED_BY,
+        "ENCODED_BY" to TagField.ENCODED_BY,
+        "ENCODING" to TagField.ENCODER,
         "ENCODERSETTINGS" to TagField.ENCODING_SETTINGS,
         "PUBLISHER" to TagField.PUBLISHER,
         "LABEL" to TagField.PUBLISHER,
@@ -215,6 +216,8 @@ internal object TagMapping {
         "IPRT" to TagField.TRACK_NUMBER,
         "ICOP" to TagField.COPYRIGHT,
         "ISFT" to TagField.ENCODER,
+        "IENC" to TagField.ENCODED_BY,
+        "ITCH" to TagField.ENCODED_BY,
         "IWRI" to TagField.LYRICIST,
         "IMUS" to TagField.COMPOSER,
         "IENG" to TagField.PERFORMER,
@@ -244,6 +247,8 @@ internal object TagMapping {
 
     /** Descriptions of `TXXX` frames that carry a field with no frame of its own. */
     private val USER_TEXT: Map<String, TagField> = mapOf(
+        "ENCODERSETTINGS" to TagField.ENCODING_SETTINGS,
+        "ENCODING_SETTINGS" to TagField.ENCODING_SETTINGS,
         "MUSICBRAINZ_RECORDING_ID" to TagField.MUSICBRAINZ_RECORDING_ID,
         "MUSICBRAINZ ARTIST ID" to TagField.MUSICBRAINZ_ARTIST_ID,
         "MUSICBRAINZ ALBUM ID" to TagField.MUSICBRAINZ_RELEASE_ID,
@@ -402,8 +407,8 @@ internal object TagMapping {
         TagField.KEY -> "TKEY"
         TagField.ISRC -> "TSRC"
         TagField.COPYRIGHT -> "TCOP"
-        TagField.ENCODER -> "TENC"
-        TagField.ENCODING_SETTINGS -> "TSSE"
+        TagField.ENCODER -> "TSSE"
+        TagField.ENCODED_BY -> "TENC"
         TagField.PUBLISHER -> "TPUB"
         TagField.LANGUAGE -> "TLAN"
         TagField.MEDIA -> "TMED"
@@ -455,6 +460,7 @@ internal object TagMapping {
         TagField.DISC_NUMBER -> "DISCNUMBER"
         TagField.DISC_TOTAL -> "DISCTOTAL"
         TagField.ENCODER -> "ENCODER"
+        TagField.ENCODED_BY -> "ENCODEDBY"
         TagField.PUBLISHER -> "PUBLISHER"
         TagField.SORT_TITLE -> "TITLESORT"
         TagField.SORT_ARTIST -> "ARTISTSORT"
@@ -491,6 +497,7 @@ internal object TagMapping {
         TagField.TRACK_NUMBER -> "ITRK"
         TagField.COPYRIGHT -> "ICOP"
         TagField.ENCODER -> "ISFT"
+        TagField.ENCODED_BY -> "IENC"
         TagField.LYRICIST -> "IWRI"
         TagField.COMPOSER -> "IMUS"
         TagField.PERFORMER -> "IENG"

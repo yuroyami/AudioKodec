@@ -94,10 +94,15 @@ public enum class TagField {
     /** Copyright statement. */
     COPYRIGHT,
 
-    /** Program that produced the file. */
+    /**
+     * Software or hardware used to encode the file.
+     *
+     * A format's combined encoder/settings string, such as ID3 `TSSE`,
+     * stays intact here. It has no reliable separator to split its parts.
+     */
     ENCODER,
 
-    /** Settings that program used. */
+    /** Separately stated encoder settings, stored as `TXXX:ENCODERSETTINGS` in ID3. */
     ENCODING_SETTINGS,
 
     /** Publisher or record label. */
@@ -168,6 +173,9 @@ public enum class TagField {
 
     /** Podcast or audiobook description. */
     DESCRIPTION,
+
+    /** Person or organisation that encoded the file, distinct from the software. */
+    ENCODED_BY,
     ;
 
     /**

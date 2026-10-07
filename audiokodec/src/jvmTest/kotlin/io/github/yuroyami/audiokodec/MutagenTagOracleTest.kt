@@ -43,6 +43,76 @@ class MutagenTagOracleTest {
     }
 
     @Test
+    fun encodingFactsAgreeWithIndependentId3FramesAndSeparateEdits() {
+        val python = python
+        val expected = mapOf(
+            TagField.ENCODER to listOf("Codec 日本語 1.2 -quality 5"),
+            TagField.ENCODED_BY to listOf("Björk Laboratory"),
+            TagField.ENCODING_SETTINGS to listOf("quality=5 日本語"),
+        )
+        val removals = mapOf(TagField.ENCODER to "software", TagField.ENCODED_BY to "credit", TagField.ENCODING_SETTINGS to "settings")
+        for (inputVersion in 3..4) {
+            val file = plainMp3("encoding-facts-$inputVersion")
+            val audio = file.readBytes()
+            run(listOf(python, "-c", ENCODING_FACTS, file.path, "id3", "write", inputVersion.toString()))
+            val original = file.readBytes()
+            val before = AudioKodec.readTags(original)
+            assertEquals(expected, before.fields)
+            for (outputVersion in 3..4) {
+                val options = TagWriteOptions(id3Version = outputVersion, padding = 0)
+                val edits = listOf("none" to before.edit { set(TagField.TITLE, "Changed") }) +
+                    removals.map { (field, name) -> name to before.edit { remove(field) } }
+                for ((removed, edited) in edits) {
+                    val bytes = AudioKodec.writeTags(original, edited, options)
+                    file.writeBytes(bytes)
+                    run(listOf(python, "-c", ENCODING_FACTS, file.path, "id3", "check", removed))
+                    assertEquals(edited.fields, AudioKodec.readTags(bytes).fields)
+                    assertContentEquals(audio, bytes.takeLast(audio.size).toByteArray())
+                }
+                file.writeBytes(AudioKodec.writeTags(audio, TagBundle(expected), options))
+                run(listOf(python, "-c", ENCODING_FACTS, file.path, "id3", "check", "none"))
+                assertContentEquals(audio, file.readBytes().takeLast(audio.size).toByteArray())
+            }
+        }
+    }
+
+    @Test
+    fun encodingFactsAgreeWithNativeFlacOpusAndApeInBothDirections() {
+        val python = python
+        val ffmpeg = findOnPath("ffmpeg")
+        assumeTrue("ffmpeg is required for native encoding metadata", ffmpeg != null)
+        val expected = mapOf(
+            TagField.ENCODER to listOf("Codec 日本語 1.2 -quality 5"),
+            TagField.ENCODED_BY to listOf("Björk Laboratory"),
+            TagField.ENCODING_SETTINGS to listOf("quality=5 日本語"),
+        )
+        for (kind in listOf("flac", "opus", "ape")) {
+            val file = if (kind == "ape") plainMp3("encoding-facts-ape") else File(directory, "encoding-facts.$kind").also {
+                run(listOf(ffmpeg!!, "-y", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.1", "-c:a", if (kind == "flac") "flac" else "libopus", it.path))
+            }
+            val original = file.readBytes()
+            val originalFile = File(directory, "encoding-facts-original.$kind").also { it.writeBytes(original) }
+            run(listOf(python, "-c", ENCODING_FACTS, file.path, kind, "write", "4"))
+            val before = AudioKodec.readTags(file.readBytes())
+            assertEquals(expected, before.fields)
+            val options = if (kind == "ape") TagWriteOptions(formats = setOf(TagFormat.APEV2)) else TagWriteOptions.DEFAULT
+            repeat(3) { index ->
+                file.writeBytes(AudioKodec.writeTags(file.readBytes(), AudioKodec.readTags(file.readBytes()).edit {
+                    set(TagField.TITLE, "Edit $index")
+                }, options))
+                run(listOf(python, "-c", ENCODING_FACTS, file.path, kind, "check", "none"))
+                val read = AudioKodec.readTags(file.readBytes())
+                for ((field, values) in expected) assertEquals(values, read.all(field))
+                when (kind) {
+                    "ape" -> assertContentEquals(original, file.readBytes().copyOfRange(0, original.size))
+                    "flac" -> assertContentEquals(TagStressFixtures.flacAudio(original), TagStressFixtures.flacAudio(file.readBytes()))
+                    else -> run(listOf(python, "-c", CHECK_OPUS_AUDIO, originalFile.path, file.path))
+                }
+            }
+        }
+    }
+
+    @Test
     fun itunesPlaybackCommentsSurviveUserCommentEditsInBothDirections() {
         val python = python
         val privateText = "000000F0 000000F0"
@@ -563,6 +633,41 @@ class MutagenTagOracleTest {
         ?.map { File(it, name) }?.firstOrNull { it.canExecute() }?.absolutePath
 
     private companion object {
+        const val ENCODING_FACTS = """
+import sys
+from mutagen.id3 import ID3, TSSE, TENC, TXXX
+from mutagen.flac import FLAC
+from mutagen.oggopus import OggOpus
+from mutagen.apev2 import APEv2
+values = {'software': 'Codec 日本語 1.2 -quality 5', 'credit': 'Björk Laboratory', 'settings': 'quality=5 日本語'}
+kind, mode = sys.argv[2:4]
+if kind == 'id3':
+    if mode == 'write':
+        tag = ID3()
+        tag.add(TSSE(encoding=1, text=[values['software']]))
+        tag.add(TENC(encoding=1, text=[values['credit']]))
+        tag.add(TXXX(encoding=1, desc='ENCODERSETTINGS', text=[values['settings']]))
+        if sys.argv[4] == '3': tag.update_to_v23()
+        tag.save(sys.argv[1], v2_version=int(sys.argv[4]))
+    else:
+        tag = ID3(sys.argv[1])
+        for name, key in [('software', 'TSSE'), ('credit', 'TENC')]:
+            frames = tag.getall(key)
+            assert [f.text for f in frames] == ([] if sys.argv[4] == name else [[values[name]]]), (name, frames)
+        frames = [f for f in tag.getall('TXXX') if f.desc == 'ENCODERSETTINGS']
+        assert [f.text for f in frames] == ([] if sys.argv[4] == 'settings' else [[values['settings']]])
+else:
+    cls = {'flac': FLAC, 'opus': OggOpus, 'ape': APEv2}[kind]
+    tag = cls(sys.argv[1]) if kind != 'ape' or mode != 'write' else APEv2()
+    keys = {'software': 'ENCODER', 'credit': 'ENCODEDBY', 'settings': 'ENCODERSETTINGS'}
+    if mode == 'write':
+        tag.clear()
+        for name, key in keys.items(): tag[key] = [values[name]]
+        if kind == 'ape': tag.save(sys.argv[1])
+        else: tag.save()
+    else:
+        for name, key in keys.items(): assert list(tag[key]) == [values[name]], (name, tag[key])
+"""
         const val ITUNES_COMMENTS = """
 import sys
 from mutagen.id3 import ID3, COMM

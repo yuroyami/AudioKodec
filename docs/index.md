@@ -455,6 +455,37 @@ AudioKodec.writeTags(
 )
 ```
 
+### Encoding software and credits
+
+`TagField.ENCODER` identifies the encoding software or hardware.
+`ENCODED_BY` identifies the person or organisation that encoded the file.
+`ENCODING_SETTINGS` holds separately stated settings.
+
+| Field | ID3v2.3/v2.4 | Vorbis/APE | RIFF INFO |
+|---|---|---|---|
+| `ENCODER` | `TSSE` | `ENCODER` | `ISFT` |
+| `ENCODED_BY` | `TENC` | `ENCODEDBY` | `IENC` |
+| `ENCODING_SETTINGS` | `TXXX:ENCODERSETTINGS` | `ENCODERSETTINGS` | needs an ID3 chunk |
+
+ID3v2.2 input uses `TSS`, `TEN` and `TXX:ENCODERSETTINGS` respectively.
+A combined encoder/settings string in `TSSE` stays intact in `ENCODER`.
+The format supplies no delimiter that can reliably separate those facts.
+Supplying both software and explicit settings writes separate frames,
+preserving each value without concatenation.
+
+Vorbis and APE also recognise `ENCODED-BY` and `ENCODED_BY` as human
+credits, and `ENCODING` as a combined encoder/settings value. RIFF input
+recognises `ITCH` as another human-credit convention.
+Use an ID3 chunk alongside RIFF INFO when explicit settings must survive.
+
+Earlier versions exposed ID3 `TENC` as `ENCODER` and `TSSE` as
+`ENCODING_SETTINGS`. Read the source tags again when migrating stored
+merged bundles so those values receive their corrected fields.
+Files written with the earlier mappings may already contain a software
+name in `TENC`. Move that known value from `ENCODED_BY` to `ENCODER`
+when repairing such a file. Reading follows the native frame's meaning
+and does not guess from the text whether a value names a person or program.
+
 ### Unknown Vorbis comments
 
 FLAC and Ogg keep unmodelled Vorbis comments in their stored order, including

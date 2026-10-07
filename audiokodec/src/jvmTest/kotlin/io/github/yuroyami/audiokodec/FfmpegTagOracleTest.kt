@@ -9,6 +9,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertContentEquals
+import org.junit.Assume.assumeTrue
 
 /**
  * Cross-checks the tag reader and writer against ffmpeg, on real MP3 files.
@@ -24,6 +26,47 @@ class FfmpegTagOracleTest {
 
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
     private val ffprobe: String? by lazy { findOnPath("ffprobe") }
+
+    @Test
+    fun softwareAndEncodingCreditsHaveTheSameMeaningAcrossContainers() {
+        val ffmpeg = ffmpeg
+        val ffprobe = ffprobe
+        assumeTrue("ffmpeg and ffprobe are required for encoding metadata", ffmpeg != null && ffprobe != null)
+        for ((extension, codec) in listOf("mp3" to "libmp3lame", "flac" to "flac", "wav" to "pcm_s16le")) {
+            val file = temp("encoder-meaning.$extension")
+            run(listOf(ffmpeg!!, "-y", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.1", "-c:a", codec, "-metadata", "encoded_by=Some Person", file.path))
+            val original = file.readBytes()
+            val reference = probeTags(ffprobe!!, file)
+            val tags = AudioKodec.readTags(original)
+            assertEquals(reference["encoder"], tags[TagField.ENCODER], extension)
+            assertEquals("Some Person", tags[TagField.ENCODED_BY], extension)
+            assertEquals(emptyList(), tags.all(TagField.ENCODING_SETTINGS), extension)
+            val edited = tags.edit {
+                set(TagField.ENCODER, "Custom Codec 2.0")
+                set(TagField.ENCODED_BY, "Another Person")
+                set(TagField.ENCODING_SETTINGS, "quality=7")
+            }
+            val options = if (extension == "wav") {
+                TagWriteOptions(formats = setOf(TagFormat.RIFF_INFO, TagFormat.ID3V2_4), padding = 0)
+            } else TagWriteOptions(padding = 0)
+            val written = AudioKodec.writeTags(original, edited, options)
+            file.writeBytes(written)
+            val after = probeTags(ffprobe, file)
+            assertEquals("Custom Codec 2.0", after["encoder"], extension)
+            assertEquals("Another Person", after["encoded_by"] ?: after["encodedby"], extension)
+            assertEquals("quality=7", after["encodersettings"], extension)
+            assertEquals(edited.fields, AudioKodec.readTags(written).fields)
+            when (extension) {
+                "mp3" -> {
+                    val beforeAt = tags.raw.blocks.first().size.toInt()
+                    val afterAt = AudioKodec.readTags(written).raw.blocks.first().size.toInt()
+                    assertContentEquals(original.copyOfRange(beforeAt, original.size), written.copyOfRange(afterAt, written.size))
+                }
+                "flac" -> assertContentEquals(TagStressFixtures.flacAudio(original), TagStressFixtures.flacAudio(written))
+                else -> assertContentEquals(EncoderTagFixtures.waveAudio(original), EncoderTagFixtures.waveAudio(written))
+            }
+        }
+    }
 
     @Test
     fun audioKodecReadsTheTagsFfmpegWrites() {

@@ -37,6 +37,27 @@ class HostileTagTest {
     }
 
     @Test
+    fun encoderMetadataKeepsTypedFailuresUnderTruncationAndMutation() {
+        for (version in 2..4) {
+            val original = EncoderTagFixtures.id3(version, 1)
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("encoder metadata truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    expectOnlyKiteFailures("encoder metadata byte $at set to $byte") {
+                        val mutated = original.copyOf().also { it[at] = byte }
+                        val tags = AudioKodec.readTags(mutated)
+                        AudioKodec.writeTags(mutated, tags.edit { remove(TagField.ENCODER) })
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun reservedItunesCommentsKeepTypedFailuresUnderTruncationAndMutation() {
         for (version in 2..4) {
             val original = ItunesCommentFixtures.tag(version, 1) + ByteArray(32) { 0x55 }

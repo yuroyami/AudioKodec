@@ -57,6 +57,7 @@ final enum class io.github.yuroyami.audiokodec.tag/TagField : kotlin/Enum<io.git
     enum entry DESCRIPTION // io.github.yuroyami.audiokodec.tag/TagField.DESCRIPTION|null[0]
     enum entry DISC_NUMBER // io.github.yuroyami.audiokodec.tag/TagField.DISC_NUMBER|null[0]
     enum entry DISC_TOTAL // io.github.yuroyami.audiokodec.tag/TagField.DISC_TOTAL|null[0]
+    enum entry ENCODED_BY // io.github.yuroyami.audiokodec.tag/TagField.ENCODED_BY|null[0]
     enum entry ENCODER // io.github.yuroyami.audiokodec.tag/TagField.ENCODER|null[0]
     enum entry ENCODING_SETTINGS // io.github.yuroyami.audiokodec.tag/TagField.ENCODING_SETTINGS|null[0]
     enum entry GENRE // io.github.yuroyami.audiokodec.tag/TagField.GENRE|null[0]

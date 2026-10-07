@@ -549,6 +549,7 @@ public final class io/github/yuroyami/audiokodec/tag/TagField : java/lang/Enum {
 	public static final field DESCRIPTION Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field DISC_NUMBER Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field DISC_TOTAL Lio/github/yuroyami/audiokodec/tag/TagField;
+	public static final field ENCODED_BY Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field ENCODER Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field ENCODING_SETTINGS Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field GENRE Lio/github/yuroyami/audiokodec/tag/TagField;
