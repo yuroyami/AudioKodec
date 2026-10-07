@@ -5,6 +5,7 @@ import io.github.yuroyami.audiokodec.tag.TagField
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -78,6 +79,39 @@ class FlacEncodeOracleTest {
                 val decoded = AudioKodec.decode(back.readBytes())
                 assertEquals(frames, decoded.frames, "$what: frame count")
                 TestSignals.assertExact(original, decoded.samples, what)
+            }
+        }
+    }
+
+    @Test
+    fun theReferenceDecoderReadsEveryRepeatedEncodingOfADecodedValue() {
+        val flac = flac ?: return skip()
+        for (depth in intArrayOf(16, 24)) {
+            for (channels in 1..2) {
+                val frames = 7_003
+                val original = TestSignals.quantise(TestSignals.sine(frames, channels, amplitude = 0.7f), depth)
+                val decoded = AudioKodec.decode(
+                    AudioKodec.encode(original, AudioFormat(44_100, channels), EncodeTarget.wav(depth)),
+                )
+                val prefix = FloatArray(channels * 3)
+                assertEquals(3, decoded.read(prefix, 0, 3))
+                var first: ByteArray? = null
+                repeat(2) { attempt ->
+                    val what = "repeated $depth-bit, $channels channels, attempt $attempt"
+                    val bytes = AudioKodec.encode(decoded, EncodeTarget.flac(depth))
+                    if (attempt == 0) first = bytes else assertContentEquals(first, bytes, what)
+                    val encoded = temp("repeated_${depth}_${channels}_$attempt.flac")
+                    encoded.writeBytes(bytes)
+                    run(listOf(flac, "--silent", "--test", encoded.absolutePath), what)
+                    val back = temp("repeated_${depth}_${channels}_$attempt.wav")
+                    back.delete()
+                    run(listOf(flac, "--silent", "--force", "--decode", "-o", back.absolutePath, encoded.absolutePath), what)
+                    val actual = AudioKodec.decode(back.readBytes())
+                    assertEquals(frames, actual.frames, what)
+                    TestSignals.assertExact(original, actual.samples, what)
+                }
+                assertEquals(3, decoded.read(prefix, 0, 3))
+                assertContentEquals(original.copyOfRange(3 * channels, 6 * channels), prefix)
             }
         }
     }

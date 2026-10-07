@@ -320,6 +320,10 @@ public object AudioKodec {
     /**
      * Encodes [pcm] into [sink] in the shape [target] describes.
      *
+     * A [DecodedAudio] is read from the beginning through an independent
+     * reader. Encoding preserves its direct-read cursor and can be repeated.
+     * Other [PcmSource] implementations are consumed through their own cursor.
+     *
      * The sink is not closed. When it cannot be patched, [PcmSource.frameCount]
      * has to be known in advance, because the header holds lengths that are
      * otherwise only knowable at the end. [tags] are stored natively in WAV,
@@ -333,10 +337,20 @@ public object AudioKodec {
         sink: AudioSink,
         tags: TagBundle? = null,
     ) {
-        ContainerWriter.write(pcm, target, sink, tags)
+        val source = if (pcm is DecodedAudio) {
+            pcm.samples.asPcmSource(pcm.format, pcm.frames)
+        } else {
+            pcm
+        }
+        ContainerWriter.write(source, target, sink, tags)
     }
 
-    /** Encodes [pcm] and returns the file as a byte array. */
+    /**
+     * Encodes [pcm] and returns the file as a byte array.
+     *
+     * A [DecodedAudio] is read from the beginning without advancing its
+     * direct-read cursor. Other sources are consumed through their own cursor.
+     */
     public fun encode(
         pcm: PcmSource,
         target: EncodeTarget,

@@ -30,6 +30,10 @@ passing one. Within them:
 - FLAC files AudioKodec writes pass `flac --test`, which verifies every frame
   checksum and the stream MD5, and `flac --decode` returns the samples that
   went in.
+- `DecodedAudio` can be encoded repeatedly through independent readers while
+  preserving its direct-read cursor. Common regressions cover partial reads,
+  failed writes and overlapping operations. Repeated mono and stereo FLAC
+  encodings at 16 and 24 bits pass reference decoding with exact samples.
 - CAF files from `afconvert` decode bit-exactly across its uncompressed data
   formats in both byte orders.
 - Ogg FLAC files from the reference encoder decode **bit-exactly**, seek to the

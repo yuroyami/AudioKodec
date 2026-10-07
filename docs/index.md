@@ -98,6 +98,24 @@ keep.
 val wav = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16))
 ```
 
+To convert one decoded value into several formats, reuse it directly:
+
+```kotlin
+val decoded = AudioKodec.decode(bytes)
+val wav = AudioKodec.encode(decoded, EncodeTarget.wav(16))
+val flac = AudioKodec.encode(decoded, EncodeTarget.flac(16))
+```
+
+Each encoding reads the complete `DecodedAudio.samples` array from the
+beginning through an independent reader. It preserves the cursor used by
+direct `DecodedAudio.read` calls. Use `decoded.rewind()` to reset that direct
+cursor, including after reaching the end. No rewind is needed for encoding
+or for retrying after an encoding fails.
+
+Other `PcmSource` implementations are consumed through their own cursor.
+Create a fresh source for each encoding operation. The sample array is not
+copied, so avoid changing it while an encoding runs.
+
 The targets available are FLAC, integer PCM and IEEE float in WAV, AIFF and AU,
 A-law and mu-law in all three, and IMA or Microsoft ADPCM in WAV.
 

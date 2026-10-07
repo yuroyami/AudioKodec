@@ -88,6 +88,20 @@ val small = AudioKodec.encode(samples, format, EncodeTarget.wavImaAdpcm())
 val exact = AudioKodec.encode(samples, format, EncodeTarget.wavFloat(32))
 ```
 
+Decode once to write several formats from the same samples:
+
+```kotlin
+val decoded = AudioKodec.decode(bytes)
+val wav = AudioKodec.encode(decoded, EncodeTarget.wav(16))
+val flac = AudioKodec.encode(decoded, EncodeTarget.flac(16))
+```
+
+Encoding a `DecodedAudio` reads all its current samples from the beginning
+and preserves its direct-read cursor. Direct `read` calls advance that cursor;
+call `rewind()` to repeat direct reading. Other `PcmSource` implementations
+are consumed by encoding and need a fresh source for another operation.
+The sample array is shared, so avoid changing it while an encoding runs.
+
 Reducing the depth of a float or a deeper integer source is where dither
 belongs:
 

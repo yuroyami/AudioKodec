@@ -6,6 +6,9 @@ package io.github.yuroyami.audiokodec
  * This is the mirror of [AudioDecoder]: pull based, synchronous, and free of
  * any assumption about where the samples come from. A decoder, an array in
  * memory or a generator all satisfy it.
+ *
+ * Encoding consumes a stream. Create a fresh source before encoding it again.
+ * [DecodedAudio] supplies an independent reader for each encoding operation.
  */
 public interface PcmSource {
 
@@ -83,6 +86,14 @@ private class FloatArrayPcmSource(
  *
  * [AudioKodec.decode] returns this. It is also a [PcmSource], so decoding one
  * format and encoding another is two calls.
+ *
+ * [AudioKodec.encode] reads the complete samples from the beginning through
+ * an independent reader. Encoding can be repeated and preserves the cursor
+ * used by direct [read] calls. Direct reading advances that cursor;
+ * [rewind] resets it.
+ *
+ * The sample array is not copied for encoding. Changing it during an
+ * encoding operation changes the samples that operation reads.
  */
 public class DecodedAudio(
     /** Sample rate and channel layout. */
@@ -126,7 +137,7 @@ public class DecodedAudio(
         return n
     }
 
-    /** Starts reading from the beginning again. */
+    /** Resets the direct-read cursor. Encoding already starts at the beginning. */
     public fun rewind() {
         position = 0
     }
