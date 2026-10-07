@@ -101,7 +101,9 @@ internal object Mp4Reader {
             val version = cursor.u8()
             cursor.skip(3)
             if (version == 1) cursor.skip(16) else cursor.skip(8)
-            cursor.u32()
+            cursor.u32().also { timescale ->
+                if (timescale == 0L) throw CorruptStreamException("the 'mvhd' box declares a zero movie timescale", base + box.offset)
+            }
         } ?: throw CorruptStreamException("the 'moov' box has no 'mvhd' header", moov.offset)
 
         val tracks = children.filter { it.type == "trak" }.map { readTrack(body, it, base, movieTimescale, options) }

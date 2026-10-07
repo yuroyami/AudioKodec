@@ -21,6 +21,33 @@ import kotlin.test.assertTrue
 class Mp4Test {
 
     @Test
+    fun aZeroMovieTimescaleIsRejectedBeforeAnyEditArithmetic() {
+        for (version in 0..1) {
+            for (edit in listOf(0L to 125L, null)) {
+                for (tolerant in listOf(false, true)) {
+                    val options = DecodeOptions(tolerant = tolerant)
+                    val valid = build(1_000, 1, 256, edit = edit, movieHeaderVersion = version)
+                    assertEquals(1_000L, AudioKodec.probe(valid, options).durationFrames)
+                    AudioKodec.open(valid, options).use { assertEquals(1_000L, it.durationFrames) }
+                    assertEquals(1_000, AudioKodec.decode(valid, options).frames)
+
+                    val damaged = build(1_000, 1, 256, edit = edit, movieTimescale = 0, movieHeaderVersion = version)
+                    val operations = listOf<() -> Unit>(
+                        { AudioKodec.probe(damaged, options) },
+                        { AudioKodec.open(damaged, options).close() },
+                        { AudioKodec.decode(damaged, options) },
+                    )
+                    for (operation in operations) {
+                        val failure = assertFailsWith<CorruptStreamException>("mvhd v$version, edit=$edit, tolerant=$tolerant", operation)
+                        assertTrue("mvhd" in failure.message.orEmpty())
+                        assertTrue(failure.offset >= 0)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun pcmPacketAndChannelScratchAllocationsAreGuardedBeforeConstruction() {
         val options = DecodeOptions(maxAllocationBytes = 4_096)
         for (frames in intArrayOf(750, 1_500)) {
@@ -219,6 +246,8 @@ class Mp4Test {
         format: String = "sowt",
         channelTag: Int? = null,
         singlePacket: Boolean = false,
+        movieTimescale: Int = 1_000,
+        movieHeaderVersion: Int = 0,
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
         require(!singlePacket || chunkCount == 1)
@@ -275,7 +304,12 @@ class Mp4Test {
                     *chapters.map { (millis, title) -> u64(millis * 10_000) + byteArrayOf(title.length.toByte()) + ascii(title) }.toTypedArray(),
                 ),
             )
-            return box("moov", *listOfNotNull(fullBox("mvhd", 0, 0, u32(0), u32(0), u32(1000), u32(0), ByteArray(80)), trak, udta).toTypedArray())
+            val mvhd = if (movieHeaderVersion == 1) {
+                fullBox("mvhd", 1, 0, u64(0), u64(0), u32(movieTimescale), u64(0), ByteArray(80))
+            } else {
+                fullBox("mvhd", 0, 0, u32(0), u32(0), u32(movieTimescale), u32(0), ByteArray(80))
+            }
+            return box("moov", *listOfNotNull(mvhd, trak, udta).toTypedArray())
         }
         return if (moovFirst) {
             val size = moov(0).size
