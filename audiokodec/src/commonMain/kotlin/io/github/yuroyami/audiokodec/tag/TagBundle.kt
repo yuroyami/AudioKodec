@@ -1,5 +1,6 @@
 package io.github.yuroyami.audiokodec.tag
 
+import io.github.yuroyami.audiokodec.internal.tag.Id3ChapterSource
 import io.github.yuroyami.audiokodec.internal.tag.Id3Dates
 
 /**
@@ -161,6 +162,30 @@ public class TagChapter(
             "chapter end must be -1 or at least its start, was $endMillis after $startMillis"
         }
     }
+
+    /** Stored subframes remain attached when the chapter is reused or copied. */
+    internal var id3Source: Id3ChapterSource? = null
+        private set
+
+    internal fun withId3Source(source: Id3ChapterSource?): TagChapter {
+        id3Source = source
+        return this
+    }
+
+    /**
+     * Copies this chapter, retaining stored ID3 subframes that are not modelled here.
+     *
+     * A changed title or picture list replaces its readable subframes.
+     * Unreadable identities raise [io.github.yuroyami.audiokodec.UnsupportedFeatureException].
+     * Construct a new [TagChapter] to replace all chapter metadata deliberately.
+     */
+    public fun copy(
+        id: String = this.id,
+        startMillis: Long = this.startMillis,
+        endMillis: Long = this.endMillis,
+        title: String? = this.title,
+        pictures: List<TagPicture> = this.pictures,
+    ): TagChapter = TagChapter(id, startMillis, endMillis, title, pictures).withId3Source(id3Source)
 
     override fun toString(): String = "TagChapter($id, $startMillis..$endMillis, $title)"
 }

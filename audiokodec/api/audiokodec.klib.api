@@ -411,6 +411,7 @@ final class io.github.yuroyami.audiokodec.tag/TagChapter { // io.github.yuroyami
     final val title // io.github.yuroyami.audiokodec.tag/TagChapter.title|{}title[0]
         final fun <get-title>(): kotlin/String? // io.github.yuroyami.audiokodec.tag/TagChapter.title.<get-title>|<get-title>(){}[0]
 
+    final fun copy(kotlin/String = ..., kotlin/Long = ..., kotlin/Long = ..., kotlin/String? = ..., kotlin.collections/List<io.github.yuroyami.audiokodec.tag/TagPicture> = ...): io.github.yuroyami.audiokodec.tag/TagChapter // io.github.yuroyami.audiokodec.tag/TagChapter.copy|copy(kotlin.String;kotlin.Long;kotlin.Long;kotlin.String?;kotlin.collections.List<io.github.yuroyami.audiokodec.tag.TagPicture>){}[0]
     final fun toString(): kotlin/String // io.github.yuroyami.audiokodec.tag/TagChapter.toString|toString(){}[0]
 }
 

@@ -308,6 +308,11 @@ totals are retained without inventing a number. FLAC, Ogg and APE refuse
 chapters unless another complete ID3 carrier is being written in the file.
 See [the tag writing rules](docs/index.md#metadata-that-needs-a-richer-carrier).
 
+Parsed ID3 chapters retain unmodelled subframes across unrelated edits.
+Use `TagChapter.copy` to change a title, timing or pictures while keeping that metadata.
+Version conversion names and refuses subframes it cannot preserve safely before output.
+See [editing ID3 chapters](docs/index.md#editing-id3-chapters).
+
 The primary `DATE` field retains ID3 `TDRC`. An explicit `TDRL` release
 timestamp uses `RELEASE_DATE`, so editing or removing either date leaves the
 other intact. Split legacy dates retain their month, day and minute precision

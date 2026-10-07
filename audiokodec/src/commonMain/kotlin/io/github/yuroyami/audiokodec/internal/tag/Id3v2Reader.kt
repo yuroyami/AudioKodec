@@ -134,13 +134,28 @@ internal object Id3v2Reader {
             if (position == 0) return null
         }
 
-        val budget = EntryBudget(options.maxAllocationBytes)
-        val entries = EntryList(budget)
+        val entries = EntryList(EntryBudget(options.maxAllocationBytes))
+        readFrames(body, position, body.size, major, entries, 0, options,
+            globalUnsynchronised = major == 4 && flags and 0x80 != 0)
+
+        return RawTagBlock(format, fileOffset, total.toLong(), entries.snapshot())
+    }
+
+    /** Parses both top-level and embedded frames with the same flag rules. */
+    private fun readFrames(
+        body: ByteArray,
+        from: Int,
+        end: Int,
+        major: Int,
+        entries: MutableList<RawTagEntry>,
+        chapterDepth: Int,
+        options: DecodeOptions,
+        globalUnsynchronised: Boolean = false,
+    ) {
+        var position = from
         val nameSize = if (major == 2) 3 else 4
         val headerSize = if (major == 2) 6 else 10
-
-        val globalUnsynchronised = major == 4 && flags and 0x80 != 0
-        while (position <= body.size - headerSize) {
+        while (position <= end - headerSize) {
             // Padding is a run of zero bytes, and it means the frames are over.
             if (body[position].toInt() == 0) break
 
@@ -160,12 +175,12 @@ internal object Id3v2Reader {
             // A version 2.4 writer that used plain sizes is a known bug in
             // several programs. When the syncsafe reading runs past the end
             // and the plain reading fits exactly, the plain one was meant.
-            if (major == 4 && (size < 0 || size > body.size - dataStart)) {
+            if (major == 4 && (size < 0 || size > end - dataStart)) {
                 val plain = readUInt32(body, position + 4)
-                if (plain in 0..(body.size - dataStart)) size = plain
+                if (plain in 0..(end - dataStart)) size = plain
             }
 
-            if (size < 0 || size > body.size - dataStart) break
+            if (size < 0 || size > end - dataStart) break
 
             val dataEnd = dataStart + size
             if (major >= 3) {
@@ -222,6 +237,15 @@ internal object Id3v2Reader {
                     position = dataEnd
                     continue
                 }
+                if (frameUnsynchronised || globalUnsynchronised) {
+                    val clean = undoUnsynchronisation(body.copyOfRange(dataStart, dataEnd))
+                    val prefixBytes = (if (grouped) 1 else 0) + (if (hasDataLength) 4 else 0)
+                    if (name.isNotEmpty() && prefixBytes < clean.size) {
+                        parseFrame(name, clean, prefixBytes, clean.size, major, entries, chapterDepth, options)
+                    }
+                    position = dataEnd
+                    continue
+                }
                 if (major == 4) {
                     val prefixBytes =
                         (if (grouped) 1 else 0) +
@@ -240,25 +264,13 @@ internal object Id3v2Reader {
                     }
                     dataStart += prefixBytes
                 }
-                // Version 2.4 unsynchronises one frame at a time.
-                if (frameUnsynchronised || globalUnsynchronised) {
-                    val raw = body.copyOfRange(dataStart, dataEnd)
-                    val clean = undoUnsynchronisation(raw)
-                    if (name.isNotEmpty() && clean.isNotEmpty()) {
-                        parseFrame(name, clean, 0, clean.size, major, entries, 0, options)
-                    }
-                    position = dataEnd
-                    continue
-                }
             }
 
             if (name.isNotEmpty()) {
-                parseFrame(name, body, dataStart, dataEnd, major, entries, 0, options)
+                parseFrame(name, body, dataStart, dataEnd, major, entries, chapterDepth, options)
             }
             position = dataEnd
         }
-
-        return RawTagBlock(format, fileOffset, total.toLong(), entries.snapshot())
     }
 
     /** The frame identifier, or an empty string when the bytes are not one. */
@@ -608,22 +620,7 @@ internal object Id3v2Reader {
         chapterDepth: Int,
         options: DecodeOptions,
     ) {
-        var position = from
-        while (position <= end - 10) {
-            if (body[position].toInt() == 0) break
-            val nestedName = frameName(body, position, 4)
-            if (nestedName.isEmpty()) break
-            val size = if (major == 4) {
-                readSyncsafe(body, position + 4) ?: break
-            } else {
-                readUInt32(body, position + 4)
-            }
-            val nestedStart = position + 10
-            if (size < 0 || size > end - nestedStart) break
-            val nestedEnd = nestedStart + size
-            parseFrame(nestedName, body, nestedStart, nestedEnd, major, into, chapterDepth + 1, options)
-            position = nestedEnd
-        }
+        readFrames(body, from, end, major, into, chapterDepth + 1, options)
     }
 
     /** The pictures nested in a chapter entry's stored frame body. */
@@ -713,16 +710,17 @@ internal object Id3v2Reader {
             val id = entry.description ?: continue
             val end = if (finish == 0xFFFF_FFFFL) -1L else finish
             if (id.isEmpty() || start < 0 || (end != -1L && end < start)) continue
+            val pictures = chapterPicturesOf(entry, block.format, options)
+            val major = if (block.format == TagFormat.ID3V2_3) 3 else 4
+            val source = entry.binary?.let { Id3ChapterSource(it, major, entry.text, pictures, options) }
             chapters.add(
                 TagChapter(
                     id = id,
                     startMillis = start,
-                    // A chapter that runs to the end of the file writes the
-                    // largest value the field can hold, which is not a time.
                     endMillis = end,
                     title = entry.text,
-                    pictures = chapterPicturesOf(entry, block.format, options),
-                ),
+                    pictures = pictures,
+                ).withId3Source(source),
             )
         }
         return chapters.sortedBy { it.startMillis }

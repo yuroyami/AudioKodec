@@ -167,7 +167,7 @@ internal object Id3v2Writer {
         return frame("UFID", body, major)
     }
 
-    private fun textValues(
+    internal fun textValues(
         id: String,
         values: List<String>,
         major: Int,
@@ -200,7 +200,7 @@ internal object Id3v2Writer {
      * every reader ever written handles. Beyond it, version 2.4 has UTF-8 and
      * version 2.3 has only UTF-16.
      */
-    private fun encodingFor(values: List<String>, major: Int): Int {
+    internal fun encodingFor(values: List<String>, major: Int): Int {
         val allLatin1 = values.all { TagText.isLatin1(it) }
         return when {
             allLatin1 -> TagText.LATIN1
@@ -209,13 +209,13 @@ internal object Id3v2Writer {
         }
     }
 
-    private fun encodeText(value: String, encoding: Int): ByteArray = when (encoding) {
+    internal fun encodeText(value: String, encoding: Int): ByteArray = when (encoding) {
         TagText.LATIN1 -> TagText.encodeLatin1(value)
         TagText.UTF16_BOM -> TagText.encodeUtf16WithBom(value)
         else -> value.encodeToByteArray()
     }
 
-    private fun textFrame(id: String, values: List<String>, major: Int): ByteArray {
+    internal fun textFrame(id: String, values: List<String>, major: Int): ByteArray {
         val encoding = encodingFor(values, major)
         val terminator = TagText.terminatorSize(encoding)
         val parts = values.map { encodeText(it, encoding) }
@@ -251,7 +251,7 @@ internal object Id3v2Writer {
     private fun userTextFrame(description: String, value: String, major: Int): ByteArray =
         userTextFrame(description, listOf(value), major)
 
-    private fun userTextFrame(
+    internal fun userTextFrame(
         description: String,
         values: List<String>,
         major: Int,
@@ -340,7 +340,7 @@ internal object Id3v2Writer {
         return frames
     }
 
-    private fun commentFrame(
+    internal fun commentFrame(
         id: String,
         value: String,
         language: String,
@@ -376,10 +376,8 @@ internal object Id3v2Writer {
         fields = tags.fields,
         pictures = canonicalPictures(tags.pictures, major),
         chapters = tags.chapters.map { chapter ->
-            TagChapter(
-                chapter.id, chapter.startMillis, chapter.endMillis, chapter.title,
-                canonicalPictures(chapter.pictures, major),
-            )
+            if (chapter.id3Source?.samePictures(chapter.pictures) == true) chapter
+            else chapter.copy(pictures = canonicalPictures(chapter.pictures, major))
         },
         replayGain = tags.replayGain,
         raw = tags.raw,
@@ -464,10 +462,33 @@ internal object Id3v2Writer {
         }
         val id = TagText.encodeLatin1(chapter.id)
         val nested = ArrayList<ByteArray>()
-        chapter.title?.takeIf { it.isNotEmpty() }?.let {
+        val source = chapter.id3Source
+        val titleChanged = source == null || chapter.title != source.title
+        val picturesChanged = source == null || !source.samePictures(chapter.pictures)
+        if (titleChanged) chapter.title?.takeIf { it.isNotEmpty() }?.let {
             nested.add(textFrame("TIT2", listOf(it), major))
         }
-        nested.addAll(pictureFrames(chapter.pictures, major))
+        if (picturesChanged) nested.addAll(pictureFrames(chapter.pictures, major))
+        if (source != null) {
+            val retained = ArrayList<Id3ChapterSource.Frame>()
+            for (stored in source.frames()) {
+                if (stored.discardOnTagAlter(source.major)) continue
+                if ((stored.id == "TIT2" && titleChanged) || (stored.id == "APIC" && picturesChanged)) {
+                    try {
+                        Id3ChapterConversion.validateEditable(source, stored)
+                    } catch (error: UnsupportedFeatureException) {
+                        throw UnsupportedFeatureException(
+                            "chapter '${chapter.id}' has unreadable '${stored.id}' metadata beside edited values",
+                            "Chapter '${chapter.id}', subframe '${stored.id}': ${error.message}. Replace the chapter explicitly to remove unreadable metadata.",
+                        )
+                    }
+                    continue
+                }
+                retained.add(stored)
+            }
+            if (source.major == major) nested.addAll(retained.map { source.frameBytes(it) })
+            else nested.addAll(Id3ChapterConversion.convert(chapter.id, source, retained, major))
+        }
 
         var size = id.size.toLong() + 1 + 16
         for (child in nested) size += child.size
@@ -621,7 +642,7 @@ internal object Id3v2Writer {
         return tags.all(TagField.DATE) == TagAssembler.primaryDates(tags.raw.blocks)
     }
 
-    private fun rawFrame(
+    internal fun rawFrame(
         key: String,
         entry: io.github.yuroyami.audiokodec.tag.RawTagEntry,
         major: Int,
@@ -674,7 +695,7 @@ internal object Id3v2Writer {
         }
     }
 
-    private fun frame(id: String, body: ByteArray, major: Int, flags: Int = 0): ByteArray {
+    internal fun frame(id: String, body: ByteArray, major: Int, flags: Int = 0): ByteArray {
         require(id.length == 4 && id.all { it in 'A'..'Z' || it in '0'..'9' }) {
             "an ID3v2.3/2.4 frame id must be four uppercase ASCII letters or digits, was '$id'"
         }

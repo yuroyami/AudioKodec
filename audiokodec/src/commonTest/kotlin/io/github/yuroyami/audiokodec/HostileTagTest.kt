@@ -37,6 +37,29 @@ class HostileTagTest {
     }
 
     @Test
+    fun chapterSubframesKeepTypedFailuresUnderTruncationAndMutation() {
+        for (major in 3..4) {
+            val original = ChapterSubframeFixtures.stream(major, ChapterSubframeFixtures.subframes(major))
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("chapter subframes truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    for (target in 3..4) {
+                        expectOnlyKiteFailures("chapter subframe byte $at set to $byte, target $target") {
+                            val mutated = original.copyOf().also { it[at] = byte }
+                            AudioKodec.writeTags(mutated, AudioKodec.readTags(mutated),
+                                io.github.yuroyami.audiokodec.tag.TagWriteOptions(id3Version = target))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun nativeCharsetsKeepTypedFailuresUnderTruncationAndMutation() {
         for (base in NativeTextEncodingFixtures.sources()) {
             val original = NativeTextEncodingFixtures.text(base, NativeTextEncodingFixtures.title.encodeToByteArray(),

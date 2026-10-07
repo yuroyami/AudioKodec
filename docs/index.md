@@ -718,6 +718,47 @@ Compressed or encrypted owner-sensitive frames cannot be combined with new
 names this limitation instead of deleting the opaque frame or guessing its
 identity.
 
+### Editing ID3 chapters
+
+Parsed ID3 chapters retain their stored subframes independently of `TagBundle.raw`.
+An unrelated edit in the same ID3 version preserves their order, payloads and flags.
+This includes subtitles, URLs, comments, private data and unknown frames.
+A subframe marked for discard when the tag changes is removed as its flag requires.
+
+Use `TagChapter.copy` to edit the modelled values while retaining other subframes:
+
+```kotlin
+val tags = AudioKodec.readTags(bytes)
+val first = tags.chapters.first().copy(title = "A new title", startMillis = 1500)
+val edited = tags.edit {
+    setChapters(listOf(first) + tags.chapters.drop(1))
+}
+val written = AudioKodec.writeTags(bytes, edited, TagWriteOptions(id3Version = 4))
+```
+
+A changed title or picture list replaces its readable `TIT2` or `APIC` frames.
+Unchanged chapter pictures keep their stored captions and sequence.
+New and edited artwork follows the picture identity rules below.
+Unreadable title or picture metadata raises `UnsupportedFeatureException` when those values change.
+Construct a new `TagChapter` to replace the complete chapter, including unreadable and unknown subframes.
+`setChapters(emptyList())` removes every chapter. `clear()` also removes retained raw metadata.
+Neither operation restores old `CHAP` frames from the raw bundle.
+
+Changing ID3 version rebuilds subframe headers and translates status and group flags.
+It removes storage-only unsynchronisation and data-length prefixes after validating and decoding them.
+A read-only bit is cleared when converted contents change.
+Supported conversions cover ordinary text and URL frames, `TXXX`, `WXXX`, `COMM`, `USLT`,
+`APIC`, `GEOB`, `USER` and the version-independent binary frame layouts such as `PRIV` and `UFID`.
+Valid `TYER`/`TDAT`/`TIME` groups and `TORY` convert to `TDRC` and `TDOR`, and back,
+within the date precision described above.
+
+Compressed, encrypted, reserved-flag and unknown layouts cannot be converted safely.
+Unsupported text lists, unresolved dates and precision beyond the destination also raise
+`UnsupportedFeatureException`, naming the chapter and subframe before output.
+Retain the source ID3 version to preserve these frames, or replace the complete chapter deliberately.
+Malformed retained headers, parent boundaries and length prefixes raise `CorruptStreamException`.
+Chapter parsing limits nesting to sixteen levels and honours `DecodeOptions.maxAllocationBytes`.
+
 ### Pictures
 
 ```kotlin
@@ -738,7 +779,7 @@ distinct. Rich picture structures take priority over legacy `COVERART`, MP4
 from ID3. The raw blocks retain every stored entry. Chapter pictures stay
 with their chapter and use a separate identity scope.
 
-ID3 requires unique picture descriptions. Writing collapses exact duplicates
+ID3 requires unique picture descriptions. New and edited pictures collapse exact duplicates
 and appends deterministic ` [1]`, ` [2]` suffixes when distinct pictures share
 a description, reserving existing descriptions first. For v2.3, a suffixed caption is shortened to fit its 64-character limit
 without splitting a UTF-16 pair. Every block in a mixed write receives the

@@ -224,7 +224,7 @@ Truncation and mutation sweeps cover independent artwork layouts.
 | Equivalent artwork copies merged without growth on repeated edits | ✅ distinct image bytes, roles and rich captions retained; chapter scope kept separate |
 | Unique ID3 picture descriptions and all standard APE picture-role keys | ✅ additional APE images need a richer block; unrepresentable APE-only requests refused before output |
 | Media type sniffed when a format stores a picture without naming one | ✅ |
-| Chapters from ID3v2 `CHAP`, with their nested titles and artwork | ✅ |
+| Chapters from ID3v2 `CHAP`, with their nested titles and artwork | ✅ stored subframes retained per chapter; copy edits preserve extras; nested flags and bounds shared with the top-level parser; safe version conversion and named refusals; Mutagen chapters with exact MPEG and decoded-audio checks |
 | ReplayGain 2 and the Opus R128 convention, kept apart | ✅ |
 | Audio payload byte-identical after a tag write | ✅ checked with a full decode comparison |
 | Padding after the frames, so the next edit need not move the audio | ✅ |
