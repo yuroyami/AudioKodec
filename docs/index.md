@@ -396,6 +396,12 @@ for (block in tags.raw.blocks) {
 }
 ```
 
+When one field has many values, the merge removes identical values and
+preserves their first-seen order. Membership lookup uses a balanced index,
+so colliding string hashes do not change its comparison bound. Existing
+allocation limits still apply. Reading time also depends on file size and
+text length.
+
 ### Editing
 
 Editing rewrites the tag blocks and copies the audio across unchanged. It never

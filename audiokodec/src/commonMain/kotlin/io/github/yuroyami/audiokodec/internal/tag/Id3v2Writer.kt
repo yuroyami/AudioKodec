@@ -253,27 +253,33 @@ internal object Id3v2Writer {
         tags: TagBundle,
         major: Int,
     ): List<ByteArray> {
+        val requested = TagValueIndex<String>(naturalOrder())
+        for (value in values) requested.add(value)
+        val originalText = TagValueIndex<String>(naturalOrder())
         val originals = ArrayList<RawTagEntry>()
         for (block in tags.raw.blocks) {
             if (!isId3(block.format)) continue
             for (entry in block.entries) {
-                if ((entry.key == id || entry.key == version22Id) && entry.text in values) {
+                if ((entry.key == id || entry.key == version22Id) && entry.text != null && entry.text in requested) {
                     originals.add(entry)
+                    originalText.add(entry.text)
                 }
             }
         }
         val frames = ArrayList<ByteArray>()
-        val used = HashSet<Pair<String, String>>()
+        val used = TagValueIndex(compareBy<Pair<String, String>> { it.first }.thenBy { it.second })
         for (entry in originals) {
             val language = entry.language?.takeIf { it.length == 3 && TagText.isLatin1(it) } ?: UNDETERMINED
             val identity = language to (entry.description ?: "")
             if (!used.add(identity)) continue
             frames.add(commentFrame(id, entry.text!!, identity.first, identity.second, major))
         }
+        // Every smaller candidate has already been used or found occupied.
+        // Advancing once preserves the first-unused identity without rescans.
+        var next = 2
         for (value in values) {
-            if (originals.any { it.text == value }) continue
+            if (value in originalText) continue
             var description = ""
-            var next = 2
             while ((UNDETERMINED to description) in used) description = (next++).toString()
             used.add(UNDETERMINED to description)
             frames.add(commentFrame(id, value, UNDETERMINED, description, major))

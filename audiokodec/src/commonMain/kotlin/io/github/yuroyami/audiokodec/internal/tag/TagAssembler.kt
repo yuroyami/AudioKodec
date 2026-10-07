@@ -32,7 +32,7 @@ internal object TagAssembler {
     ): TagBundle {
         if (blocks.isEmpty() && containerChapters.isEmpty()) return TagBundle.EMPTY
 
-        val fields = LinkedHashMap<TagField, MutableList<String>>()
+        val fields = LinkedHashMap<TagField, FieldValues>()
         val claimedBy = HashMap<TagField, Int>()
         val pictures = ArrayList<TagPicture>()
         val chapters = ArrayList<TagChapter>(containerChapters)
@@ -55,9 +55,9 @@ internal object TagAssembler {
                     val slash = text.indexOf('/')
                     val number = if (slash >= 0) text.substring(0, slash) else text
                     val total = if (slash >= 0) text.substring(slash + 1) else null
-                    addValue(fields, claimedBy, numberField, number.trim(), precedence)
+                    addValue(fields, claimedBy, numberField, number.trim(), precedence, options)
                     if (!total.isNullOrBlank()) {
-                        addValue(fields, claimedBy, totalField, total.trim(), precedence)
+                        addValue(fields, claimedBy, totalField, total.trim(), precedence, options)
                     }
                     continue
                 }
@@ -69,12 +69,12 @@ internal object TagAssembler {
                     (block.format == TagFormat.ID3V2_2 || block.format == TagFormat.ID3V2_3 || block.format == TagFormat.ID3V2_4)
                 ) {
                     for (genre in Id3Genres.resolveAll(value)) {
-                        addValue(fields, claimedBy, field, genre, precedence)
+                        addValue(fields, claimedBy, field, genre, precedence, options)
                     }
                     continue
                 }
                 if (field == TagField.COMPILATION) value = normaliseFlag(value)
-                addValue(fields, claimedBy, field, value.trim(), precedence)
+                addValue(fields, claimedBy, field, value.trim(), precedence, options)
             }
 
             when (block.format) {
@@ -91,7 +91,7 @@ internal object TagAssembler {
 
         val replayGain = gain.build()
         return TagBundle(
-            fields = fields.mapValues { it.value.toList() },
+            fields = fields.mapValues { it.value.values },
             pictures = pictures,
             chapters = chapters.sortedBy { it.startMillis },
             replayGain = if (replayGain.isEmpty) null else replayGain,
@@ -107,22 +107,29 @@ internal object TagAssembler {
      * copy and is dropped.
      */
     private fun addValue(
-        fields: MutableMap<TagField, MutableList<String>>,
+        fields: MutableMap<TagField, FieldValues>,
         claimedBy: MutableMap<TagField, Int>,
         field: TagField,
         value: String,
         precedence: Int,
+        options: DecodeOptions,
     ) {
         if (value.isEmpty()) return
         val owner = claimedBy[field]
         if (owner != null && owner > precedence) return
         if (owner == null) {
             claimedBy[field] = precedence
-            fields[field] = mutableListOf(value)
-            return
         }
-        val existing = fields.getOrPut(field) { mutableListOf() }
-        if (existing.none { it == value }) existing.add(value)
+        val existing = fields.getOrPut(field) { FieldValues(options) }
+        if (existing.index.add(value)) existing.values.add(value)
+    }
+
+    private class FieldValues(options: DecodeOptions) {
+        val values = ArrayList<String>()
+        val index = TagValueIndex<String>(naturalOrder()) { count ->
+            // The index nodes and the ordered value references grow together.
+            options.checkAllocation(count.toLong() * 64L, "remembering merged tag field values")
+        }
     }
 
     /** Turns the several spellings of a yes or no field into `1` or `0`. */
@@ -147,6 +154,7 @@ internal object TagAssembler {
         options: DecodeOptions,
     ): List<TagPicture> {
         val pictures = ArrayList<TagPicture>()
+        val coverArtMime = block.entries.firstOrNull { it.key.equals("COVERARTMIME", true) }?.text
         for (entry in block.entries) {
             val key = entry.key.uppercase()
             if (key == "METADATA_BLOCK_PICTURE") {
@@ -167,11 +175,10 @@ internal object TagAssembler {
                 // media type in a separate comment.
                 val text = entry.text ?: continue
                 val decoded = Base64.decodeOrNull(text, options) ?: continue
-                val mime = block.entries.firstOrNull { it.key.equals("COVERARTMIME", true) }?.text
                 pictures.add(
                     TagPicture(
                         type = PictureType.FRONT_COVER,
-                        mimeType = mime ?: sniffImageType(decoded),
+                        mimeType = coverArtMime ?: sniffImageType(decoded),
                         bytes = decoded,
                     ),
                 )

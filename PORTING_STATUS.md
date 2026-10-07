@@ -150,6 +150,17 @@ then ID3v1.
 `TagBundle.raw` keeps every block exactly as it was stored, with the original
 keys, so nothing is lost by the merge and an unusual entry is still reachable.
 
+Merged values retain first-seen order through a balanced membership index.
+Lookup and insertion use O(log n) comparisons, including colliding string
+hashes. New merged values are charged to the existing allocation limit before
+index insertion. Comment and lyric rewrites use the same index for text and identity
+matching. New descriptions advance through unused numbers once, and legacy
+cover-art MIME lookup occurs once per block. Comparison-count tests cover
+ordered, reversed, permuted and colliding values on JVM, macOS ARM64, JS,
+WasmJS and WASI.
+Large FLAC value lists and ID3 identities are checked with Mutagen; the JVM
+scaling test records timings without a machine-dependent pass threshold.
+
 ### Other tag features
 
 | Feature | Status |

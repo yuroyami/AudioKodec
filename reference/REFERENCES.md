@@ -44,6 +44,7 @@ can hold checkouts without them ever reaching the repository.
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |
 | Format magic numbers | The published headers of each format the sniffer names |
 | File output | [kotlinx-io atomic move](https://kotlinlang.org/api/kotlinx-io/kotlinx-io-core/kotlinx.io.files/-file-system/atomic-move.html); [Node.js WASI directory options](https://nodejs.org/api/wasi.html#new-wasioptions) for filesystem tests |
+| Tag membership | [NIST AVL tree definition](https://xlinux.nist.gov/dads/HTML/avltree.html), for bounded comparison-based lookup and insertion; implemented directly, with no implementation source used |
 | ID3 genres | [ID3v2.2](https://id3.org/id3v2-00) and [ID3v2.3](https://id3.org/id3v2.3.0) section 4.2.1; [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) section 4.2.3 |
 | ID3 identities and MusicBrainz | [ID3v2.3](https://id3.org/id3v2.3.0) sections 4.1 and 4.2; [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) sections 4.1 and 4.2; [Picard tag mapping](https://picard-docs.musicbrainz.org/en/v3.0/_static/MusicBrainz_Picard_Tag_Map.html) |
 
@@ -57,7 +58,7 @@ Run as programs, never read as source.
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
 | alacconvert | ALAC, built from Apple's reference at the commit the port follows |
-| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions multi-value text frames and `TCON.genres`, through its public API as an executable oracle. No implementation source is read |
+| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames, `TCON.genres`, large FLAC value lists and comment/lyric identities, through its public API as an executable oracle. No implementation source is read |
 
 ## Permissively licensed implementations for the work still to come
 

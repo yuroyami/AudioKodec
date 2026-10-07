@@ -152,6 +152,46 @@ class MutagenTagOracleTest {
         assertContentEquals(originalAudio, file.readBytes().takeLast(originalAudio.size).toByteArray())
     }
 
+    @Test
+    fun manyCommentAndLyricIdentitiesSurviveEditsInBothVersions() {
+        val python = python
+        val count = 512
+        for (version in 3..4) {
+            val file = plainMp3("many-identities-$version")
+            val originalAudio = file.readBytes()
+            run(listOf(python, "-c", WRITE_MANY_IDENTITIES, file.path, version.toString(), count.toString()))
+            val tags = AudioKodec.readTags(file.readBytes())
+            assertEquals(count + 3, tags.all(TagField.COMMENT).size)
+            assertEquals(count, tags.all(TagField.LYRICS).size)
+            val edited = tags.edit {
+                repeat(count) { add(TagField.COMMENT, "new-comment-$it"); add(TagField.LYRICS, "new-lyric-$it") }
+                set(TagField.TITLE, "Edited")
+            }
+            file.writeBytes(AudioKodec.writeTags(file.readBytes(), edited, TagWriteOptions(id3Version = version)))
+            run(listOf(python, "-c", CHECK_MANY_IDENTITIES, file.path, count.toString()))
+            val after = AudioKodec.readTags(file.readBytes())
+            assertEquals(edited.all(TagField.COMMENT), after.all(TagField.COMMENT))
+            assertEquals(edited.all(TagField.LYRICS), after.all(TagField.LYRICS))
+            assertContentEquals(originalAudio, file.readBytes().takeLast(originalAudio.size).toByteArray())
+        }
+    }
+
+    @Test
+    fun largeFlacArtistListsAndDuplicateControlsAgreeWithMutagen() {
+        val python = python
+        val count = 64_000
+        for (repeated in listOf(false, true)) {
+            val comments = List(count) { "ARTIST=" + if (repeated) "same" else "artist-$it" }
+            val file = File(directory, "many-artists-$repeated.flac")
+            file.writeBytes(TagStressFixtures.flac(comments))
+            run(listOf(python, "-c", CHECK_FLAC_ARTISTS, file.path, count.toString(), repeated.toString()))
+            val expected = if (repeated) listOf("same") else List(count) { "artist-$it" }
+            val tags = AudioKodec.readTags(file.readBytes())
+            assertEquals(expected, tags.all(TagField.ARTIST))
+            assertEquals(count, tags.raw.blocks.single().entries.count { it.key == "ARTIST" })
+        }
+    }
+
     private fun plainMp3(name: String): File {
         val ffmpeg = findOnPath("ffmpeg")
         assumeTrue("ffmpeg is required for the ID3 oracle's audio fixture", ffmpeg != null)
@@ -174,6 +214,49 @@ class MutagenTagOracleTest {
 
     private companion object {
         val directory = File(System.getProperty("java.io.tmpdir"), "audiokodec-mutagen-oracle").also { it.mkdirs() }
+        const val WRITE_MANY_IDENTITIES = """
+import sys
+from mutagen.id3 import ID3, COMM, USLT
+t = ID3()
+n = int(sys.argv[3])
+for i in range(n):
+    desc = ''.join('Aa' if i & (1 << bit) == 0 else 'BB' for bit in range(16))
+    t.add(COMM(encoding=3, lang='eng', desc=desc, text=['original-comment-' + str(i)]))
+    t.add(USLT(encoding=3, lang='eng', desc=desc, text='original-lyric-' + str(i)))
+t.add(COMM(encoding=3, lang='fra', desc='shared', text=['original-comment-0']))
+for desc, text in [('', 'saved blank'), ('2', 'saved two'), ('4', 'saved four')]:
+    t.add(COMM(encoding=3, lang='xxx', desc=desc, text=[text]))
+if sys.argv[2] == '3':
+    t.update_to_v23()
+t.save(sys.argv[1], v2_version=int(sys.argv[2]), v1=0)
+"""
+        const val CHECK_MANY_IDENTITIES = """
+import sys
+from mutagen.id3 import ID3
+t = ID3(sys.argv[1])
+n = int(sys.argv[2])
+assert len(t.getall('COMM')) == 2 * n + 4
+assert len(t.getall('USLT')) == 2 * n
+for i in range(n):
+    desc = ''.join('Aa' if i & (1 << bit) == 0 else 'BB' for bit in range(16))
+    assert t['COMM:' + desc + ':eng'].text == ['original-comment-' + str(i)]
+    assert t['USLT:' + desc + ':eng'].text == 'original-lyric-' + str(i)
+    comment_desc = '3' if i == 0 else str(i + 4)
+    lyric_desc = '' if i == 0 else str(i + 1)
+    assert t['COMM:' + comment_desc + ':xxx'].text == ['new-comment-' + str(i)]
+    assert t['USLT:' + lyric_desc + ':xxx'].text == 'new-lyric-' + str(i)
+assert t['COMM:shared:fra'].text == ['original-comment-0']
+for desc, text in [('', 'saved blank'), ('2', 'saved two'), ('4', 'saved four')]:
+    assert t['COMM:' + desc + ':xxx'].text == [text]
+"""
+        const val CHECK_FLAC_ARTISTS = """
+import sys
+from mutagen.flac import FLAC
+values = FLAC(sys.argv[1])['artist']
+n = int(sys.argv[2])
+expected = ['same'] * n if sys.argv[3] == 'true' else ['artist-' + str(i) for i in range(n)]
+assert values == expected
+"""
         const val WRITE_GENRE = """
 import sys
 from mutagen.id3 import ID3, TCON
