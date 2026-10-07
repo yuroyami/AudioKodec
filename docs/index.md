@@ -51,6 +51,9 @@ or 16, and A-law and mu-law widths may be 8 or 16. A short IMA payload still
 raises `TruncatedStreamException` in strict mode; tolerant mode returns only
 the complete packet groups available.
 
+CAF IMA accepts a compressed sample width of 0 or 4. Its packet description
+must still specify flags 0, 34 bytes per channel and 64 frames per packet.
+
 ## Stream and seek
 
 Whole-file decoding allocates the whole file, so use the streaming decoder for

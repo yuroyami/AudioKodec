@@ -651,7 +651,9 @@ internal object CafReader {
                     desc,
                     expectedBytesPerPacket = 34 * channels,
                     expectedFramesPerPacket = 64,
-                    allowedBitsPerChannel = intArrayOf(0),
+                    // Apple leaves compressed width unspecified; ffmpeg
+                    // states the four coded bits with identical geometry.
+                    allowedBitsPerChannel = intArrayOf(0, 4),
                 )
                 Chosen(AudioCodec.IMA_ADPCM, ImaAdpcmQuickTimeCodec(channels), null)
             }
