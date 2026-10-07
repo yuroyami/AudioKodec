@@ -10,6 +10,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -129,6 +130,11 @@ class Mp4OracleTest {
             val file = encode(ffmpeg, case.name, case.channels, case.options)
             val ours = AudioKodec.decode(file.readBytes())
             assertEquals(case.codec, ours.info.codec, "${case.name}: codec")
+            if (case.name.endsWith(".mov")) {
+                // These cases are fixed-width PCM and G.711 from a real muxer.
+                assertFalse(ours.info.isVariableBitrate, "${case.name}: decode bitrate classification")
+                assertFalse(AudioKodec.probe(file.readBytes()).isVariableBitrate, "${case.name}: probe bitrate classification")
+            }
             val reference = temp(case.name + ".f32")
             run(listOf(ffmpeg, "-y", "-v", "error", "-request_sample_fmt", "flt", "-i", file.path, "-f", "f32le", reference.path))
             val theirs = ByteBuffer.wrap(reference.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()

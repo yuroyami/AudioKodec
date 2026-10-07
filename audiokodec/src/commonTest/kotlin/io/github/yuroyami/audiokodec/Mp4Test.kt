@@ -5,6 +5,7 @@ import io.github.yuroyami.audiokodec.internal.mp4.Mp4Reader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -21,6 +22,36 @@ import kotlin.test.assertTrue
  * ffmpeg on the JVM.
  */
 class Mp4Test {
+
+    @Test
+    fun pcmReadPacketBoundariesDoNotMakeTheBitrateVariable() {
+        for (channels in 1..2) {
+            val files = listOf(
+                build(32_768 / channels, channels, 32_768 / channels),
+                build(40_000, channels, 40_000),
+                build(40_000, channels, 9_000, gap = 13),
+                buildFragmented(40_000, channels, 9_000),
+            )
+            for ((case, file) in files.withIndex()) {
+                val info = AudioKodec.probe(file)
+                assertFalse(info.isVariableBitrate, "$channels channels, case $case")
+                assertEquals(RATE * channels * 16, info.bitrate)
+                AudioKodec.open(file).use { assertFalse(it.info.isVariableBitrate) }
+            }
+            val parsed = Mp4Reader.parse(SourceReader(files[1].asAudioSource(), DecodeOptions.DEFAULT), DecodeOptions.DEFAULT)
+            assertTrue(parsed.audio.sizes.any { it != parsed.audio.sizes[0] }, "the regression needs a shorter read packet")
+        }
+    }
+
+    @Test
+    fun compressedTracksCanStillHaveVariablePacketSizes() {
+        for ((sizes, variable) in listOf(intArrayOf(2, 2) to false, intArrayOf(1, 3) to true)) {
+            val file = build(2, 1, 2, format = "mp4a", sampleSizes = sizes)
+            val info = AudioKodec.probe(file)
+            assertEquals(AudioCodec.AAC, info.codec)
+            assertEquals(variable, info.isVariableBitrate)
+        }
+    }
 
     @Test
     fun pcmIndexMemoryTracksCoalescedPackets() {
@@ -566,6 +597,7 @@ class Mp4Test {
         sampleEntryBoxes: ByteArray = ByteArray(0),
         editVersion: Int = 0,
         timeRuns: List<Pair<Int, Int>>? = null,
+        sampleSizes: IntArray? = null,
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
         require(!singlePacket || chunkCount == 1)
@@ -607,6 +639,7 @@ class Mp4Test {
                         ?: listOf(u32(if (singlePacket) 1 else frames) + u32(if (singlePacket) frames else 1))).toTypedArray()),
                 stsc,
                 if (singlePacket) fullBox("stsz", 0, 0, u32(0), u32(1), u32(data.size))
+                else if (sampleSizes != null) fullBox("stsz", 0, 0, u32(0), u32(sampleSizes.size), *sampleSizes.map(::u32).toTypedArray())
                 else fullBox("stsz", 0, 0, u32(1), u32(frames)),
                 fullBox("stco", 0, 0, u32(chunkCount), *starts.map { u32(dataAt + it) }.toTypedArray()),
             )

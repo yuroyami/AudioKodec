@@ -1,6 +1,7 @@
 package io.github.yuroyami.audiokodec.internal.mp4
 
 import io.github.yuroyami.audiokodec.AudioContainer
+import io.github.yuroyami.audiokodec.AudioCodec
 import io.github.yuroyami.audiokodec.AudioDecoder
 import io.github.yuroyami.audiokodec.AudioInfo
 import io.github.yuroyami.audiokodec.AudioKodecException
@@ -89,7 +90,12 @@ internal object Mp4Container {
             durationFrames = playFrames,
             bitDepth = choice.bitDepth,
             bitrate = bitrate,
-            isVariableBitrate = track.sizes.isNotEmpty() && track.sizes.any { it != track.sizes[0] },
+            // Fixed-width samples stay constant-rate even when read packets
+            // have different lengths after coalescing or at chunk boundaries.
+            isVariableBitrate = when (choice.codec) {
+                AudioCodec.PCM_INTEGER, AudioCodec.PCM_FLOAT, AudioCodec.A_LAW, AudioCodec.MU_LAW -> false
+                else -> track.sizes.isNotEmpty() && track.sizes.any { it != track.sizes[0] }
+            },
             dataOffset = reader.absoluteOffset(track.offsets.firstOrNull() ?: 0L),
             dataSize = file.audioBytes,
         )
