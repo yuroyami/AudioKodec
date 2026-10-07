@@ -36,6 +36,33 @@ class HostileTagTest {
     }
 
     @Test
+    fun r128GainsKeepTypedFailuresUnderTruncationAndMutation() {
+        for (value in listOf("-32768", "+32767", "32768", "", "0000000", "1\u0000", "١")) {
+            val fixtures = listOf(
+                R128TagFixtures.opus(listOf("R128_TRACK_GAIN=$value", "R128_ALBUM_GAIN=$value")),
+                TagStressFixtures.flac(listOf("R128_TRACK_GAIN=$value")),
+                ApeBytes(listOf("R128_TRACK_GAIN" to value.encodeToByteArray())),
+                R128TagFixtures.id3("R128_TRACK_GAIN", value),
+            )
+            for (original in fixtures) {
+                for (length in 0..original.size) {
+                    expectOnlyKiteFailures("R128 tag truncated to $length bytes") {
+                        AudioKodec.readTags(original.copyOf(length))
+                    }
+                }
+                for (at in original.indices) {
+                    for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                        val mutated = original.copyOf().also { it[at] = byte }
+                        expectOnlyKiteFailures("R128 tag byte $at set to $byte") {
+                            AudioKodec.readTags(mutated)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun rawLoudnessTagsKeepTypedFailuresUnderTruncationAndMutation() {
         val audio = ByteArray(32) { 0x55 }
         val fixtures = (2..4).map { LoudnessTagFixtures.id3(it, 1, lists = it == 4) + audio } +

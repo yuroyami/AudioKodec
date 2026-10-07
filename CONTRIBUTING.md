@@ -82,3 +82,16 @@ AUDIOKODEC_MUTAGEN_PYTHON=/tmp/audiokodec-tag-oracle/bin/python ./gradlew :audio
 
 Mutagen is a test executable only. Its implementation source must stay
 unopened under the same boundary as every other copyleft oracle.
+
+The R128 suite also calls libopusfile's documented tag and gain API through
+Python. Install libopusfile or set `AUDIOKODEC_OPUSFILE_LIBRARY` to its shared
+library. A missing library produces an actual test skip; a configured library
+that cannot load fails the test. On macOS:
+
+```sh
+brew install opusfile
+AUDIOKODEC_OPUSFILE_LIBRARY="$(brew --prefix opusfile)/lib/libopusfile.0.dylib" \
+AUDIOKODEC_MUTAGEN_PYTHON=/tmp/audiokodec-tag-oracle/bin/python ./gradlew :audiokodec:jvmTest
+```
+
+Only its public API is used. No implementation source is read.

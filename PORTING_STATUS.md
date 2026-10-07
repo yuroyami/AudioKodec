@@ -181,6 +181,18 @@ upgrades, repeated edits, gain removal, empty values, repetitions, binary
 items and unchanged audio. Mutagen checks ID3v2.3/v2.4 and APEv2 in both
 directions. Truncation and mutation sweeps cover these independent layouts.
 
+R128 gain parsing enforces RFC 7845's signed 16-bit range and six-character
+ASCII syntax. Invalid values remain raw and do not supply applicable gain;
+the first later valid value can still supply it. R128 writers check the dB
+range before quantisation and refuse unrepresentable requests before output.
+Common tests cover both gains, signed endpoints, leading zeros, malformed
+syntax, embedded nulls, fallback, rounding ties, adjacent floating values
+outside each endpoint, large finite values, byte-identical audio and untouched
+sinks. Truncation and mutation sweeps cover Ogg, FLAC, APE and ID3 layouts.
+libopusfile 0.12's public gain helpers check conforming values, overflow and
+rewritten real Opus files. The stricter RFC syntax takes precedence over its
+acceptance of empty/sign-only values, overlong zeros and embedded-null suffixes.
+
 ### Other tag features
 
 | Feature | Status |

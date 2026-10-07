@@ -2,6 +2,7 @@ package io.github.yuroyami.audiokodec.internal.tag
 
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.AudioKodecException
+import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.tag.RawTagBlock
 import io.github.yuroyami.audiokodec.tag.RawTagEntry
 import io.github.yuroyami.audiokodec.tag.TagBundle
@@ -134,6 +135,16 @@ internal object VorbisComment {
         return position
     }
 
+    private fun formatR128Gain(name: String, gainDb: Double): String {
+        if (!gainDb.isFinite() || gainDb < R128_MIN_Q78 / 256.0 || gainDb > R128_MAX_Q78 / 256.0) {
+            throw UnsupportedFeatureException(
+                "representing $name in signed 16-bit Q7.8",
+                "$name requires -128.0 to 127.99609375 dB, inclusive; requested $gainDb dB",
+            )
+        }
+        return (gainDb * 256.0).roundToInt().toString()
+    }
+
     /**
      * Builds a comment block body, without any container framing.
      *
@@ -160,10 +171,10 @@ internal object VorbisComment {
         tags.replayGain?.let { gain ->
             if (gain.isR128) {
                 gain.trackGainDb?.let {
-                    items.add("R128_TRACK_GAIN=${(it * 256).roundToInt()}")
+                    items.add("R128_TRACK_GAIN=${formatR128Gain("R128_TRACK_GAIN", it)}")
                 }
                 gain.albumGainDb?.let {
-                    items.add("R128_ALBUM_GAIN=${(it * 256).roundToInt()}")
+                    items.add("R128_ALBUM_GAIN=${formatR128Gain("R128_ALBUM_GAIN", it)}")
                 }
                 // The Opus convention has no peak fields. A peak is a sample
                 // value rather than a level against a reference, so the

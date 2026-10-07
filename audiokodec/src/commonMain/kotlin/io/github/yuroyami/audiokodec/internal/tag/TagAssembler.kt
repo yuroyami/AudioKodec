@@ -369,8 +369,22 @@ internal class ReplayGainReader {
     private fun parsePeak(text: String): Double? =
         text.trim().toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 }
 
-    private fun parseQ78(text: String): Double? = text.trim().toIntOrNull()?.let { it / 256.0 }
+    private fun parseQ78(text: String): Double? {
+        // RFC 7845 permits signs and leading zeros, but no whitespace,
+        // non-ASCII digits or more than six characters in the stored value.
+        if (text.length !in 1..6) return null
+        val firstDigit = if (text[0] == '+' || text[0] == '-') 1 else 0
+        if (firstDigit == text.length) return null
+        for (index in firstDigit until text.length) {
+            if (text[index] !in '0'..'9') return null
+        }
+        val value = text.toIntOrNull() ?: return null
+        return if (value in R128_MIN_Q78..R128_MAX_Q78) value / 256.0 else null
+    }
 }
+
+internal const val R128_MIN_Q78: Int = -32768
+internal const val R128_MAX_Q78: Int = 32767
 
 /** Names rebuilt from [ReplayGain]; all other loudness names remain raw metadata. */
 internal fun isModelledLoudnessName(name: String): Boolean = when (name.uppercase()) {

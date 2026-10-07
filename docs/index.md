@@ -577,6 +577,19 @@ Empty raw values remain accessible even though merged fields omit them.
 An empty ID3v2.3 user-text value uses UTF-16 with a byte order mark for readers
 that omit the same value in Latin-1.
 
+Stored R128 gains must contain ASCII decimal digits, with an optional leading
+sign and at most six characters. Leading zeros are permitted; whitespace and
+other characters are not. Values outside -32768 to 32767 remain in the raw
+view without supplying applicable gain information. A later valid entry can
+still supply the gain.
+
+Writing an R128 gain requires -128.0 to 127.99609375 dB, inclusive. A request
+outside that range raises `UnsupportedFeatureException` before tag output.
+Values inside the range round to the nearest 1/256 dB step, with ties towards
+the positive value. The range check happens before rounding. Ordinary
+ReplayGain text and reference conversion into ID3 or APE keep their existing
+range.
+
 ## Channel layouts
 
 An `AudioFormat` carries the speaker position of every channel, in the order
