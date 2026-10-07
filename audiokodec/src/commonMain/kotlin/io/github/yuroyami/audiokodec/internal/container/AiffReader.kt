@@ -383,8 +383,8 @@ internal object AiffReader {
      * more reliable of the two, because it is what the writer chose last.
      */
     private fun normaliseDepth(sampleSize: Int, compression: String, at: Long): Int = when (compression) {
-        "in24", "23ni" -> 24
-        "in32", "42ni" -> 32
+        "in24", "42ni" -> 24
+        "in32", "23ni" -> 32
         else -> if (sampleSize in 1..32) {
             sampleSize
         } else {

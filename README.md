@@ -308,7 +308,8 @@ RF64 and BW64 are read, and written automatically when a file passes 4 GiB.
 
 On reading, the AIFF-C compression types understood are `NONE`, `twos`,
 `sowt`, `raw `, `in24`, `in32`, `23ni`, `42ni`, `fl32`, `fl64`, `alaw`, `ulaw`
-and `ima4`.
+and `ima4`. The reversed integer types are little-endian: `23ni` is 32-bit
+and `42ni` is 24-bit.
 
 ### Read only
 

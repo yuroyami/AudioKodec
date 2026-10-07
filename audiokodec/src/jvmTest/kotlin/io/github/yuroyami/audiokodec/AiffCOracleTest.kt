@@ -1,5 +1,7 @@
 package io.github.yuroyami.audiokodec
 
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -9,11 +11,93 @@ import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** Checks the compressed AIFF-C profiles written by both common converters. */
+/** Checks AIFF-C sample interpretations against independent converters. */
 class AiffCOracleTest {
+    @Test
+    fun reversedIntegerTypesAgreeWithApplesIntegerReader() {
+        val afconvert = findOnPath("afconvert") ?: return skip("afconvert")
+        for (depth in intArrayOf(24, 32)) {
+            val values = if (depth == 32) {
+                intArrayOf(0x01020304, -0x11223344, 0x7F000001, Int.MIN_VALUE, Int.MAX_VALUE, -1, 0)
+            } else {
+                intArrayOf(0x010203, -0x112233, 0x7F0001, -8_388_608, 8_388_607, -1, 0)
+            }
+            for (channels in 1..2) {
+                val samples = IntArray(values.size * channels) { values[(it / channels + it % channels) % values.size] }
+                val alias = if (depth == 32) "23ni" else "42ni"
+                val bytes = integerFile(alias, depth, channels, samples, littleEndian = true)
+                val input = File(workDirectory, "integer-$depth-$channels.aifc")
+                // Apple reads 23ni directly. It does not recognise 42ni, so
+                // its standard in24 interpretation checks the same 24-bit
+                // audio without claiming tool support for the reversed alias.
+                input.writeBytes(if (depth == 32) bytes else integerFile("in24", depth, channels, samples, littleEndian = false))
+                val output = File(workDirectory, "integer-$depth-$channels.wav")
+                output.delete()
+                run(listOf(afconvert, "-f", "WAVE", "-d", "LEI32", input.path, output.path))
+                val wave = output.readBytes()
+                var at = 12
+                while (String(wave, at, 4, Charsets.US_ASCII) != "data") {
+                    val size = ByteBuffer.wrap(wave, at + 4, 4).order(ByteOrder.LITTLE_ENDIAN).int
+                    at += 8 + size + (size and 1)
+                    assertTrue(at + 8 <= wave.size, "Apple's WAVE file has no data chunk")
+                }
+                val size = ByteBuffer.wrap(wave, at + 4, 4).order(ByteOrder.LITTLE_ENDIAN).int
+                val buffer = ByteBuffer.wrap(wave, at + 8, size).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer()
+                val reference = IntArray(buffer.remaining()) { buffer.get() shr (32 - depth) }
+                assertContentEquals(samples, reference, "Apple's $depth-bit integers")
+                AudioKodec.open(bytes).use { decoder ->
+                    val integers = assertIs<IntPcmAccess>(decoder)
+                    assertEquals(depth, integers.bitDepth)
+                    val frame = assertNotNull(integers.nextIntFrame())
+                    assertEquals(values.size, frame.frameCount)
+                    assertContentEquals(reference, frame.samples.copyOf(reference.size), "$alias, $channels channels")
+                }
+            }
+        }
+    }
+
+    private fun integerFile(compression: String, depth: Int, channels: Int, samples: IntArray, littleEndian: Boolean): ByteArray {
+        val chunks = ByteArrayOutputStream()
+        DataOutputStream(chunks).use { out ->
+            out.writeBytes("FVER")
+            out.writeInt(4)
+            out.writeInt(0xA2805140.toInt())
+            out.writeBytes("COMM")
+            out.writeInt(24)
+            out.writeShort(channels)
+            out.writeInt(samples.size / channels)
+            out.writeShort(depth)
+            // 8000 as a normalised 80-bit extended float.
+            out.writeShort(16_383 + 12)
+            out.writeLong(8_000L shl 51)
+            out.writeBytes(compression)
+            out.writeShort(0)
+            out.writeBytes("SSND")
+            val dataSize = samples.size * (depth / 8)
+            out.writeInt(8 + dataSize)
+            out.writeLong(0)
+            for (sample in samples) {
+                for (byte in 0 until depth / 8) {
+                    val shift = if (littleEndian) byte * 8 else depth - 8 - byte * 8
+                    out.writeByte(sample ushr shift)
+                }
+            }
+            if (dataSize and 1 != 0) out.writeByte(0)
+        }
+        val result = ByteArrayOutputStream()
+        DataOutputStream(result).use { out ->
+            out.writeBytes("FORM")
+            out.writeInt(4 + chunks.size())
+            out.writeBytes("AIFC")
+            out.write(chunks.toByteArray())
+        }
+        return result.toByteArray()
+    }
+
     @Test
     fun ffmpegFilesPreserveLengthSamplesAndSeeking() {
         val ffmpeg = findOnPath("ffmpeg") ?: return skip("ffmpeg")

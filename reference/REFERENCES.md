@@ -53,7 +53,7 @@ Run as programs, never read as source.
 |---|---|
 | ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write |
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions |
-| afconvert (macOS) | CAF and compressed AIFF-C, and reserved for the ALAC work |
+| afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
 | alacconvert | ALAC, built from Apple's reference at the commit the port follows |
 
 ## Permissively licensed implementations for the work still to come

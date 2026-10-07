@@ -3,6 +3,7 @@ package io.github.yuroyami.audiokodec
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -241,6 +242,80 @@ class HandBuiltFileTest {
                 assertEquals(128, AudioKodec.decode(file, tolerant).frames)
             }
         }
+    }
+
+    @Test
+    fun aiffCReversedIntegerTypesPreserveTheirWidthsSamplesAndSeeking() {
+        for ((compression, depth) in listOf("23ni" to 32, "42ni" to 24)) {
+            val values = if (depth == 32) {
+                intArrayOf(0x01020304, -0x11223344, 0x7F000001, Int.MIN_VALUE, Int.MAX_VALUE, -1, 0)
+            } else {
+                intArrayOf(0x010203, -0x112233, 0x7F0001, -8_388_608, 8_388_607, -1, 0)
+            }
+            for (channels in 1..2) {
+                val samples = IntArray(values.size * channels) { values[(it / channels + it % channels) % values.size] }
+                val data = littleEndianIntegers(samples, depth)
+                // The explicit compression type still determines the width
+                // when an older writer leaves a contradictory COMM width.
+                for (declaredWidth in intArrayOf(depth, 16)) {
+                    val file = buildAiffC(compression, 8_000, channels, values.size, data, declaredWidth)
+                    for (tolerant in listOf(false, true)) {
+                        val options = DecodeOptions(tolerant = tolerant)
+                        val info = AudioKodec.probe(file, options)
+                        assertEquals(depth, info.bitDepth, compression)
+                        assertEquals(values.size.toLong(), info.durationFrames, compression)
+                        AudioKodec.open(file, options).use { decoder ->
+                            val integers = assertIs<IntPcmAccess>(decoder)
+                            assertEquals(depth, integers.bitDepth)
+                            val frame = assertNotNull(integers.nextIntFrame())
+                            assertEquals(values.size, frame.frameCount)
+                            assertContentEquals(samples, frame.samples.copyOf(samples.size))
+                            assertEquals(null, integers.nextIntFrame())
+                            for (target in longArrayOf(0, 1, values.lastIndex.toLong(), values.size.toLong())) {
+                                assertEquals(target, decoder.seek(target))
+                                val sought = integers.nextIntFrame()
+                                if (target == values.size.toLong()) {
+                                    assertEquals(null, sought)
+                                } else {
+                                    assertNotNull(sought)
+                                    assertEquals(target, sought.positionFrames)
+                                    assertEquals(values.size - target.toInt(), sought.frameCount)
+                                    val remaining = samples.copyOfRange(target.toInt() * channels, samples.size)
+                                    assertContentEquals(remaining, sought.samples.copyOf(remaining.size))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun aiffCReversedIntegerTypesRejectOrTrimAnIncompleteFinalFrame() {
+        for ((compression, depth) in listOf("23ni" to 32, "42ni" to 24)) {
+            for (channels in 1..2) {
+                val samples = IntArray(7 * channels) { it * 65_537 - 700_001 }
+                val complete = littleEndianIntegers(samples, depth)
+                for (missing in intArrayOf(1, depth / 8)) {
+                    val file = buildAiffC(compression, 8_000, channels, 7, complete.copyOf(complete.size - missing), depth)
+                    assertFailsWith<TruncatedStreamException> { AudioKodec.open(file).close() }
+                    AudioKodec.open(file, DecodeOptions(tolerant = true)).use { decoder ->
+                        assertEquals(6L, decoder.durationFrames)
+                        val integers = assertIs<IntPcmAccess>(decoder)
+                        val frame = assertNotNull(integers.nextIntFrame())
+                        assertEquals(6, frame.frameCount)
+                        assertContentEquals(samples.copyOf(6 * channels), frame.samples.copyOf(6 * channels))
+                        assertEquals(null, integers.nextIntFrame())
+                    }
+                }
+            }
+        }
+    }
+
+    private fun littleEndianIntegers(samples: IntArray, depth: Int): ByteArray {
+        val width = depth / 8
+        return ByteArray(samples.size * width) { at -> (samples[at / width] ushr ((at % width) * 8)).toByte() }
     }
 
     @Test

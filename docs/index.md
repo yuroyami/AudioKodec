@@ -51,6 +51,10 @@ or 16, and A-law and mu-law widths may be 8 or 16. A short IMA payload still
 raises `TruncatedStreamException` in strict mode; tolerant mode returns only
 the complete packet groups available.
 
+The AIFF-C integer types `23ni` and `42ni` are little-endian, with widths of
+32 and 24 bits respectively. Their compression type determines the width,
+including when the `COMM` sample size disagrees.
+
 CAF IMA accepts a compressed sample width of 0 or 4. Its packet description
 must still specify flags 0, 34 bytes per channel and 64 frames per packet.
 
