@@ -50,7 +50,7 @@ internal object TagMapping {
         "TCON" to TagField.GENRE,
         "TYER" to TagField.DATE,
         "TDRC" to TagField.DATE,
-        "TDRL" to TagField.DATE,
+        "TDRL" to TagField.RELEASE_DATE,
         "TDOR" to TagField.ORIGINAL_DATE,
         "TORY" to TagField.ORIGINAL_DATE,
         "TBPM" to TagField.BPM,
@@ -129,6 +129,7 @@ internal object TagMapping {
         "DATE" to TagField.DATE,
         "YEAR" to TagField.DATE,
         "ORIGINALDATE" to TagField.ORIGINAL_DATE,
+        "RELEASEDATE" to TagField.RELEASE_DATE,
         "GENRE" to TagField.GENRE,
         "COMPOSER" to TagField.COMPOSER,
         "PERFORMER" to TagField.PERFORMER,
@@ -265,6 +266,7 @@ internal object TagMapping {
         "ALBUMARTISTSORT" to TagField.SORT_ALBUM_ARTIST,
         "COMPILATION" to TagField.COMPILATION,
         "ORIGINALDATE" to TagField.ORIGINAL_DATE,
+        "RELEASEDATE" to TagField.RELEASE_DATE,
         "MOOD" to TagField.MOOD,
         "ISRC" to TagField.ISRC,
     )
@@ -385,10 +387,10 @@ internal object TagMapping {
      * The ID3v2.3 or 2.4 frame that holds [field], or null when the field has
      * no frame of its own and belongs in a `TXXX`.
      *
-     * This cannot be the read table turned around. Three frames read as a
-     * date, and only one of them is the right frame to write: `TDRC` in
-     * version 2.4 and `TYER` in version 2.3, which is the single place the two
-     * versions differ enough to matter here.
+     * This cannot be the read table turned around. Several native spellings
+     * may fill one field. The primary date uses `TDRC` in version 2.4 and
+     * `TYER` in version 2.3; the explicit release date uses its own `TDRL`
+     * frame or a `TXXX:RELEASEDATE` value in version 2.3.
      */
     fun id3FrameFor(field: TagField, major: Int): String? = when (field) {
         TagField.TITLE -> "TIT2"
@@ -399,6 +401,7 @@ internal object TagMapping {
         TagField.DISC_NUMBER -> "TPOS"
         TagField.DATE -> if (major >= 4) "TDRC" else "TYER"
         TagField.ORIGINAL_DATE -> if (major >= 4) "TDOR" else "TORY"
+        TagField.RELEASE_DATE -> if (major >= 4) "TDRL" else null
         TagField.GENRE -> "TCON"
         TagField.COMPOSER -> "TCOM"
         TagField.CONDUCTOR -> "TPE3"
@@ -434,6 +437,7 @@ internal object TagMapping {
     /** The `TXXX` description that holds [field], or null. */
     fun userTextDescriptionFor(field: TagField): String? {
         when (field) {
+            TagField.RELEASE_DATE -> return "RELEASEDATE"
             TagField.MUSICBRAINZ_ARTIST_ID -> return "MusicBrainz Artist Id"
             TagField.MUSICBRAINZ_RELEASE_ID -> return "MusicBrainz Album Id"
             TagField.MUSICBRAINZ_RELEASE_ARTIST_ID -> return "MusicBrainz Album Artist Id"
@@ -479,6 +483,7 @@ internal object TagMapping {
         TagField.MUSICBRAINZ_RELEASE_ARTIST_ID -> "MUSICBRAINZ_ALBUMARTISTID"
         TagField.ACOUSTID_ID -> "ACOUSTID_ID"
         TagField.ORIGINAL_DATE -> "ORIGINALDATE"
+        TagField.RELEASE_DATE -> "RELEASEDATE"
         TagField.CATALOG_NUMBER -> "CATALOGNUMBER"
         TagField.ENCODING_SETTINGS -> "ENCODERSETTINGS"
         TagField.URL -> "WEBSITE"

@@ -276,7 +276,7 @@ internal object TagRepresentabilityFixtures {
     val fields = TagField.entries.associateWith { field -> listOf(when (field) {
         TagField.TRACK_NUMBER, TagField.DISC_NUMBER -> "3"
         TagField.TRACK_TOTAL, TagField.DISC_TOTAL -> "12"
-        TagField.DATE, TagField.ORIGINAL_DATE -> "2026-10-07"
+        TagField.DATE, TagField.ORIGINAL_DATE, TagField.RELEASE_DATE -> "2026-10-07"
         TagField.BPM -> "128"
         TagField.COMPILATION -> "1"
         TagField.URL -> "https://example.org/artist"

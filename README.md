@@ -303,6 +303,11 @@ totals are retained without inventing a number. FLAC, Ogg and APE refuse
 chapters unless another complete ID3 carrier is being written in the file.
 See [the tag writing rules](docs/index.md#metadata-that-needs-a-richer-carrier).
 
+The primary `DATE` field retains ID3 `TDRC`. An explicit `TDRL` release
+timestamp uses `RELEASE_DATE`, so editing or removing either date leaves the
+other intact. See [date fields](docs/index.md#primary-and-explicit-release-dates)
+for native keys and migration from previously merged date lists.
+
 MusicBrainz recording IDs use `UFID:http://musicbrainz.org` in ID3; the other
 MusicBrainz IDs use Picard's `TXXX` descriptions. ID3v2.4 stores multiple text
 values in one frame. ID3v2.3 uses slash lists for artists, composers and

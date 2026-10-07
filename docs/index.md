@@ -455,6 +455,34 @@ AudioKodec.writeTags(
 )
 ```
 
+### Primary and explicit release dates
+
+`TagField.DATE` retains the existing primary date convention. In ID3v2.4 it
+maps to the recording timestamp `TDRC`. Music taggers also use that frame
+for their main release date. An explicit `TDRL` timestamp has a separate
+field, `RELEASE_DATE`, so an unrelated edit keeps both meanings.
+
+| Field | ID3v2.4 | ID3v2.3 | Vorbis and APE |
+|---|---|---|---|
+| `DATE` | `TDRC` | `TYER` | `DATE`, or APE `YEAR` on input |
+| `RELEASE_DATE` | `TDRL` | `TXXX:RELEASEDATE` | `RELEASEDATE` |
+| `ORIGINAL_DATE` | `TDOR` | `TORY` | `ORIGINALDATE` |
+
+Set or remove either date field independently. Equal timestamp strings stay
+in both fields when the file states both meanings. ID3v2.4 permits separate
+values in each frame; ID3v2.3 requires one distinct user-text release value.
+A release-date list in version 2.3 is named and refused before output.
+
+`RELEASE_DATE` is appended after the existing enum entries. Earlier versions
+combined `TDRC` and `TDRL` into `DATE`. Read the source tags again when
+migrating a cached merged date list, because the list alone cannot recover
+the original frame identities.
+
+Legacy primary date conversion is still limited: full dates in ID3v2.3 year
+frames and the conversion of split `TYER`/`TDAT`/`TIME` dates need repair.
+Use version 2.4 for new full primary dates, and retain version 2.3 when an
+existing split date must remain in that version.
+
 ### Metadata that needs a richer carrier
 
 Default edits retain modelled metadata by adding an ID3 chunk to WAV, RF64,

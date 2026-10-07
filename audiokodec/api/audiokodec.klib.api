@@ -78,6 +78,7 @@ final enum class io.github.yuroyami.audiokodec.tag/TagField : kotlin/Enum<io.git
     enum entry ORIGINAL_DATE // io.github.yuroyami.audiokodec.tag/TagField.ORIGINAL_DATE|null[0]
     enum entry PERFORMER // io.github.yuroyami.audiokodec.tag/TagField.PERFORMER|null[0]
     enum entry PUBLISHER // io.github.yuroyami.audiokodec.tag/TagField.PUBLISHER|null[0]
+    enum entry RELEASE_DATE // io.github.yuroyami.audiokodec.tag/TagField.RELEASE_DATE|null[0]
     enum entry REMIXER // io.github.yuroyami.audiokodec.tag/TagField.REMIXER|null[0]
     enum entry SORT_ALBUM // io.github.yuroyami.audiokodec.tag/TagField.SORT_ALBUM|null[0]
     enum entry SORT_ALBUM_ARTIST // io.github.yuroyami.audiokodec.tag/TagField.SORT_ALBUM_ARTIST|null[0]

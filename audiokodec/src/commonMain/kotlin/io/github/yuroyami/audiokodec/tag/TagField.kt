@@ -39,11 +39,12 @@ public enum class TagField {
     DISC_TOTAL,
 
     /**
-     * Release date, as complete as the file states it.
+     * Primary date, as complete as the file states it.
      *
-     * ID3v2.4 and Vorbis comments allow a full date, ID3v2.3 stores a
-     * four-digit year in `TYER`, and both end up here in the form the file
-     * used.
+     * ID3v2.4 uses `TDRC`, the recording timestamp. Music taggers also use
+     * this frame for their main release date. An explicit `TDRL` release
+     * timestamp belongs to [RELEASE_DATE], so the two facts remain separate.
+     * Vorbis comments use `DATE`; ID3v2.3 uses `TYER` for the year.
      */
     DATE,
 
@@ -176,6 +177,9 @@ public enum class TagField {
 
     /** Person or organisation that encoded the file, distinct from the software. */
     ENCODED_BY,
+
+    /** Explicit release timestamp, stored in ID3v2.4 `TDRL` and native `RELEASEDATE` fields. */
+    RELEASE_DATE,
     ;
 
     /**

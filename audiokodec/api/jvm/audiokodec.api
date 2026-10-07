@@ -570,6 +570,7 @@ public final class io/github/yuroyami/audiokodec/tag/TagField : java/lang/Enum {
 	public static final field ORIGINAL_DATE Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field PERFORMER Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field PUBLISHER Lio/github/yuroyami/audiokodec/tag/TagField;
+	public static final field RELEASE_DATE Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field REMIXER Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field SORT_ALBUM Lio/github/yuroyami/audiokodec/tag/TagField;
 	public static final field SORT_ALBUM_ARTIST Lio/github/yuroyami/audiokodec/tag/TagField;

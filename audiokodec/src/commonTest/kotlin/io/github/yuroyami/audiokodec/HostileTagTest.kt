@@ -37,6 +37,27 @@ class HostileTagTest {
     }
 
     @Test
+    fun distinctDateIdentitiesKeepTypedFailuresUnderTruncationAndMutation() {
+        for (encoding in 0..3) {
+            val original = DateIdentityFixtures.stream("2000-01-02T03:04:05", "2026-10-06T12:34:56", encoding)
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("date identities truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    expectOnlyKiteFailures("date identity byte $at set to $byte") {
+                        val mutated = original.copyOf().also { it[at] = byte }
+                        val tags = AudioKodec.readTags(mutated)
+                        AudioKodec.writeTags(mutated, tags.edit { remove(TagField.RELEASE_DATE) })
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun richerNativeFallbackKeepsTypedFailuresUnderTruncationAndMutation() {
         for (source in listOf(NativeTextListFixtures.wave(), NativeTextListFixtures.rf64(), NativeTextListFixtures.aiff())) {
             val original = AudioKodec.writeTags(source, TagRepresentabilityFixtures.rich)
