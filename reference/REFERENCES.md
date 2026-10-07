@@ -50,6 +50,7 @@ can hold checkouts without them ever reaching the repository.
 | ID3 identities and MusicBrainz | [ID3v2.3](https://id3.org/id3v2.3.0) sections 4.1 and 4.2; [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) sections 4.1 and 4.2; [Picard tag mapping](https://picard-docs.musicbrainz.org/en/v3.0/_static/MusicBrainz_Picard_Tag_Map.html) |
 | ID3 text lists | [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) sections 4.2 and 4.2.6, with the [structure specification](https://id3.org/id3v2.4.0-structure) for text encodings, byte orders and terminators |
 | ID3 free-form text | [ID3v2.2](https://id3.org/id3v2-00) and [ID3v2.3](https://id3.org/id3v2.3.0) sections 4.9 and 4.11; [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) sections 4.8 and 4.10, for comment and lyric text and identities |
+| Artwork identity and APE roles | [ID3v2.3 APIC](https://id3.org/id3v2.3.0) section 4.15 and [ID3v2.4 APIC](https://id3.org/id3v2.4.0-frames) section 4.14; [APE item key uniqueness](https://wiki.hydrogenaudio.org/index.php?title=APE_Tag_Item) and [picture-role conventions](https://wiki.hydrogenaudio.org/index.php?title=Tag_Mapping#Ape_pictures) |
 
 ## Test oracles
 
@@ -62,7 +63,7 @@ Run as programs, never read as source.
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
 | alacconvert | ALAC, built from Apple's reference at the commit the port follows |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
-| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
+| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
 
 ## Permissively licensed implementations for the work still to come
 

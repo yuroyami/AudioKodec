@@ -6,6 +6,7 @@ import io.github.yuroyami.audiokodec.tag.TagChapter
 import io.github.yuroyami.audiokodec.tag.TagField
 import io.github.yuroyami.audiokodec.tag.TagFormat
 import io.github.yuroyami.audiokodec.tag.TagPicture
+import io.github.yuroyami.audiokodec.tag.PictureType
 import io.github.yuroyami.audiokodec.AudioKodecException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 
@@ -85,9 +86,7 @@ internal object Id3v2Writer {
             }
         }
 
-        for (picture in tags.pictures) {
-            frames.add(pictureFrame(picture, major))
-        }
+        frames.addAll(pictureFrames(tags.pictures, major))
         for (chapter in tags.chapters) {
             frames.add(chapterFrame(chapter, major))
         }
@@ -337,10 +336,68 @@ internal object Id3v2Writer {
     private fun isId3(format: TagFormat): Boolean =
         format == TagFormat.ID3V2_2 || format == TagFormat.ID3V2_3 || format == TagFormat.ID3V2_4
 
-    private fun pictureFrame(picture: TagPicture, major: Int): ByteArray {
-        val encoding = encodingFor(listOf(picture.description), major)
+    /** Every block in a mixed write must receive the same picture captions. */
+    fun normaliseArtwork(tags: TagBundle, major: Int): TagBundle = TagBundle(
+        fields = tags.fields,
+        pictures = canonicalPictures(tags.pictures, major),
+        chapters = tags.chapters.map { chapter ->
+            TagChapter(
+                chapter.id, chapter.startMillis, chapter.endMillis, chapter.title,
+                canonicalPictures(chapter.pictures, major),
+            )
+        },
+        replayGain = tags.replayGain,
+        raw = tags.raw,
+    )
+
+    private fun pictureFrames(pictures: List<TagPicture>, major: Int): List<ByteArray> =
+        canonicalPictures(pictures, major).map { pictureFrame(it, it.description, major) }
+
+    private fun canonicalPictures(pictures: List<TagPicture>, major: Int): List<TagPicture> {
+        val unique = TagPictureMerge()
+        for (picture in pictures) unique.add(picture)
+        val reserved = TagValueIndex<String>(naturalOrder())
+        for (picture in unique.pictures) reserved.add(picture.description)
+        val used = TagValueIndex<String>(naturalOrder())
+        val icons = mutableSetOf<PictureType>()
+        val result = ArrayList<TagPicture>()
+        var suffix = 1
+        for (picture in unique.pictures) {
+            if ((picture.type == PictureType.FILE_ICON || picture.type == PictureType.OTHER_FILE_ICON) &&
+                !icons.add(picture.type)
+            ) {
+                throw UnsupportedFeatureException(
+                    "multiple ID3 ${picture.type} pictures",
+                    "ID3 permits only one picture of each file-icon type.",
+                )
+            }
+            var description = picture.description
+            if (description in used) {
+                do {
+                    val ending = " [${suffix++}]"
+                    var length = if (major == 3) minOf(picture.description.length, (64 - ending.length).coerceAtLeast(0)) else picture.description.length
+                    // A v2.3 caption suffix must not split a UTF-16 pair.
+                    if (length in 1 until picture.description.length && picture.description[length - 1] in '\uD800'..'\uDBFF') length--
+                    val caption = picture.description.take(length)
+                    description = caption + ending
+                } while (description in reserved || description in used)
+            }
+            used.add(description)
+            if ('\u0000' in description || '\u0000' in picture.mimeType) {
+                throw UnsupportedFeatureException("null characters in ID3 picture metadata")
+            }
+            result.add(if (description == picture.description) picture else TagPicture(
+                picture.type, picture.mimeType, description, picture.bytes,
+                picture.width, picture.height, picture.colourDepth, picture.colourCount,
+            ))
+        }
+        return result
+    }
+
+    private fun pictureFrame(picture: TagPicture, caption: String, major: Int): ByteArray {
+        val encoding = encodingFor(listOf(caption), major)
         val mime = TagText.encodeLatin1(picture.mimeType)
-        val description = encodeText(picture.description, encoding)
+        val description = encodeText(caption, encoding)
         val terminator = TagText.terminatorSize(encoding)
         val body = ByteArray(
             checkedArraySize(
@@ -368,7 +425,7 @@ internal object Id3v2Writer {
         chapter.title?.takeIf { it.isNotEmpty() }?.let {
             nested.add(textFrame("TIT2", listOf(it), major))
         }
-        for (picture in chapter.pictures) nested.add(pictureFrame(picture, major))
+        nested.addAll(pictureFrames(chapter.pictures, major))
 
         var size = id.size.toLong() + 1 + 16
         for (child in nested) size += child.size

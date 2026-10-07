@@ -21,17 +21,21 @@ internal class TagValueIndex<T>(
     var size: Int = 0
         private set
 
-    operator fun contains(value: T): Boolean {
+    operator fun contains(value: T): Boolean = findNode(value) != null
+
+    fun find(value: T): T? = findNode(value)?.value
+
+    private fun findNode(value: T): Node<T>? {
         var node = root
         while (node != null) {
             val compared = comparator.compare(value, node.value)
             node = when {
                 compared < 0 -> node.left
                 compared > 0 -> node.right
-                else -> return true
+                else -> return node
             }
         }
-        return false
+        return null
     }
 
     fun add(value: T): Boolean {

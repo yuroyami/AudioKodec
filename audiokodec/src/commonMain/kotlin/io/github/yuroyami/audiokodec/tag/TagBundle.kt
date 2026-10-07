@@ -309,7 +309,7 @@ public class RawTags(
 public class TagBundle(
     /** Merged fields, each of which can hold several values. */
     fields: Map<TagField, List<String>>,
-    /** Every picture found, across all blocks. */
+    /** Distinct artwork across all blocks, with equivalent stored copies merged. */
     pictures: List<TagPicture> = emptyList(),
     /** Chapters, in the order they start. */
     chapters: List<TagChapter> = emptyList(),
@@ -324,7 +324,7 @@ public class TagBundle(
             .filterValues { it.isNotEmpty() }
             .mapValuesTo(LinkedHashMap()) { it.value.toList() }
 
-    /** Every picture found, across all blocks. */
+    /** Distinct artwork across all blocks, with equivalent stored copies merged. */
     public val pictures: List<TagPicture> = pictures.toList()
 
     /** Chapters, in the order they start. */

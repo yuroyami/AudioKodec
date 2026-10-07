@@ -2,6 +2,7 @@ package io.github.yuroyami.audiokodec.internal.tag
 
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.AudioKodecException
+import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.tag.RawTagBlock
 import io.github.yuroyami.audiokodec.tag.RawTagEntry
 import io.github.yuroyami.audiokodec.tag.TagBundle
@@ -307,7 +308,10 @@ internal object ApeTag {
     }
 
     /** Builds an APEv2 block, retaining entries outside AudioKodec's model. */
-    fun build(tags: TagBundle): ByteArray {
+    fun build(tags: TagBundle, picturesPreservedElsewhere: Boolean = false): ByteArray {
+        if (!picturesPreservedElsewhere && tags.chapters.any { it.pictures.isNotEmpty() }) {
+            throw UnsupportedFeatureException("chapter-local artwork in APE")
+        }
         val text = LinkedHashMap<String, MutableList<String>>()
         val binary = LinkedHashMap<String, ByteArray>()
 
@@ -344,11 +348,19 @@ internal object ApeTag {
             gain.albumPeak?.let { addText("REPLAYGAIN_ALBUM_PEAK", it.toString()) }
         }
 
-        for (picture in tags.pictures) {
-            val key = if (picture.type == io.github.yuroyami.audiokodec.tag.PictureType.BACK_COVER) {
-                "Cover Art (Back)"
-            } else {
-                "Cover Art (Front)"
+        val unique = TagPictureMerge()
+        for (picture in tags.pictures) unique.add(picture)
+        for (picture in unique.pictures) {
+            val key = ApePictureKeys.key(picture.type)
+            if (key in binary) {
+                if (picturesPreservedElsewhere) continue
+                throw UnsupportedFeatureException(
+                    "multiple APE pictures under $key",
+                    "APE permits each cover-art key only once. Include ID3v2 to retain every picture.",
+                )
+            }
+            if ('\u0000' in picture.description) {
+                throw UnsupportedFeatureException("null characters in an APE picture filename")
             }
             val description = picture.description.encodeToByteArray()
             val size = description.size.toLong() + 1 + picture.bytes.size

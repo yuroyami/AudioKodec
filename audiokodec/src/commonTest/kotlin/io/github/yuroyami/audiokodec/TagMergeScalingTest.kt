@@ -50,19 +50,23 @@ class TagMergeScalingTest {
     @Test
     fun manyLegacyPicturesUseTheFirstMimeEntryOrTheExistingSniffFallback() {
         val png = byteArrayOf(0x89.toByte(), 80, 78, 71, 13, 10, 26, 10)
-        val encoded = Base64.encode(png)
-        val pictures = List(4_096) { RawTagEntry("COVERART", text = encoded) }
+        val images = List(4_096) { value -> png + ByteArray(4) { (value ushr (it * 8)).toByte() } }
+        val pictures = images.flatMap { image ->
+            val encoded = Base64.encode(image)
+            listOf(RawTagEntry("COVERART", text = encoded), RawTagEntry("COVERART", text = encoded))
+        }
         for (mime in listOf("image/private", null)) {
             val entries = pictures + listOf(RawTagEntry("coverartmime", text = mime), RawTagEntry("COVERARTMIME", text = "image/later"))
             val tags = TagAssembler.assemble(listOf(block(TagFormat.VORBIS_COMMENT, entries)))
-            assertEquals(pictures.size, tags.pictures.size)
-            for (picture in tags.pictures) {
+            assertEquals(images.size, tags.pictures.size)
+            assertEquals(entries, tags.raw.blocks.single().entries)
+            for ((image, picture) in images.zip(tags.pictures)) {
                 assertEquals(mime ?: "image/png", picture.mimeType)
-                assertContentEquals(png, picture.bytes)
+                assertContentEquals(image, picture.bytes)
             }
         }
         val missing = TagAssembler.assemble(listOf(block(TagFormat.VORBIS_COMMENT, pictures)))
-        assertEquals(pictures.size, missing.pictures.size)
+        assertEquals(images.size, missing.pictures.size)
         assertEquals("image/png", missing.pictures.first().mimeType)
     }
 

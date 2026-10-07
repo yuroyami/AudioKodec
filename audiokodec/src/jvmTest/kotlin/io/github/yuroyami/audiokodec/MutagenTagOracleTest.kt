@@ -6,6 +6,9 @@ import io.github.yuroyami.audiokodec.tag.TagFormat
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
 import io.github.yuroyami.audiokodec.tag.TagWriteOptions
+import io.github.yuroyami.audiokodec.tag.TagPicture
+import io.github.yuroyami.audiokodec.tag.TagChapter
+import io.github.yuroyami.audiokodec.tag.PictureType
 import java.io.File
 import java.util.concurrent.TimeUnit
 import org.junit.Assume.assumeTrue
@@ -37,6 +40,108 @@ class MutagenTagOracleTest {
         if (configured != null) assertEquals(0, process.exitValue(), output)
         else assumeTrue("Install Mutagen or set AUDIOKODEC_MUTAGEN_PYTHON: $output", process.exitValue() == 0)
         executable
+    }
+
+    @Test
+    fun allStandardApePictureKeysAgreeWithReferenceItemsInBothDirections() {
+        val python = python
+        val file = plainMp3("all-ape-picture-roles")
+        val audio = file.readBytes()
+        val pictures = PictureType.entries.map { type ->
+            TagPicture(type, "image/jpeg", "role-${type.ordinal}.jpg", byteArrayOf(-1, -40, 0, type.ordinal.toByte()))
+        }
+        val options = TagWriteOptions(formats = setOf(TagFormat.APEV2), padding = 0)
+        file.writeBytes(AudioKodec.writeTags(audio, TagBundle(emptyMap(), pictures), options))
+        run(listOf(python, "-c", ALL_APE_ROLES, file.path, "check"))
+        run(listOf(python, "-c", ALL_APE_ROLES, file.path, "write"))
+        val read = AudioKodec.readTags(file.readBytes())
+        assertEquals(PictureType.entries.toSet(), read.pictures.map { it.type }.toSet())
+        for (picture in read.pictures) assertContentEquals(pictures[picture.type.ordinal].bytes, picture.bytes)
+        file.writeBytes(AudioKodec.writeTags(file.readBytes(), read.edit { set(TagField.TITLE, "Changed") }, options))
+        run(listOf(python, "-c", ALL_APE_ROLES, file.path, "check"))
+        assertContentEquals(audio, file.readBytes().copyOfRange(0, audio.size))
+    }
+
+    @Test
+    fun leadingId3AndRealFlacOrOpusKeepTheSamePictureIdentities() {
+        val python = python
+        val ffmpeg = findOnPath("ffmpeg")
+        assumeTrue("ffmpeg is required for native artwork fixtures", ffmpeg != null)
+        val pictures = listOf(
+            TagPicture(mimeType = "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 1)),
+            TagPicture(mimeType = "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 2)),
+        )
+        for (kind in listOf("flac", "opus")) {
+            val file = File(directory, "native-pictures.$kind")
+            run(listOf(ffmpeg!!, "-y", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.1", "-c:a", if (kind == "flac") "flac" else "libopus", file.path))
+            val original = file.readBytes()
+            val native = AudioKodec.writeTags(original, TagBundle(emptyMap(), pictures))
+            file.writeBytes(PictureTagFixtures.id3(pictures, 4) + native)
+            repeat(4) { edit ->
+                val read = AudioKodec.readTags(file.readBytes())
+                assertEquals(2, read.pictures.size)
+                file.writeBytes(AudioKodec.writeTags(file.readBytes(), read.edit { set(TagField.TITLE, "Edit $edit") }, TagWriteOptions(padding = 0)))
+                val bytes = file.readBytes()
+                val after = AudioKodec.readTags(bytes)
+                assertEquals(listOf("", " [1]"), after.pictures.map { it.description })
+                val nativeBytes = bytes.copyOfRange(after.raw.blocks.first().size.toInt(), bytes.size)
+                val stripped = File(directory, "stripped-pictures.$kind").also { it.writeBytes(nativeBytes) }
+                run(listOf(python, "-c", CHECK_NATIVE_PICTURES, file.path, stripped.path, kind))
+                if (kind == "flac") assertContentEquals(TagStressFixtures.flacAudio(original), TagStressFixtures.flacAudio(nativeBytes))
+                else run(listOf(python, "-c", CHECK_OPUS_AUDIO, File(directory, "original.opus").also { it.writeBytes(original) }.path, stripped.path))
+            }
+        }
+    }
+
+    @Test
+    fun mixedPicturesAndChapterIdentitiesAgreeAfterRepeatedEdits() {
+        val python = python
+        val pictures = listOf(
+            TagPicture(mimeType = "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 1)),
+            TagPicture(mimeType = "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 2)),
+            TagPicture(PictureType.BACK_COVER, "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 1)),
+            TagPicture(PictureType.ARTIST, "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 1)),
+            TagPicture(mimeType = "image/jpeg", description = "caption", bytes = byteArrayOf(-1, -40, 0, 1)),
+        )
+        for (version in 3..4) {
+            val file = plainMp3("pictures-$version")
+            val audio = file.readBytes()
+            val formats = setOf(if (version == 3) TagFormat.ID3V2_3 else TagFormat.ID3V2_4, TagFormat.APEV2)
+            file.writeBytes(AudioKodec.writeTags(audio, TagBundle(emptyMap(), pictures,
+                chapters = listOf(TagChapter("one", 0, pictures = pictures))), TagWriteOptions(formats = formats, padding = 0)))
+            var size = -1
+            repeat(5) { edit ->
+                run(listOf(python, "-c", CHECK_PICTURES, file.path))
+                val bytes = file.readBytes()
+                val read = AudioKodec.readTags(bytes)
+                assertEquals(5, read.pictures.size)
+                val at = read.raw.blocks.first().size.toInt()
+                assertContentEquals(audio, bytes.copyOfRange(at, at + audio.size))
+                file.writeBytes(AudioKodec.writeTags(bytes, read.edit { set(TagField.TITLE, "Edit $edit") }, TagWriteOptions(id3Version = version, padding = 0)))
+                if (edit == 0) size = file.length().toInt() else assertEquals(size.toLong(), file.length())
+            }
+        }
+    }
+
+    @Test
+    fun independentlyWrittenMixedCopiesMergeWithoutLosingApePictureRoles() {
+        val python = python
+        for (version in 3..4) {
+            val file = plainMp3("reference-pictures-$version")
+            val audio = file.readBytes()
+            run(listOf(python, "-c", WRITE_PICTURES, file.path, version.toString()))
+            val read = AudioKodec.readTags(file.readBytes())
+            assertEquals(listOf(PictureType.FRONT_COVER, PictureType.ARTIST, PictureType.BACK_COVER), read.pictures.map { it.type })
+            assertEquals(listOf("cover", "portrait", "back.jpg"), read.pictures.map { it.description })
+            repeat(3) { edit ->
+                val tags = AudioKodec.readTags(file.readBytes())
+                file.writeBytes(AudioKodec.writeTags(file.readBytes(), tags.edit { set(TagField.TITLE, "Edit $edit") }, TagWriteOptions(id3Version = version, padding = 0)))
+                run(listOf(python, "-c", CHECK_REFERENCE_PICTURES, file.path))
+                val bytes = file.readBytes()
+                val at = AudioKodec.readTags(bytes).raw.blocks.first().size.toInt()
+                assertContentEquals(audio, bytes.copyOfRange(at, at + audio.size))
+            }
+        }
     }
 
     @Test
@@ -423,6 +528,87 @@ class MutagenTagOracleTest {
         ?.map { File(it, name) }?.firstOrNull { it.canExecute() }?.absolutePath
 
     private companion object {
+        const val ALL_APE_ROLES = """
+import sys
+from mutagen.apev2 import APEv2
+names = ['Other', 'Png Icon', 'Icon', 'Front', 'Back', 'Leaflet', 'Media', 'Lead Artist', 'Artist', 'Conductor', 'Band', 'Composer', 'Lyricist', 'Recording Location', 'During Recording', 'During Performance', 'Video Capture', 'Fish', 'Illustration', 'Band Logotype', 'Publisher Logotype']
+keys = ['Cover Art (' + name + ')' for name in names]
+tag = APEv2(sys.argv[1])
+if sys.argv[2] == 'write':
+    tag.clear()
+    for i, key in enumerate(keys): tag[key.lower()] = ('role-' + str(i) + '.jpg').encode() + b'\0' + bytes([255, 216, 0, i])
+    tag.save(sys.argv[1])
+else:
+    assert sorted(k for k in tag if k.startswith('Cover Art')) == sorted(keys)
+    for i, key in enumerate(keys): assert bytes(tag[key]) == ('role-' + str(i) + '.jpg').encode() + b'\0' + bytes([255, 216, 0, i])
+"""
+        const val CHECK_NATIVE_PICTURES = """
+import sys, base64
+from mutagen.id3 import ID3
+from mutagen.flac import FLAC, Picture
+from mutagen.oggopus import OggOpus
+id3 = ID3(sys.argv[1]).getall('APIC')
+native = FLAC(sys.argv[2]).pictures if sys.argv[3] == 'flac' else [Picture(base64.b64decode(x)) for x in OggOpus(sys.argv[2])['metadata_block_picture']]
+expected = [(3, '', 'ffd80001'), (3, ' [1]', 'ffd80002')]
+for pictures in [id3, native]:
+    assert sorted((int(p.type), p.desc, p.data.hex()) for p in pictures) == expected
+"""
+        const val CHECK_OPUS_AUDIO = """
+import sys, struct
+def packets(path):
+    data = open(path, 'rb').read(); at = 0; partial = b''; result = []
+    while at < len(data):
+        assert data[at:at+4] == b'OggS'
+        count = data[at+26]; lacing = data[at+27:at+27+count]; payload = at+27+count
+        granule = struct.unpack_from('<Q', data, at+6)[0]
+        for length in lacing:
+            partial += data[payload:payload+length]; payload += length
+            if length < 255: result.append(partial); partial = b''
+        at = payload
+    assert not partial
+    return result, granule
+before, before_granule = packets(sys.argv[1]); after, after_granule = packets(sys.argv[2])
+assert before[0] == after[0] and before[2:] == after[2:] and before_granule == after_granule
+"""
+        const val CHECK_PICTURES = """
+import sys
+from mutagen.id3 import ID3
+from mutagen.apev2 import APEv2
+tag = ID3(sys.argv[1])
+expected = sorted([(3, 'ffd80001'), (3, 'ffd80002'), (4, 'ffd80001'), (8, 'ffd80001'), (3, 'ffd80001')])
+for pictures in [tag.getall('APIC'), tag['CHAP:one'].sub_frames.getall('APIC')]:
+    assert len(pictures) == 5, pictures
+    assert sorted((int(p.type), p.data.hex()) for p in pictures) == expected
+    assert len({p.desc for p in pictures}) == 5
+ape = APEv2(sys.argv[1])
+keys = ['Cover Art (Front)', 'Cover Art (Back)', 'Cover Art (Artist)']
+assert sorted(k for k in ape if k.startswith('Cover Art')) == sorted(keys)
+for key in keys: assert bytes(ape[key]).split(b'\0', 1)[1].hex() == 'ffd80001'
+"""
+        const val WRITE_PICTURES = """
+import sys
+from mutagen.id3 import ID3, APIC
+from mutagen.apev2 import APEv2
+image = bytes.fromhex('ffd80001')
+tag = ID3()
+tag.add(APIC(mime='image/jpeg', type=3, desc='cover', data=image))
+tag.add(APIC(mime='image/jpeg', type=8, desc='portrait', data=image))
+tag.save(sys.argv[1], v2_version=int(sys.argv[2]))
+ape = APEv2()
+for key in ['Front', 'Artist', 'Back']: ape['Cover Art (' + key + ')'] = b'back.jpg\0' + image
+ape.save(sys.argv[1])
+"""
+        const val CHECK_REFERENCE_PICTURES = """
+import sys
+from mutagen.id3 import ID3
+from mutagen.apev2 import APEv2
+tag = ID3(sys.argv[1])
+pictures = tag.getall('APIC')
+assert sorted((int(p.type), p.desc, p.data.hex()) for p in pictures) == [(3, 'cover', 'ffd80001'), (4, 'back.jpg', 'ffd80001'), (8, 'portrait', 'ffd80001')]
+ape = APEv2(sys.argv[1])
+for key in ['Front', 'Artist', 'Back']:
+    assert bytes(ape['Cover Art (' + key + ')']).split(b'\0', 1)[1].hex() == 'ffd80001'
+"""
         const val WRITE_PRIVATE_ID3_LOUDNESS = """
 import sys
 from mutagen.id3 import ID3, TXXX, UFID

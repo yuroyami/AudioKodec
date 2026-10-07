@@ -82,11 +82,42 @@ internal object TagWriter {
             false
         }
         val hadTrailingId3 = externalTrailing.any { isId3v2(it.block.format) }
+        val willWriteId3 = if (containerHasSeparateMetadata) {
+            options.formats?.any { isId3v2(it) }
+                ?: (hadLeadingId3 || hadTrailingId3 || existing.any { isId3v2(it.format) })
+        } else {
+            options.formats == null || options.formats.any { isId3v2(it) }
+        }
+        val artworkTags = if (willWriteId3) {
+            Id3v2Writer.normaliseArtwork(tags, requestedId3Version(options))
+        } else {
+            tags
+        }
+        // Prepare APE before the first sink write. APE has one item per
+        // picture role, so extra images need a richer block in the same file.
+        val wantApe = if (containerHasSeparateMetadata) {
+            options.formats == null && externalTrailing.any {
+                it.block.format == TagFormat.APEV1 || it.block.format == TagFormat.APEV2
+            }
+        } else {
+            options.formats?.contains(TagFormat.APEV2)
+                ?: existing.any { it.format == TagFormat.APEV1 || it.format == TagFormat.APEV2 }
+        }
+        val picturesPreservedElsewhere = if (containerHasSeparateMetadata) {
+            container == AudioContainer.FLAC || container == AudioContainer.OGG ||
+                hadLeadingId3 || hadTrailingId3 || existing.any { isId3v2(it.format) }
+        } else {
+            options.formats == null || options.formats.any { isId3v2(it) }
+        }
+        if (wantApe && !willWriteId3 && artworkTags.chapters.any { it.pictures.isNotEmpty() }) {
+            throw UnsupportedFeatureException("chapter-local artwork in APE without ID3")
+        }
+        val ape = if (wantApe) ApeTag.build(artworkTags, picturesPreservedElsewhere) else null
         if (options.formats == null &&
             containerHasSeparateMetadata &&
             (hadLeadingId3 || hadTrailingId3)
         ) {
-            sink.write(Id3v2Writer.build(tags, options.id3Version, options.padding))
+            sink.write(Id3v2Writer.build(artworkTags, options.id3Version, options.padding))
         }
         // FLAC and Ogg writers use -1 to mean "copy to EOF". Chunked
         // containers have their own finite declared end even when the source
@@ -97,14 +128,14 @@ internal object TagWriter {
             ?: writerSourceEnd
         when (container) {
             AudioContainer.WAV ->
-                writeRiff(reader, tags, sink, options, rf64 = false, sourceEnd = containerEnd)
+                writeRiff(reader, artworkTags, sink, options, rf64 = false, sourceEnd = containerEnd)
             AudioContainer.RF64 ->
-                writeRiff(reader, tags, sink, options, rf64 = true, sourceEnd = containerEnd)
+                writeRiff(reader, artworkTags, sink, options, rf64 = true, sourceEnd = containerEnd)
             AudioContainer.AIFF ->
-                writeAiff(reader, tags, sink, options, sourceEnd = containerEnd)
+                writeAiff(reader, artworkTags, sink, options, sourceEnd = containerEnd)
             AudioContainer.FLAC -> io.github.yuroyami.audiokodec.internal.flac.FlacTagWriter.write(
                 reader,
-                tags,
+                artworkTags,
                 sink,
                 reader.options,
                 includeTags = options.formats == null ||
@@ -112,14 +143,14 @@ internal object TagWriter {
                 audioEnd = containerEnd,
             )
             AudioContainer.OGG -> io.github.yuroyami.audiokodec.internal.ogg.OggTagWriter.write(
-                reader, tags, sink, reader.options, sourceEnd = containerEnd,
+                reader, artworkTags, sink, reader.options, sourceEnd = containerEnd,
             )
             null,
             AudioContainer.MPEG_AUDIO,
             AudioContainer.ADTS,
             AudioContainer.AC3,
             AudioContainer.DTS,
-            -> writeAroundAudio(reader, existing, tags, sink, options)
+            -> writeAroundAudio(reader, existing, artworkTags, sink, options, ape)
             else -> throw UnsupportedFeatureException(
                 "writing tags into ${container.displayName}",
                 "AudioKodec cannot write tags into a ${container.displayName} file yet. " +
@@ -130,11 +161,12 @@ internal object TagWriter {
             writeExternalTrailing(
                 reader,
                 externalTrailing,
-                tags,
+                artworkTags,
                 sink,
                 options,
                 suffixStart = containerEnd,
                 sourceEnd = if (writerSourceEnd >= 0) writerSourceEnd else Long.MAX_VALUE,
+                ape = ape,
             )
         }
     }
@@ -151,6 +183,7 @@ internal object TagWriter {
         tags: TagBundle,
         sink: AudioSink,
         options: TagWriteOptions,
+        ape: ByteArray?,
     ) {
         val size = reader.size
         val spans = tagSpans(reader, existing)
@@ -178,15 +211,13 @@ internal object TagWriter {
         val wantId3 = requested == null ||
             TagFormat.ID3V2_3 in requested ||
             TagFormat.ID3V2_4 in requested
-        val wantApe = requested?.contains(TagFormat.APEV2)
-            ?: existing.any { it.format == TagFormat.APEV1 || it.format == TagFormat.APEV2 }
 
         if (wantId3) {
             sink.write(Id3v2Writer.build(tags, requestedId3Version(options), options.padding))
         }
         copy(reader, sink, audioStart, audioEnd)
 
-        if (wantApe) sink.write(ApeTag.build(tags))
+        if (ape != null) sink.write(ape)
 
         // Formats without a writer are retained byte-for-byte. In particular,
         // an unrelated title edit must not erase a Lyrics3 block.
@@ -323,6 +354,7 @@ internal object TagWriter {
         options: TagWriteOptions,
         suffixStart: Long,
         sourceEnd: Long,
+        ape: ByteArray?,
     ) {
         var cursor = suffixStart
         var wroteApe = false
@@ -337,8 +369,8 @@ internal object TagWriter {
             copy(reader, sink, cursor, span.offset)
             when (span.block.format) {
                 TagFormat.APEV1, TagFormat.APEV2 -> {
-                    if (options.formats == null && !wroteApe) {
-                        sink.write(ApeTag.build(tags))
+                    if (ape != null && !wroteApe) {
+                        sink.write(ape)
                         wroteApe = true
                     }
                 }

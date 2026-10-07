@@ -193,6 +193,19 @@ libopusfile 0.12's public gain helpers check conforming values, overflow and
 rewritten real Opus files. The stricter RFC syntax takes precedence over its
 acceptance of empty/sign-only values, overlong zeros and embedded-null suffixes.
 
+Artwork merging compares the image bytes and properties both representations
+carry, considering rich structures first. It retains distinct image bytes,
+roles and rich captions, supplies absent dimensions from matching FLAC
+pictures, and keeps chapter artwork separate. ID3 descriptions are made unique
+before every block in a mixed write receives the same edited artwork. APE
+uses all standard role keys and cannot overwrite an earlier picture silently.
+Unrepresentable APE-only artwork and distinct ID3 icons are refused before
+output. Common tests cover repeated edits, stable size, caption collisions,
+all APE roles, hash collisions, allocation bounds and untouched sinks.
+Mutagen checks mixed ID3/APE, chapter identities, all APE role keys, and real
+FLAC/Opus files with leading ID3. Audio bytes and Opus packets remain exact.
+Truncation and mutation sweeps cover independent artwork layouts.
+
 ### Other tag features
 
 | Feature | Status |
@@ -201,6 +214,8 @@ acceptance of empty/sign-only values, overlong zeros and embedded-null suffixes.
 | `3/12` split into a number and a total, and joined again on write | ✅ |
 | Comment and lyric whitespace retained in the merged view; unchanged ID3 text keeps every distinct language/description pair | ✅ v2.2/v2.3/v2.4 inputs and v2.3/v2.4 output, with all legal text encodings; Mutagen checks v2.3/v2.4 |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
+| Equivalent artwork copies merged without growth on repeated edits | ✅ distinct image bytes, roles and rich captions retained; chapter scope kept separate |
+| Unique ID3 picture descriptions and all standard APE picture-role keys | ✅ additional APE images need a richer block; unrepresentable APE-only requests refused before output |
 | Media type sniffed when a format stores a picture without naming one | ✅ |
 | Chapters from ID3v2 `CHAP`, with their nested titles and artwork | ✅ |
 | ReplayGain 2 and the Opus R128 convention, kept apart | ✅ |

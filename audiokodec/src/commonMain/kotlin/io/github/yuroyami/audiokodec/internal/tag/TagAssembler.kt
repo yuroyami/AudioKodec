@@ -34,7 +34,13 @@ internal object TagAssembler {
 
         val fields = LinkedHashMap<TagField, FieldValues>()
         val claimedBy = HashMap<TagField, Int>()
-        val pictures = ArrayList<TagPicture>()
+        val pictures = ArrayList<Pair<TagPicture, PictureMetadata>>()
+        fun addPictures(values: List<TagPicture>, metadata: PictureMetadata) {
+            for (picture in values) {
+                options.checkAllocation((pictures.size.toLong() + 1) * 64L, "collecting tag artwork")
+                pictures.add(picture to metadata)
+            }
+        }
         val chapters = ArrayList<TagChapter>(containerChapters)
         val gain = ReplayGainReader()
 
@@ -82,20 +88,27 @@ internal object TagAssembler {
 
             when (block.format) {
                 TagFormat.ID3V2_2, TagFormat.ID3V2_3, TagFormat.ID3V2_4 -> {
-                    pictures.addAll(Id3v2Reader.picturesOf(block))
+                    addPictures(Id3v2Reader.picturesOf(block), PictureMetadata.RICH)
                     chapters.addAll(Id3v2Reader.chaptersOf(block, options))
                 }
-                TagFormat.VORBIS_COMMENT -> pictures.addAll(vorbisPicturesOf(block, options))
-                TagFormat.APEV1, TagFormat.APEV2 -> pictures.addAll(apePicturesOf(block, options))
-                TagFormat.MP4_ILST -> pictures.addAll(mp4PicturesOf(block))
+                TagFormat.VORBIS_COMMENT -> {
+                    addPictures(vorbisPicturesOf(block, options, legacy = false), PictureMetadata.RICH)
+                    addPictures(vorbisPicturesOf(block, options, legacy = true), PictureMetadata.LEGACY_COVER)
+                }
+                TagFormat.APEV1, TagFormat.APEV2 -> addPictures(apePicturesOf(block, options), PictureMetadata.APE)
+                TagFormat.MP4_ILST -> addPictures(mp4PicturesOf(block), PictureMetadata.MP4_COVER)
                 else -> Unit
             }
         }
 
         val replayGain = gain.build()
+        val artwork = TagPictureMerge(options)
+        for ((picture, metadata) in pictures.sortedByDescending { it.second.richness }) {
+            artwork.add(picture, metadata)
+        }
         return TagBundle(
             fields = fields.mapValues { it.value.values },
-            pictures = pictures,
+            pictures = artwork.pictures,
             chapters = chapters.sortedBy { it.startMillis },
             replayGain = if (replayGain.isEmpty) null else replayGain,
             raw = RawTags(blocks),
@@ -155,12 +168,13 @@ internal object TagAssembler {
     private fun vorbisPicturesOf(
         block: RawTagBlock,
         options: DecodeOptions,
+        legacy: Boolean,
     ): List<TagPicture> {
         val pictures = ArrayList<TagPicture>()
         val coverArtMime = block.entries.firstOrNull { it.key.equals("COVERARTMIME", true) }?.text
         for (entry in block.entries) {
             val key = entry.key.uppercase()
-            if (key == "METADATA_BLOCK_PICTURE") {
+            if (!legacy && key == "METADATA_BLOCK_PICTURE") {
                 // A FLAC file carries the structure in a metadata block, so
                 // the reader hands it over as bytes. Ogg has no such block and
                 // wraps the same structure in base64 inside a comment. Both
@@ -173,7 +187,7 @@ internal object TagAssembler {
                     Base64.decodeOrNull(entry.text ?: continue, options) ?: continue
                 }
                 FlacPicture.parse(decoded, options)?.let { pictures.add(it) }
-            } else if (key == "COVERART") {
+            } else if (legacy && key == "COVERART") {
                 // An older convention: base64 of the image itself, with the
                 // media type in a separate comment.
                 val text = entry.text ?: continue
@@ -222,11 +236,7 @@ internal object TagAssembler {
             if (image.isEmpty()) continue
             pictures.add(
                 TagPicture(
-                    type = if (entry.key.contains("Back", true)) {
-                        PictureType.BACK_COVER
-                    } else {
-                        PictureType.FRONT_COVER
-                    },
+                    type = ApePictureKeys.type(entry.key),
                     mimeType = sniffImageType(image),
                     description = description,
                     bytes = image,

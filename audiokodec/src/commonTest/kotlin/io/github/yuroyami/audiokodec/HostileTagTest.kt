@@ -2,6 +2,7 @@ package io.github.yuroyami.audiokodec
 
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
+import io.github.yuroyami.audiokodec.tag.TagPicture
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -33,6 +34,31 @@ class HostileTagTest {
                 ),
             ),
         )
+    }
+
+    @Test
+    fun artworkKeepsTypedFailuresUnderTruncationAndMutation() {
+        val image = TagPicture(mimeType = "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 1))
+        val ape = ApeBytes(listOf("Cover Art (Artist)" to ("portrait.jpg\u0000".encodeToByteArray() + image.bytes))).also { it[36] = 2 }
+        val fixtures = (3..4).map { PictureTagFixtures.id3(listOf(image, image), it) + ByteArray(32) { 0x55 } + ape } + listOf(
+            TagStressFixtures.flac(listOf("COVERART=/9gAAQ==", "COVERARTMIME=image/jpeg")),
+            PictureTagFixtures.flac(),
+            R128TagFixtures.opus(listOf("METADATA_BLOCK_PICTURE=AAAAAwAAAAppbWFnZS9qcGVnAAAABWNvdmVyAAACgAAAAeAAAAAYAAAAAAAAAAT/2AAB")),
+        )
+        for (original in fixtures) {
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("artwork truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    expectOnlyKiteFailures("artwork byte $at set to $byte") {
+                        AudioKodec.readTags(original.copyOf().also { it[at] = byte })
+                    }
+                }
+            }
+        }
     }
 
     @Test

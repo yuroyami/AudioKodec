@@ -548,6 +548,33 @@ The bytes are the image file exactly as it was stored. AudioKodec does not
 decode it, and does not need to: pass them to ImageKodec, or to whatever the
 platform uses.
 
+`tags.pictures` merges equivalent copies across tag blocks. Images with
+different bytes, roles or captions in a format that carries captions remain
+distinct. Rich picture structures take priority over legacy `COVERART`, MP4
+`covr` and APE copies. Matching FLAC artwork can supply dimensions absent
+from ID3. The raw blocks retain every stored entry. Chapter pictures stay
+with their chapter and use a separate identity scope.
+
+ID3 requires unique picture descriptions. Writing collapses exact duplicates
+and appends deterministic ` [1]`, ` [2]` suffixes when distinct pictures share
+a description, reserving existing descriptions first. For v2.3, a suffixed caption is shortened to fit its 64-character limit
+without splitting a UTF-16 pair. Every block in a mixed write receives the
+same resulting captions. Read the resulting bundle to obtain those
+descriptions; subsequent edits keep them stable.
+ID3 permits only one picture of each file-icon type. Two distinct pictures
+of one such type raise `UnsupportedFeatureException`.
+
+APE uses a separate standard `Cover Art` key for each picture role. Its
+binary prefix is a filename, exposed as `TagPicture.description`, rather
+than an ID3 caption; that prefix does not distinguish equivalent copies in
+the merged artwork set. A mixed write retains additional pictures of one
+role in ID3 or native FLAC/Ogg artwork and mirrors the first in APE. An
+APE-only write requesting multiple distinct pictures under one role key
+raises `UnsupportedFeatureException` before writing to the sink. Include
+ID3v2 when every picture must be retained. Null characters in ID3 picture
+metadata or an APE filename cannot be represented and are refused. APE-only
+writes also refuse chapter-local artwork, which needs ID3.
+
 ### Loudness
 
 Two conventions exist and they are five decibels apart. ReplayGain 2 measures

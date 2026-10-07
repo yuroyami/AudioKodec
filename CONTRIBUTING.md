@@ -71,7 +71,7 @@ for Core Audio Format files on macOS. Each suite skips itself when its tool is
 missing, so a green run on a machine without them is proving less than it
 looks. Install all three before trusting one.
 
-The ID3 identity suite also runs Mutagen through Python. It reports an actual
+The ID3 identity and mixed-artwork suites also run Mutagen through Python. It reports an actual
 test skip when the module is unavailable. Use an isolated interpreter:
 
 ```sh
