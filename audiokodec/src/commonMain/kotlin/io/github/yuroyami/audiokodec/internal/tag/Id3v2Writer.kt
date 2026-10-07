@@ -278,7 +278,9 @@ internal object Id3v2Writer {
         for (block in tags.raw.blocks) {
             if (!isId3(block.format)) continue
             for (entry in block.entries) {
-                if ((entry.key == id || entry.key == version22Id) && entry.text != null && entry.text in requested) {
+                if ((entry.key == id || entry.key == version22Id) &&
+                    !TagMapping.isReservedComment(entry) && entry.text != null && entry.text in requested
+                ) {
                     originals.add(entry)
                     originalText.add(entry.text)
                 }
@@ -479,6 +481,7 @@ internal object Id3v2Writer {
                     entry.key.length == 4 -> entry.key
                     entry.key == "UFI" -> "UFID"
                     entry.key == "TXX" -> "TXXX"
+                    entry.key == "COM" -> "COMM"
                     else -> throw UnsupportedFeatureException(
                         "preserving unknown ID3v2.2 frame '${entry.key}'",
                         "this tag contains a three-character frame with no safe ID3v2.3/2.4 equivalent",
@@ -566,6 +569,10 @@ internal object Id3v2Writer {
         entry: io.github.yuroyami.audiokodec.tag.RawTagEntry,
         major: Int,
     ): ByteArray? {
+        if (key == "COMM" && entry.text != null) {
+            val language = entry.language?.takeIf { it.length == 3 && TagText.isLatin1(it) } ?: UNDETERMINED
+            return commentFrame(key, entry.text, language, entry.description ?: "", major)
+        }
         if (key == "UFID") {
             val owner = TagText.encodeLatin1(entry.description ?: "")
             val value = entry.binary ?: entry.text?.let(TagText::encodeLatin1) ?: return null

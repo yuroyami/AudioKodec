@@ -431,7 +431,15 @@ and description. Original frames with identical text retain their distinct
 language and description pairs. Changing whitespace is an explicit text change.
 Replacement text with no exact original match receives the language `xxx` and
 an empty description, or a numbered description when that identity is occupied.
-Removing the field removes its frames.
+Removing the field removes its modelled frames.
+
+ID3 comments whose description starts with `iTun`, ignoring case, carry
+reserved iTunes data. They remain in `tags.raw` and are excluded from
+`TagField.COMMENT`. Adding, replacing or removing a user comment preserves
+their text, language and description, including normalisation (`iTunNORM`)
+and gapless playback (`iTunSMPB`) values. Other described comments remain
+editable user comments. A reserved description on lyrics or a custom text
+frame does not change that frame's meaning.
 
 `TagWriteOptions` controls the details:
 

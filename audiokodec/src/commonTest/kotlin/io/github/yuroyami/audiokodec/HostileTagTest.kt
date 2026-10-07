@@ -37,6 +37,27 @@ class HostileTagTest {
     }
 
     @Test
+    fun reservedItunesCommentsKeepTypedFailuresUnderTruncationAndMutation() {
+        for (version in 2..4) {
+            val original = ItunesCommentFixtures.tag(version, 1) + ByteArray(32) { 0x55 }
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("iTunes comments truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    expectOnlyKiteFailures("iTunes comment byte $at set to $byte") {
+                        val mutated = original.copyOf().also { it[at] = byte }
+                        val tags = AudioKodec.readTags(mutated)
+                        AudioKodec.writeTags(mutated, tags.edit { remove(TagField.COMMENT) })
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun artworkKeepsTypedFailuresUnderTruncationAndMutation() {
         val image = TagPicture(mimeType = "image/jpeg", bytes = byteArrayOf(-1, -40, 0, 1))
         val ape = ApeBytes(listOf("Cover Art (Artist)" to ("portrait.jpg\u0000".encodeToByteArray() + image.bytes))).also { it[36] = 2 }

@@ -43,6 +43,41 @@ class MutagenTagOracleTest {
     }
 
     @Test
+    fun itunesPlaybackCommentsSurviveUserCommentEditsInBothDirections() {
+        val python = python
+        val privateText = "000000F0 000000F0"
+        for (inputVersion in 3..4) {
+            val file = plainMp3("itunes-comments-$inputVersion")
+            val audio = file.readBytes()
+            run(listOf(python, "-c", ITUNES_COMMENTS, file.path, "write", inputVersion.toString()))
+            val original = file.readBytes()
+            val before = AudioKodec.readTags(original)
+            assertEquals(setOf("old note", "named note"), before.all(TagField.COMMENT).toSet())
+            for (outputVersion in 3..4) {
+                val edits = listOf(
+                    "preserved" to before.edit { set(TagField.TITLE, "Changed") },
+                    "replaced" to before.edit { set(TagField.COMMENT, privateText) },
+                    "removed" to before.edit { remove(TagField.COMMENT) },
+                )
+                for ((mode, edited) in edits) {
+                    val written = AudioKodec.writeTags(original, edited, TagWriteOptions(id3Version = outputVersion, padding = 0))
+                    file.writeBytes(written)
+                    run(listOf(python, "-c", ITUNES_COMMENTS, file.path, mode))
+                    assertEquals(edited.all(TagField.COMMENT), AudioKodec.readTags(written).all(TagField.COMMENT))
+                    assertContentEquals(audio, written.takeLast(audio.size).toByteArray())
+                    // A subsequent unrelated rewrite must keep both scopes stable.
+                    val again = AudioKodec.writeTags(written, AudioKodec.readTags(written).edit {
+                        set(TagField.TITLE, "Again")
+                    }, TagWriteOptions(id3Version = outputVersion, padding = 0))
+                    file.writeBytes(again)
+                    run(listOf(python, "-c", ITUNES_COMMENTS, file.path, mode))
+                    assertContentEquals(audio, again.takeLast(audio.size).toByteArray())
+                }
+            }
+        }
+    }
+
+    @Test
     fun allStandardApePictureKeysAgreeWithReferenceItemsInBothDirections() {
         val python = python
         val file = plainMp3("all-ape-picture-roles")
@@ -528,6 +563,25 @@ class MutagenTagOracleTest {
         ?.map { File(it, name) }?.firstOrNull { it.canExecute() }?.absolutePath
 
     private companion object {
+        const val ITUNES_COMMENTS = """
+import sys
+from mutagen.id3 import ID3, COMM
+reserved = [('eng', 'iTunNORM', '000000F0 000000F0'), ('eng', 'iTunSMPB', ' 00000000 00000840 000001F4 0000000000001000'), ('fra', 'itunnorm', 'private note'), ('deu', 'ITUNfuture', '  future 日本語\n')]
+ordinary = [('eng', '', 'old note'), ('fra', 'review', 'named note')]
+mode = sys.argv[2]
+if mode == 'write':
+    tag = ID3()
+    for lang, desc, text in reserved + ordinary:
+        tag.add(COMM(encoding=1, lang=lang, desc=desc, text=[text]))
+    if sys.argv[3] == '3': tag.update_to_v23()
+    tag.save(sys.argv[1], v2_version=int(sys.argv[3]))
+else:
+    frames = ID3(sys.argv[1]).getall('COMM')
+    actual = sorted((f.lang, f.desc, str(f.text[0])) for f in frames)
+    user = ordinary if mode == 'preserved' else [('xxx', '', '000000F0 000000F0')] if mode == 'replaced' else []
+    assert actual == sorted(reserved + user), (mode, actual)
+    assert len(frames) == len(reserved) + len(user)
+"""
         const val ALL_APE_ROLES = """
 import sys
 from mutagen.apev2 import APEv2

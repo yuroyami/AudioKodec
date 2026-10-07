@@ -270,6 +270,9 @@ internal object TagMapping {
      */
     fun fieldFor(format: TagFormat, entry: RawTagEntry): TagField? {
         val key = entry.key
+        if ((format == TagFormat.ID3V2_2 || format == TagFormat.ID3V2_3 || format == TagFormat.ID3V2_4) &&
+            isReservedComment(entry)
+        ) return null
         return when (format) {
             TagFormat.ID3V2_2 -> {
                 when (key) {
@@ -294,6 +297,11 @@ internal object TagMapping {
             else -> null
         }
     }
+
+    /** iTunes stores playback data in comments under this reserved family. */
+    fun isReservedComment(entry: RawTagEntry): Boolean =
+        (entry.key == "COM" || entry.key == "COMM") &&
+            entry.description?.startsWith("iTun", ignoreCase = true) == true
 
     /** MP4 metadata atom names. */
     private val MP4_ILST: Map<String, TagField> = mapOf(

@@ -213,6 +213,7 @@ Truncation and mutation sweeps cover independent artwork layouts.
 | ID3 genre reference runs, refinements, `((` escapes, bare codes, `RX` and `CR` | ✅ separate merged values; unknown syntax stays literal |
 | `3/12` split into a number and a total, and joined again on write | ✅ |
 | Comment and lyric whitespace retained in the merged view; unchanged ID3 text keeps every distinct language/description pair | ✅ v2.2/v2.3/v2.4 inputs and v2.3/v2.4 output, with all legal text encodings; Mutagen checks v2.3/v2.4 |
+| Reserved iTunes `COM`/`COMM` frames kept separate from editable user comments | ✅ case-insensitive `iTun` description family retained across comment edits and version conversion; common encoding/hostile cases and Mutagen on real MP3 files |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
 | Equivalent artwork copies merged without growth on repeated edits | ✅ distinct image bytes, roles and rich captions retained; chapter scope kept separate |
 | Unique ID3 picture descriptions and all standard APE picture-role keys | ✅ additional APE images need a richer block; unrepresentable APE-only requests refused before output |
