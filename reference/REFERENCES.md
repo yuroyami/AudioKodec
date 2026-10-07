@@ -43,6 +43,7 @@ can hold checkouts without them ever reaching the repository.
 | Vorbis | Xiph.Org Vorbis I specification |
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |
 | Format magic numbers | The published headers of each format the sniffer names |
+| File output | [kotlinx-io atomic move](https://kotlinlang.org/api/kotlinx-io/kotlinx-io-core/kotlinx.io.files/-file-system/atomic-move.html); [Node.js WASI directory options](https://nodejs.org/api/wasi.html#new-wasioptions) for filesystem tests |
 
 ## Test oracles
 

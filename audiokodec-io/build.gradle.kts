@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -71,4 +72,13 @@ kotlin {
             implementation(kotlin("test"))
         }
     }
+}
+
+tasks.withType<KotlinJsTest>().matching { it.name == "wasmWasiNodeTest" }.configureEach {
+    val directory = layout.buildDirectory.dir("wasi-test-files")
+    val preloader = layout.projectDirectory.file("test-tools/wasi-filesystem.cjs")
+    inputs.file(preloader)
+    nodeJsArgs.addAll(listOf("--require", preloader.asFile.absolutePath))
+    environment("AUDIOKODEC_WASI_TEST_DIRECTORY", directory.get().asFile.absolutePath)
+    doFirst { directory.get().asFile.mkdirs() }
 }

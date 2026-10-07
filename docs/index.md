@@ -482,10 +482,23 @@ Kotlin target. `audiokodec-io` adds the bridge:
 ```kotlin
 val info = Path("song.wav").readAudioSource().use { AudioKodec.probe(it) }
 
-Path("out.wav").asAudioSink().use { sink ->
+Path("out.wav").writeAudioAtomically { sink ->
     AudioKodec.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
 }
 ```
+
+`writeAudioAtomically` reserves a staging directory beside the destination,
+writes the temporary file, closes it and then uses kotlinx-io's atomic move to
+replace the destination. Its parent directory must exist. A failure while
+writing, closing or replacing preserves the old file, and temporary output is
+removed. Cleanup errors are attached to the original failure. A cleanup error
+after a successful replacement is reported with the new file already in place.
+Atomicity follows the platform filesystem; WASI cannot verify that guarantee.
+
+For direct streaming output, `Path.asAudioSink()` opens the file on its first
+valid, non-empty write. Creating or closing an unused sink leaves it untouched.
+Once writing begins, a later failure can leave partial output, so use the
+atomic helper when replacing a file that must survive an unsuccessful encode.
 
 Reading loads the file into memory, because decoding needs random access and
 kotlinx-io offers sequential streams only. A sink cannot seek backwards

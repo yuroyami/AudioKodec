@@ -86,12 +86,19 @@ public fun Path.readAudioSource(maxBytes: Long = 512L * 1024 * 1024): AudioSourc
 public fun RawSink.asAudioSink(): AudioSink = RawSinkAudioSink(this)
 
 /**
- * Writes an encoder's output to the file at [this], replacing anything
- * already there.
+ * Writes an encoder's output to the file at [this].
+ *
+ * The first valid, non-empty write opens the file and replaces its contents.
+ * Creating or closing an unused sink leaves the file untouched. Failures
+ * after writing begins may leave partial output; use [writeAudioAtomically]
+ * when an existing file must survive a failed encode.
  */
-public fun Path.asAudioSink(): AudioSink = SystemFileSystem.sink(this).asAudioSink()
+public fun Path.asAudioSink(): AudioSink = RawSinkAudioSink(null) { SystemFileSystem.sink(this) }
 
-private class RawSinkAudioSink(private val sink: RawSink) : AudioSink {
+private class RawSinkAudioSink(
+    private var sink: RawSink?,
+    private val openSink: (() -> RawSink)? = null,
+) : AudioSink {
 
     private val buffer = Buffer()
     private var written = 0L
@@ -109,9 +116,11 @@ private class RawSinkAudioSink(private val sink: RawSink) : AudioSink {
         check(count.toLong() <= Long.MAX_VALUE - written) {
             "the sink position would overflow 64 bits"
         }
+        if (count == 0) return
+        val destination = sink ?: checkNotNull(openSink).invoke().also { sink = it }
         buffer.write(bytes, offset, offset + count)
         written += count
-        if (buffer.size >= 64 * 1024) sink.write(buffer, buffer.size)
+        if (buffer.size >= 64 * 1024) destination.write(buffer, buffer.size)
     }
 
     override fun patchAt(position: Long, bytes: ByteArray, offset: Int, count: Int) {
@@ -123,11 +132,12 @@ private class RawSinkAudioSink(private val sink: RawSink) : AudioSink {
     override fun close() {
         if (closed) return
         closed = true
+        val destination = sink ?: return
         try {
-            if (buffer.size > 0) sink.write(buffer, buffer.size)
-            sink.flush()
+            if (buffer.size > 0) destination.write(buffer, buffer.size)
+            destination.flush()
         } finally {
-            sink.close()
+            destination.close()
         }
     }
 }

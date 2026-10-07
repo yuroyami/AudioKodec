@@ -1,3 +1,7 @@
+public final class io/github/yuroyami/audiokodec/io/AtomicAudioFileKt {
+	public static final fun writeAudioAtomically (Lkotlinx/io/files/Path;Lkotlin/jvm/functions/Function1;)V
+}
+
 public final class io/github/yuroyami/audiokodec/io/AudioKodecIoKt {
 	public static final fun asAudioSink (Lkotlinx/io/RawSink;)Lio/github/yuroyami/audiokodec/AudioSink;
 	public static final fun asAudioSink (Lkotlinx/io/files/Path;)Lio/github/yuroyami/audiokodec/AudioSink;

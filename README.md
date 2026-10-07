@@ -381,7 +381,7 @@ adds the bridge to kotlinx-io:
 
 ```kotlin
 val info = Path("song.wav").readAudioSource().use { AudioKodec.probe(it) }
-Path("out.wav").asAudioSink().use { sink ->
+Path("out.wav").writeAudioAtomically { sink ->
     AudioKodec.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
 }
 ```
@@ -389,6 +389,14 @@ Path("out.wav").asAudioSink().use { sink ->
 Reading loads the file into memory, because decoding needs random access and
 kotlinx-io offers sequential streams only. For large files, implement
 `AudioSource` over a seekable handle of your own: it has three members.
+
+`writeAudioAtomically` writes to a temporary file beside the destination and
+replaces it after the write and close succeed, using kotlinx-io's atomic move.
+The parent directory must exist and an encoder needs a known frame count.
+Atomicity depends on the filesystem; WASI cannot verify that guarantee.
+`Path.asAudioSink()` opens on its first valid, non-empty write. An unused sink
+preserves the file, while a failure after writing begins can leave partial
+output.
 
 ## License
 

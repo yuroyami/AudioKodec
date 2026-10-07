@@ -203,6 +203,8 @@ FLAC, CAF, Ogg and MPEG audio. Ogg decodes the Vorbis and FLAC mappings and
 refuses unsupported mappings by codec name. A unit test fixes that set in code
 so it cannot drift accidentally.
 
+**File output through kotlinx-io.** `Path.asAudioSink` opens on the first valid non-empty write, so unused sinks and encodes rejected before output preserve an existing file. `Path.writeAudioAtomically` writes a temporary file, closes it and replaces the destination through the platform atomic move. Shared filesystem tests cover successful replacement, rejected layouts, unknown lengths, partial-write failures and cleanup. The parent must exist; atomicity follows the filesystem, with the WASI guarantee unverifiable.
+
 ## Known differences
 
 **IMA ADPCM against ffmpeg.** The IMA specification builds the difference from
