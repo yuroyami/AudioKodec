@@ -22,6 +22,122 @@ import kotlin.test.assertTrue
 class Mp4Test {
 
     @Test
+    fun fragmentDefaultsMustResolveToExactlyOneTrack() {
+        val missing = buildFragmented(5, 1, 5) { dataOffset ->
+            box("traf", fullBox("tfhd", 0, 0x020000, u32(3)), fullBox("trun", 0, 1, u32(0), u32(dataOffset)))
+        }
+        val duplicate = buildFragmented(5, 1, 5) { dataOffset ->
+            box("traf", fullBox("tfhd", 0, 0x020000, u32(2)), fullBox("trun", 0, 1, u32(0), u32(dataOffset)))
+        }
+        val trex = (0..duplicate.size - 4).filter { at -> (0..3).all { k -> duplicate[at + k] == "trex"[k].code.toByte() } }
+        assertEquals(2, trex.size)
+        u32(1).copyInto(duplicate, trex.last() + 8)
+        for (file in listOf(missing, duplicate)) {
+            for (tolerant in listOf(false, true)) {
+                val failure = assertFailsWith<CorruptStreamException> { AudioKodec.probe(file, DecodeOptions(tolerant = tolerant)) }
+                assertTrue("trex" in failure.message.orEmpty())
+                assertTrue(failure.offset >= 0)
+            }
+        }
+    }
+
+    @Test
+    fun maximumCountRunsOnOtherTracksAreSkippedWithoutWalkingSamples() {
+        for (runs in intArrayOf(1, 16, 64)) {
+            val file = buildFragmented(5, 1, 5, implicitAudioBase = true) { dataOffset ->
+                box("traf", fullBox("tfhd", 0, 0x020000, u32(2)),
+                    *Array(runs) { i -> fullBox("trun", 0, if (i == 0) 1 else 0, u32(Int.MAX_VALUE), if (i == 0) u32(dataOffset) else ByteArray(0)) })
+            }
+            for (tolerant in listOf(false, true)) {
+                val options = DecodeOptions(tolerant = tolerant)
+                assertEquals(5L, AudioKodec.probe(file, options).durationFrames)
+                AudioKodec.open(file, options).close()
+                AudioKodec.readTags(file, options)
+                assertEquals(5, AudioKodec.decode(file, options).frames)
+            }
+            assertSamples(file, 1, 0, 5, "$runs maximum-count runs on another track")
+        }
+        // A large product fits on its own, but adding a second run overflows.
+        val overflow = buildFragmented(5, 1, 5, otherTrexSize = -1) { dataOffset ->
+            box("traf", fullBox("tfhd", 0, 0x020000, u32(2)),
+                fullBox("trun", 0, 1, u32(Int.MAX_VALUE), u32(dataOffset)), fullBox("trun", 0, 0, u32(Int.MAX_VALUE)))
+        }
+        for (tolerant in listOf(false, true)) {
+            val failure = assertFailsWith<CorruptStreamException> { AudioKodec.probe(overflow, DecodeOptions(tolerant = tolerant)) }
+            assertTrue("trun" in failure.message.orEmpty())
+        }
+        // A declared per-sample field must still be backed by stored entries.
+        val missing = buildFragmented(5, 1, 5) { dataOffset ->
+            box("traf", fullBox("tfhd", 0, 0x020000, u32(2)), fullBox("trun", 0, 0x101, u32(Int.MAX_VALUE), u32(dataOffset)))
+        }
+        assertFailsWith<CorruptStreamException> { AudioKodec.probe(missing) }
+    }
+
+    @Test
+    fun skippingAFragmentUsesItsOwnTrackDefaultsAndOverrides() {
+        for (override in listOf(null, 10)) {
+            for (fields in intArrayOf(0, 0x100, 0x400, 0x800, 0xD00)) {
+                val sampleSize = override ?: 6
+                val file = buildFragmented(5, 1, 5, otherTrexSize = 6, otherPayload = ByteArray(3 * sampleSize), implicitAudioBase = true) { dataOffset ->
+                    fun run(count: Int, first: Boolean): ByteArray {
+                        val entries = ByteArray(count * sampleFieldCount(fields) * 4)
+                        return fullBox("trun", 0, fields or if (first) 1 else 0, u32(count), if (first) u32(dataOffset) else ByteArray(0), entries)
+                    }
+                    box("traf", fullBox("tfhd", 0, 0x020000 or if (override != null) 0x10 else 0, u32(2), if (override != null) u32(override) else ByteArray(0)), run(2, true), run(1, false))
+                }
+                for (tolerant in listOf(false, true)) {
+                    val options = DecodeOptions(tolerant = tolerant)
+                    assertEquals(5L, AudioKodec.probe(file, options).durationFrames)
+                    assertEquals(5, AudioKodec.decode(file, options).frames)
+                    AudioKodec.readTags(file, options)
+                }
+                assertSamples(file, 1, 0, 5, "other track size $sampleSize, fields $fields")
+            }
+        }
+    }
+
+    @Test
+    fun skippingVariableSizeFragmentRunsKeepsTheFollowingAudioInPlace() {
+        val file = buildFragmented(5, 1, 5, otherTrexSize = 6, otherPayload = ByteArray(11), implicitAudioBase = true) { dataOffset ->
+            box("traf", fullBox("tfhd", 0, 0x020000, u32(2)), fullBox("trun", 0, 0xB01, u32(3), u32(dataOffset),
+                u32(1), u32(3), u32(0), u32(2), u32(7), u32(0), u32(3), u32(1), u32(0)))
+        }
+        assertEquals(5L, AudioKodec.probe(file).durationFrames)
+        assertSamples(file, 1, 0, 5, "variable-sized other track")
+    }
+
+    @Test
+    fun fragmentOffsetArithmeticCannotWrap() {
+        for ((base, relative, count) in listOf(
+            Triple(-1L, null, 0), Triple(Long.MIN_VALUE, null, 0),
+            Triple(Long.MAX_VALUE - 1, 2, 0), Triple(0L, -1, 0),
+            Triple(Long.MAX_VALUE - 1, null, 2),
+        )) {
+            val file = buildFragmented(5, 1, 5, otherTrexSize = 1) {
+                box("traf", fullBox("tfhd", 0, 1, u32(2), u64(base)),
+                    fullBox("trun", 0, if (relative != null) 1 else 0, u32(count), if (relative != null) u32(relative) else ByteArray(0)))
+            }
+            for (tolerant in listOf(false, true)) {
+                val options = DecodeOptions(tolerant = tolerant)
+                for (operation in listOf<() -> Unit>(
+                    { AudioKodec.probe(file, options) },
+                    { AudioKodec.open(file, options).close() },
+                    { AudioKodec.decode(file, options) },
+                )) {
+                    val failure = assertFailsWith<CorruptStreamException>("base $base, relative $relative, count $count", operation)
+                    assertTrue("tfhd" in failure.message.orEmpty() || "trun" in failure.message.orEmpty())
+                    assertTrue(failure.offset >= 0)
+                }
+                AudioKodec.readTags(file, options)
+            }
+        }
+        val valid = buildFragmented(5, 1, 5, otherTrexSize = 1) {
+            box("traf", fullBox("tfhd", 0, 1, u32(2), u64(Long.MAX_VALUE - 2)), fullBox("trun", 0, 1, u32(2), u32(-1)))
+        }
+        assertSamples(valid, 1, 0, 5, "representable high offset on another track")
+    }
+
+    @Test
     fun sampleEntryChannelBoundsAreCheckedBeforeConstructingLayouts() {
         for (format in listOf("sowt", "mp4a")) {
             for (channels in intArrayOf(0, 65, 4_096, 4_097, 65_535)) {
@@ -449,7 +565,15 @@ class Mp4Test {
     }
 
     /** A fragmented file: an empty `moov` with defaults in `trex`, then one `moof` and `mdat` per fragment. */
-    private fun buildFragmented(frames: Int, channels: Int, fragmentFrames: Int): ByteArray {
+    private fun buildFragmented(
+        frames: Int,
+        channels: Int,
+        fragmentFrames: Int,
+        otherTrexSize: Int = 0,
+        otherPayload: ByteArray = ByteArray(0),
+        implicitAudioBase: Boolean = false,
+        otherTraf: ((Int) -> ByteArray)? = null,
+    ): ByteArray {
         val frameBytes = channels * 2
         val entry = box("sowt", ByteArray(6), u16(1), u16(0), u16(0), u32(0), u16(channels), u16(16), u16(0), u16(0), u32(RATE shl 16))
         val stbl = box(
@@ -473,7 +597,11 @@ class Mp4Test {
                     box("minf", fullBox("smhd", 0, 0, u32(0)), stbl),
                 ),
             ),
-            box("mvex", fullBox("trex", 0, 0, u32(1), u32(1), u32(1), u32(frameBytes), u32(0))),
+            if (otherTraf != null) box("trak", fullBox("tkhd", 0, 7, u32(0), u32(0), u32(2), u32(0), u32(0), ByteArray(60)),
+                box("mdia", fullBox("mdhd", 0, 0, u32(0), u32(0), u32(RATE), u32(0), u16(0), u16(0)),
+                    fullBox("hdlr", 0, 0, u32(0), ascii("meta"), ByteArray(12), byteArrayOf(0)))) else ByteArray(0),
+            box("mvex", fullBox("trex", 0, 0, u32(1), u32(1), u32(1), u32(frameBytes), u32(0)),
+                if (otherTraf != null) fullBox("trex", 0, 0, u32(2), u32(1), u32(1), u32(otherTrexSize), u32(0)) else ByteArray(0)),
         )
         var out = box("ftyp", ascii("iso6"), u32(0), ascii("iso6")) + moov
         var at = 0
@@ -483,10 +611,12 @@ class Mp4Test {
             fun moof(dataOffset: Int) = box(
                 "moof",
                 fullBox("mfhd", 0, 0, u32(sequence)),
-                box("traf", fullBox("tfhd", 0, 0x020000, u32(1)), fullBox("trun", 0, 0x1, u32(count), u32(dataOffset))),
+                otherTraf?.invoke(dataOffset) ?: ByteArray(0),
+                box("traf", fullBox("tfhd", 0, if (implicitAudioBase) 0 else 0x020000, u32(1)),
+                    fullBox("trun", 0, if (implicitAudioBase) 0 else 1, u32(count), if (implicitAudioBase) ByteArray(0) else u32(dataOffset + otherPayload.size))),
             )
             val moofSize = moof(0).size
-            out += moof(moofSize + 8) + box("mdat", pcm(at, count, channels))
+            out += moof(moofSize + 8) + box("mdat", otherPayload, pcm(at, count, channels))
             at += count
             sequence++
         }
@@ -505,6 +635,8 @@ class Mp4Test {
     private fun u16(value: Int): ByteArray = byteArrayOf((value shr 8).toByte(), value.toByte())
     private fun u32(value: Int): ByteArray = byteArrayOf((value shr 24).toByte(), (value shr 16).toByte(), (value shr 8).toByte(), value.toByte())
     private fun u64(value: Long): ByteArray = u32((value ushr 32).toInt()) + u32(value.toInt())
+
+    private fun sampleFieldCount(flags: Int): Int = listOf(0x100, 0x200, 0x400, 0x800).count { flags and it != 0 }
 
     private companion object {
         const val RATE = 8_000

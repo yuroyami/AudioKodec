@@ -38,6 +38,7 @@ class Mp4OracleTest {
         Case("aac_moov_last.m4a", AudioCodec.AAC, listOf("-c:a", "aac", "-b:a", "128k")),
         Case("aac_moov_first.m4a", AudioCodec.AAC, listOf("-c:a", "aac", "-movflags", "+faststart")),
         Case("aac_fragmented.mp4", AudioCodec.AAC, listOf("-c:a", "aac", "-movflags", "frag_keyframe+empty_moov", "-frag_duration", "400000")),
+        Case("aac_fragmented_with_video.mp4", AudioCodec.AAC, listOf("-f", "lavfi", "-i", "color=c=blue:s=32x32:r=10:d=3", "-map", "1:v", "-map", "0:a", "-c:v", "mpeg4", "-c:a", "aac", "-movflags", "frag_keyframe+empty_moov+omit_tfhd_offset", "-frag_duration", "400000")),
         Case("aac_51.m4a", AudioCodec.AAC, listOf("-c:a", "aac", "-b:a", "256k"), channels = 6),
         Case("aac.3gp", AudioCodec.AAC, listOf("-c:a", "aac", "-ar", "22050", "-f", "3gp")),
         Case("alac.m4a", AudioCodec.ALAC, listOf("-c:a", "alac")),

@@ -35,6 +35,7 @@ can hold checkouts without them ever reaching the repository.
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
 | Microsoft ADPCM | [Microsoft Multimedia Data Standards Update, 15 April 1994](https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/RIFFNEW.pdf), pages 22 to 26 |
 | QuickTime IMA (`ima4`) | Apple QuickTime File Format documentation |
+| MP4 and QuickTime containers | Apple QuickTime File Format documentation; [ISO/IEC 14496-12:2005](https://studylib.net/doc/26307294/mp4), clauses 8.31, 8.35 and 8.36 for per-track fragment defaults and data offsets |
 | FLAC | RFC 9639 |
 | Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex |
 | Vorbis | Xiph.Org Vorbis I specification |

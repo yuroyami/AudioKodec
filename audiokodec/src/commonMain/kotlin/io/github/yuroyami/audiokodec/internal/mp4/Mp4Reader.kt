@@ -23,8 +23,8 @@ import io.github.yuroyami.audiokodec.tag.TagChapter
  * The edit list of a track says which part of its media is played. For audio
  * that is how an encoder's priming samples are left out, so it is applied.
  *
- * Written from Apple's QuickTime File Format specification, which ISO base
- * media files follow closely enough to be read the same way.
+ * Written from Apple's QuickTime File Format specification and the fragment
+ * definitions in ISO/IEC 14496-12.
  */
 internal object Mp4Reader {
 
@@ -127,8 +127,9 @@ internal object Mp4Reader {
         val samples = SampleList(options, coalesce = isFramewisePcm(entry))
         expandTables(body, chosen.stbl, samples, base, if (isFramewisePcm(entry)) Mp4Codecs.pcmFrameBytes(entry) else null, options)
         if (fragmented) {
-            val defaults = trex.firstOrNull { it.trackId == chosen.id }
-                ?: throw CorruptStreamException("the fragmented audio track has no 'trex' defaults", moov.offset)
+            val defaults = trex.associateBy { it.trackId }
+            if (defaults.size != trex.size) throw CorruptStreamException("the 'trex' boxes repeat a track's defaults", moov.offset)
+            if (chosen.id !in defaults) throw CorruptStreamException("the fragmented audio track has no 'trex' defaults", moov.offset)
             for (moof in top.filter { it.type == "moof" }) {
                 readFragment(reader, moof, chosen.id, defaults, samples, options)
             }
@@ -626,7 +627,7 @@ internal object Mp4Reader {
     }
 
     /** Adds the packets one `moof` box describes for track [trackId]. */
-    private fun readFragment(reader: SourceReader, moof: Mp4Box, trackId: Int, defaults: Trex, into: SampleList, options: DecodeOptions) {
+    private fun readFragment(reader: SourceReader, moof: Mp4Box, trackId: Int, defaults: Map<Int, Trex>, into: SampleList, options: DecodeOptions) {
         val body = readBody(reader, moof, options)
         val base = moof.bodyOffset
         var previousEnd = moof.offset
@@ -639,10 +640,15 @@ internal object Mp4Reader {
             header.skip(1)
             val flags = header.u24()
             val id = header.i32()
+            val trackDefaults = defaults[id]
+                ?: throw CorruptStreamException("the 'tfhd' box names track $id without 'trex' defaults", base + tfhd.offset)
             val explicitBase = if (flags and 0x1 != 0) header.u64() else null
+            if (explicitBase != null && explicitBase < 0) {
+                throw CorruptStreamException("the 'tfhd' box's base data offset exceeds the supported file range", base + tfhd.offset)
+            }
             if (flags and 0x2 != 0) header.skip(4)
-            val defaultDuration = if (flags and 0x8 != 0) header.u32() else defaults.duration
-            val defaultSize = if (flags and 0x10 != 0) header.u32() else defaults.size
+            val defaultDuration = if (flags and 0x8 != 0) header.u32() else trackDefaults.duration
+            val defaultSize = if (flags and 0x10 != 0) header.u32() else trackDefaults.size
             val dataBase = when {
                 explicitBase != null -> explicitBase
                 flags and 0x20000 != 0 || first -> moof.offset
@@ -655,10 +661,19 @@ internal object Mp4Reader {
                 run.skip(1)
                 val runFlags = run.u24()
                 val count = run.count()
-                if (runFlags and 0x1 != 0) data = dataBase + run.i32()
+                if (runFlags and 0x1 != 0) data = fragmentOffset(dataBase, run.i32().toLong(), base + trun.offset)
                 if (runFlags and 0x4 != 0) run.skip(4)
                 val perSample = listOf(0x100, 0x200, 0x400, 0x800).count { runFlags and it != 0 } * 4
                 run.requireEntries(count, perSample)
+                if (id != trackId && runFlags and 0x200 == 0) {
+                    // Both fields are at most 32 bits, and count fits a signed
+                    // Int, so their product fits Long. No sample bytes need
+                    // reading when only the default size places the data.
+                    data = fragmentOffset(data, count.toLong() * defaultSize, base + trun.offset)
+                    // requireEntries proved the product fits remaining, an Int.
+                    run.skip(count * perSample)
+                    continue
+                }
                 if (id == trackId) into.reserve(count.toLong())
                 repeat(count) {
                     val duration = if (runFlags and 0x100 != 0) run.u32() else defaultDuration
@@ -669,11 +684,18 @@ internal object Mp4Reader {
                         if (data < 0) throw CorruptStreamException("a fragment's data starts before the file", base + trun.offset)
                         into.add(data, size, duration)
                     }
-                    data += size
+                    data = fragmentOffset(data, size, base + trun.offset)
                 }
             }
             previousEnd = data
         }
+    }
+
+    private fun fragmentOffset(start: Long, advance: Long, offset: Long): Long {
+        if (start < 0 || advance > Long.MAX_VALUE - start || advance < -start) {
+            throw CorruptStreamException("the 'trun' box places data outside the supported file offset range", offset)
+        }
+        return start + advance
     }
 
     // Chapters.
