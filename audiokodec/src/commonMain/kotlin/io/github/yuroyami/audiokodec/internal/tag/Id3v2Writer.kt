@@ -142,25 +142,30 @@ internal object Id3v2Writer {
         return frame("UFID", body, major)
     }
 
-    private fun textValues(id: String, values: List<String>, major: Int): List<String> {
+    private fun textValues(
+        id: String,
+        values: List<String>,
+        major: Int,
+        preserveDuplicates: Boolean = false,
+    ): List<String> {
         if (major >= 4) return values
-        val distinct = values.distinct()
+        val stored = if (preserveDuplicates) values else values.distinct()
         if (TagMapping.id3UsesSlashList(id, major)) {
-            if (distinct.any { '/' in it }) {
+            if (stored.any { '/' in it }) {
                 throw UnsupportedFeatureException(
                     "a literal slash in ID3v2.3 '$id'",
                     "ID3v2.3 '$id' uses slashes between values; write ID3v2.4 to preserve a literal slash",
                 )
             }
-            return listOf(distinct.joinToString("/"))
+            return listOf(stored.joinToString("/"))
         }
-        if (distinct.size > 1) {
+        if (stored.size > 1) {
             throw UnsupportedFeatureException(
                 "multiple values in ID3v2.3 '$id'",
                 "ID3v2.3 '$id' has no unambiguous list representation; write ID3v2.4 to preserve these values",
             )
         }
-        return distinct
+        return stored
     }
 
     /**
@@ -212,8 +217,13 @@ internal object Id3v2Writer {
     private fun userTextFrame(description: String, value: String, major: Int): ByteArray =
         userTextFrame(description, listOf(value), major)
 
-    private fun userTextFrame(description: String, values: List<String>, major: Int): ByteArray {
-        val supported = textValues("TXXX:$description", values, major)
+    private fun userTextFrame(
+        description: String,
+        values: List<String>,
+        major: Int,
+        preserveDuplicates: Boolean = false,
+    ): ByteArray {
+        val supported = textValues("TXXX:$description", values, major, preserveDuplicates)
         val encoding = encodingFor(listOf(description) + supported, major)
         val descriptionBytes = encodeText(description, encoding)
         val parts = supported.map { encodeText(it, encoding) }
@@ -422,8 +432,14 @@ internal object Id3v2Writer {
                 rawFrame(key, entry, major)?.let { frames.add(it) }
             }
         }
-        for ((description, values) in userText) frames.add(userTextFrame(description, values.distinct(), major))
-        for ((key, values) in ordinaryText) frames.add(textFrame(key, textValues(key, values.distinct(), major), major))
+        // Raw lists carry their original order and multiplicity. Only the
+        // merged convenience fields deduplicate values.
+        for ((description, values) in userText) {
+            frames.add(userTextFrame(description, values, major, preserveDuplicates = true))
+        }
+        for ((key, values) in ordinaryText) {
+            frames.add(textFrame(key, textValues(key, values, major, preserveDuplicates = true), major))
+        }
         return frames
     }
 

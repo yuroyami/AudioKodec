@@ -36,6 +36,27 @@ class HostileTagTest {
     }
 
     @Test
+    fun textListsInEveryEncodingKeepTypedFailuresUnderTruncationAndMutation() {
+        for (encoding in Id3TextListFixtures.encodings) {
+            val original = Id3TextListFixtures.tag(encoding)
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("text list $encoding truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (value in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    val mutated = original.copyOf()
+                    mutated[at] = value
+                    expectOnlyKiteFailures("text list $encoding byte $at set to $value") {
+                        AudioKodec.readTags(mutated)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun everyTruncationOfATaggedFileIsHandled() {
         for (length in 0 until good.size step 11) {
             expectOnlyKiteFailures("truncated to $length bytes") {

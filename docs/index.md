@@ -457,6 +457,14 @@ one distinct value. Writing an unsupported list
 or a literal slash in a slash-list value raises `UnsupportedFeatureException`.
 Use `TagWriteOptions(id3Version = 4)` to preserve those values separately.
 
+Read mapped user-text lists with `tags.all(field)`. The raw view has one entry
+per decoded value, with the same frame key and description. Unmodelled raw
+lists retain their order and repeated values through an unrelated edit.
+All four v2.4 text encodings are supported, including both UTF-16 BOM byte orders.
+V2.3 slash-list frames retain raw repetitions. Other raw lists need v2.4,
+even when every item has the same text; an unsupported downgrade is refused
+before writing.
+
 Read every genre with `tags.all(TagField.GENRE)`. ID3 references and refinements
 remain separate values in file order. For example, `(51)(39)Eurodisco` becomes
 `Techno-Industrial`, `Noise`, `Eurodisco`; `(4)Eurodisco` keeps both `Disco` and

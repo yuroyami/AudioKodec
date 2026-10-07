@@ -177,6 +177,41 @@ class MutagenTagOracleTest {
     }
 
     @Test
+    fun mappedAndCustomTextListsAgreeWithMutagenInEveryEncoding() {
+        val python = python
+        for (encoding in Id3TextListFixtures.encodings) {
+            val file = plainMp3("text-lists-${encoding.code}-${encoding.bigEndian}")
+            val originalAudio = file.readBytes()
+            val independent = Id3TextListFixtures.tag(encoding) + originalAudio
+            file.writeBytes(independent)
+            run(listOf(python, "-c", CHECK_TEXT_LIST_MATRIX, file.path, encoding.code.toString(), "Original"))
+            val tags = AudioKodec.readTags(independent)
+            val rewritten = AudioKodec.writeTags(independent, tags.edit { set(TagField.TITLE, "Changed") }, TagWriteOptions(id3Version = 4, padding = 0))
+            file.writeBytes(rewritten)
+            run(listOf(python, "-c", CHECK_TEXT_LIST_MATRIX, file.path, encoding.code.toString(), "Changed"))
+            assertContentEquals(originalAudio, rewritten.takeLast(originalAudio.size).toByteArray())
+
+            // Mutagen writes encoding 1 in little-endian; the independent
+            // fixture above checks its reading of both BOM byte orders.
+            if (encoding.code == 1 && encoding.bigEndian) continue
+            file.writeBytes(originalAudio)
+            run(listOf(python, "-c", WRITE_TEXT_LIST_MATRIX, file.path, encoding.code.toString()))
+            val fromMutagen = file.readBytes()
+            val read = AudioKodec.readTags(fromMutagen)
+            assertEquals(Id3TextListFixtures.artists(encoding), read.all(TagField.ARTIST))
+            assertEquals(Id3TextListFixtures.identifiers, read.all(TagField.MUSICBRAINZ_ARTIST_ID))
+            val raw = read.raw.blocks.flatMap { it.entries }
+            assertEquals(Id3TextListFixtures.originalArtists(encoding), raw.filter { it.key == "TOPE" }.map { it.text })
+            assertEquals(Id3TextListFixtures.customValues(encoding), raw.filter { it.key == "TXXX" && it.description == Id3TextListFixtures.description(encoding) }.map { it.text })
+            assertEquals(Id3TextListFixtures.emptyDescriptionValues, raw.filter { it.key == "TXXX" && it.description == "" }.map { it.text })
+            val edited = AudioKodec.writeTags(fromMutagen, read.edit { set(TagField.TITLE, "Changed") }, TagWriteOptions(id3Version = 4, padding = 0))
+            file.writeBytes(edited)
+            run(listOf(python, "-c", CHECK_TEXT_LIST_MATRIX, file.path, encoding.code.toString(), "Changed"))
+            assertContentEquals(originalAudio, edited.takeLast(originalAudio.size).toByteArray())
+        }
+    }
+
+    @Test
     fun commentAndLyricWhitespaceAgreesInBothDirectionsAfterEdits() {
         val python = python
         for (inputVersion in 3..4) {
@@ -261,6 +296,40 @@ class MutagenTagOracleTest {
 
     private companion object {
         val directory = File(System.getProperty("java.io.tmpdir"), "audiokodec-mutagen-oracle").also { it.mkdirs() }
+        const val WRITE_TEXT_LIST_MATRIX = """
+import sys
+from mutagen.id3 import ID3, TIT2, TPE1, TOPE, TXXX
+encoding = int(sys.argv[2])
+artists = ['first', 'Björk' if encoding == 0 else 'AĀ 日本語', 'third']
+custom = ['x', 'ÉA' if encoding == 0 else 'ĀA 日本語', 'x', 'z']
+desc = 'Private description' if encoding == 0 else 'Private 日本語'
+t = ID3()
+t.add(TIT2(encoding=encoding, text=['Original']))
+t.add(TPE1(encoding=encoding, text=artists))
+t.add(TOPE(encoding=encoding, text=artists + ['first']))
+t.add(TXXX(encoding=encoding, desc='MusicBrainz Artist Id', text=['id-one', 'id-two']))
+t.add(TXXX(encoding=encoding, desc=desc, text=custom))
+t.add(TXXX(encoding=encoding, desc='', text=['empty-first', 'empty-second']))
+t.save(sys.argv[1], v2_version=4, v1=0)
+"""
+        const val CHECK_TEXT_LIST_MATRIX = """
+import sys
+from mutagen.id3 import ID3
+encoding = int(sys.argv[2])
+artists = ['first', 'Björk' if encoding == 0 else 'AĀ 日本語', 'third']
+custom = ['x', 'ÉA' if encoding == 0 else 'ĀA 日本語', 'x', 'z']
+desc = 'Private description' if encoding == 0 else 'Private 日本語'
+t = ID3(sys.argv[1])
+assert t['TIT2'].text == [sys.argv[3]]
+assert len(t.getall('TPE1')) == 1
+assert t['TPE1'].text == artists
+assert len(t.getall('TOPE')) == 1
+assert t['TOPE'].text == artists + ['first']
+assert len(t.getall('TXXX')) == 3
+assert t['TXXX:MusicBrainz Artist Id'].text == ['id-one', 'id-two']
+assert t['TXXX:' + desc].text == custom
+assert t['TXXX:'].text == ['empty-first', 'empty-second']
+"""
         const val WRITE_WHITESPACE = """
 import sys
 from mutagen.id3 import ID3, COMM, USLT

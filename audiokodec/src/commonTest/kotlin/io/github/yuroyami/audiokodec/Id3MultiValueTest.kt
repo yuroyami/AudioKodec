@@ -3,13 +3,94 @@ package io.github.yuroyami.audiokodec
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
 import io.github.yuroyami.audiokodec.tag.TagWriteOptions
+import io.github.yuroyami.audiokodec.tag.RawTagBlock
+import io.github.yuroyami.audiokodec.tag.RawTagEntry
+import io.github.yuroyami.audiokodec.tag.RawTags
+import io.github.yuroyami.audiokodec.tag.TagFormat
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class Id3MultiValueTest {
     private val audio = ByteArray(21) { 0x55 }
+
+    @Test
+    fun mappedAndCustomVersion24ListsSurviveAnUnrelatedEditInEveryEncoding() {
+        for (encoding in Id3TextListFixtures.encodings) {
+            for (terminated in listOf(false, true)) {
+                val original = Id3TextListFixtures.tag(encoding, terminated) + audio
+                val before = AudioKodec.readTags(original)
+                assertTextLists(before, encoding)
+                assertEquals("Original", before[TagField.TITLE])
+                val written = AudioKodec.writeTags(original, before.edit { set(TagField.TITLE, "Changed") }, TagWriteOptions(id3Version = 4, padding = 0))
+                val after = AudioKodec.readTags(written)
+                assertTextLists(after, encoding)
+                assertEquals("Changed", after[TagField.TITLE])
+                val ids = frameIds(written)
+                assertEquals(6, ids.size)
+                assertEquals(3, ids.count { it == "TXXX" })
+                for (key in listOf("TIT2", "TPE1", "TOPE")) assertEquals(1, ids.count { it == key })
+                assertContentEquals(audio, written.takeLast(audio.size).toByteArray())
+            }
+        }
+    }
+
+    @Test
+    fun unmodelledRepeatedValuesKeepTheirMultiplicityAndRefuseAnUnsupportedDowngrade() {
+        val entries = listOf(
+            RawTagEntry("TXXX", text = "same", description = "Private duplicates"),
+            RawTagEntry("TXXX", text = "same", description = "Private duplicates"),
+        )
+        val tags = TagBundle(mapOf(TagField.TITLE to listOf("Title")), raw = RawTags(listOf(RawTagBlock(TagFormat.ID3V2_4, 0, 0, entries))))
+        val written = AudioKodec.writeTags(audio, tags, TagWriteOptions(id3Version = 4, padding = 0))
+        val after = AudioKodec.readTags(written)
+        assertEquals(listOf("same", "same"), after.raw.blocks.flatMap { it.entries }.filter { it.key == "TXXX" }.map { it.text })
+        val sink = ByteArrayAudioSink()
+        assertFailsWith<UnsupportedFeatureException> {
+            AudioKodec.writeTags(written.asAudioSource(), after, sink, TagWriteOptions(id3Version = 3, padding = 0))
+        }
+        assertEquals(0L, sink.position)
+        assertContentEquals(audio, written.takeLast(audio.size).toByteArray())
+
+        // A v2.3 original-artist slash list can keep repeated raw values.
+        val values = listOf("One", "Two", "One")
+        val artists = TagBundle(mapOf(TagField.TITLE to listOf("Title")), raw = RawTags(listOf(
+            RawTagBlock(TagFormat.ID3V2_4, 0, 0, values.map { RawTagEntry("TOPE", text = it) }),
+        )))
+        val version23 = AudioKodec.writeTags(audio, artists, TagWriteOptions(id3Version = 3, padding = 0))
+        assertEquals(values, AudioKodec.readTags(version23).raw.blocks.flatMap { it.entries }.filter { it.key == "TOPE" }.map { it.text })
+        assertContentEquals(audio, version23.takeLast(audio.size).toByteArray())
+    }
+
+    @Test
+    fun downgradingReadVersion24UserTextListsIsRefusedBeforeWriting() {
+        for (encoding in Id3TextListFixtures.encodings) {
+            val original = Id3TextListFixtures.tag(encoding) + audio
+            val snapshot = original.copyOf()
+            val tags = AudioKodec.readTags(original).edit { set(TagField.TITLE, "Changed") }
+            val sink = ByteArrayAudioSink()
+            val failure = assertFailsWith<UnsupportedFeatureException> {
+                AudioKodec.writeTags(original.asAudioSource(), tags, sink, TagWriteOptions(id3Version = 3, padding = 0))
+            }
+            assertTrue(failure.message.orEmpty().contains("TXXX"))
+            assertEquals(0L, sink.position)
+            assertContentEquals(snapshot, original)
+        }
+    }
+
+    private fun assertTextLists(tags: TagBundle, encoding: Id3TextListFixtures.Encoding) {
+        assertEquals(Id3TextListFixtures.artists(encoding), tags.all(TagField.ARTIST), encoding.toString())
+        assertEquals(Id3TextListFixtures.identifiers, tags.all(TagField.MUSICBRAINZ_ARTIST_ID), encoding.toString())
+        val raw = tags.raw.blocks.flatMap { it.entries }
+        assertEquals(Id3TextListFixtures.originalArtists(encoding), raw.filter { it.key == "TOPE" }.map { it.text })
+        for ((description, values) in listOf(
+            "MusicBrainz Artist Id" to Id3TextListFixtures.identifiers,
+            Id3TextListFixtures.description(encoding) to Id3TextListFixtures.customValues(encoding),
+            "" to Id3TextListFixtures.emptyDescriptionValues,
+        )) assertEquals(values, raw.filter { it.key == "TXXX" && it.description == description }.map { it.text }, encoding.toString())
+    }
 
     @Test
     fun version24StoresSeveralUserTextValuesInOneFrame() {
