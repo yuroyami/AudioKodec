@@ -301,12 +301,16 @@ internal object Id3v2Reader {
         when {
             // Text frames, which is most of them. TXXX carries its own key.
             name == "TXX" || name == "TXXX" ->
-                readUserText(name, body, start, end, into, options)
+                readUserText(name, body, start, end, major, into, options)
 
             name.startsWith("T") -> {
                 val encoding = body[start].toInt() and 0xFF
                 forEachTextValue(body, start + 1, end, encoding, major, options) { value ->
-                    if (value.isNotEmpty()) into.add(RawTagEntry(name, text = value))
+                    if (TagMapping.id3UsesSlashList(name, major)) {
+                        for (part in value.split('/')) if (part.isNotEmpty()) into.add(RawTagEntry(name, text = part))
+                    } else if (value.isNotEmpty()) {
+                        into.add(RawTagEntry(name, text = value))
+                    }
                 }
             }
 
@@ -379,6 +383,7 @@ internal object Id3v2Reader {
         body: ByteArray,
         start: Int,
         end: Int,
+        major: Int,
         into: MutableList<RawTagEntry>,
         options: DecodeOptions,
     ) {
@@ -393,8 +398,13 @@ internal object Id3v2Reader {
         )
         val valueStart = descriptionEnd + TagText.terminatorSize(encoding)
         if (valueStart > end) return
-        val value = TagText.decode(body, valueStart, end - valueStart, encoding, options)
-        into.add(RawTagEntry(name, text = value, description = description))
+        if (valueStart == end) {
+            into.add(RawTagEntry(name, text = "", description = description))
+            return
+        }
+        forEachTextValue(body, valueStart, end, encoding, major, options) { value ->
+            into.add(RawTagEntry(name, text = value, description = description))
+        }
     }
 
     private fun readUserUrl(
@@ -458,9 +468,9 @@ internal object Id3v2Reader {
         val ownerEnd = TagText.findTerminator(body, start, end, TagText.LATIN1)
         val owner = TagText.decodeLatin1(body, start, ownerEnd - start, options)
         val valueStart = ownerEnd + 1
-        if (valueStart >= end) return
-        // The identifier is bytes by specification and text in every file that
-        // uses it, so it is offered as both.
+        if (valueStart > end) return
+        // Identifiers are binary. The text view is useful for owners whose
+        // convention uses text, and the complete bytes remain available.
         val raw = body.copyOfRange(valueStart, end)
         into.add(
             RawTagEntry(

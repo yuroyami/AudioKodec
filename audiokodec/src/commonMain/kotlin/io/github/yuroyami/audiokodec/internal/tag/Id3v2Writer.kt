@@ -49,6 +49,7 @@ internal object Id3v2Writer {
                 )
                 TagField.COMMENT -> frames.addAll(commentLikeFrames("COMM", "COM", values, tags, major))
                 TagField.LYRICS -> frames.addAll(commentLikeFrames("USLT", "ULT", values, tags, major))
+                TagField.MUSICBRAINZ_RECORDING_ID -> frames.add(recordingFrame(values, major))
                 else -> {
                     val frameId = TagMapping.id3FrameFor(field, major)
                     if (frameId != null && frameId.startsWith("W")) {
@@ -57,20 +58,10 @@ internal object Id3v2Writer {
                         // empty URL, and one frame per value.
                         for (value in values) frames.add(urlFrame(frameId, value, major))
                     } else if (frameId != null) {
-                        if (major >= 4) {
-                            frames.add(textFrame(frameId, values, major))
-                        } else {
-                            // Version 2.3 has no multi-value form, so each
-                            // value gets its own frame. Readers accept that,
-                            // and joining them would invent a separator the
-                            // format does not have.
-                            for (value in values) frames.add(textFrame(frameId, listOf(value), major))
-                        }
+                        frames.add(textFrame(frameId, textValues(frameId, values, major), major))
                     } else {
                         val description = TagMapping.userTextDescriptionFor(field) ?: field.name
-                        for (value in values) {
-                            frames.add(userTextFrame(description, value, major))
-                        }
+                        frames.add(userTextFrame(description, values, major))
                     }
                 }
             }
@@ -137,6 +128,40 @@ internal object Id3v2Writer {
     private fun joinWithTotal(number: String, total: String?): String =
         if (total.isNullOrBlank()) number else "$number/$total"
 
+    private fun recordingFrame(values: List<String>, major: Int): ByteArray {
+        val identifiers = values.distinct()
+        if (identifiers.size != 1 || !TagMapping.isRecordingIdentifier(identifiers.single())) {
+            throw UnsupportedFeatureException(
+                "representing MusicBrainz recording identifiers in ID3",
+                "ID3 requires one MusicBrainz recording identifier of 1 to 64 ASCII bytes " +
+                    "without whitespace or control characters",
+            )
+        }
+        val body = TagMapping.MUSICBRAINZ_OWNER.encodeToByteArray() + byteArrayOf(0) + identifiers.single().encodeToByteArray()
+        return frame("UFID", body, major)
+    }
+
+    private fun textValues(id: String, values: List<String>, major: Int): List<String> {
+        if (major >= 4) return values
+        val distinct = values.distinct()
+        if (TagMapping.id3UsesSlashList(id, major)) {
+            if (distinct.any { '/' in it }) {
+                throw UnsupportedFeatureException(
+                    "a literal slash in ID3v2.3 '$id'",
+                    "ID3v2.3 '$id' uses slashes between values; write ID3v2.4 to preserve a literal slash",
+                )
+            }
+            return listOf(distinct.joinToString("/"))
+        }
+        if (distinct.size > 1) {
+            throw UnsupportedFeatureException(
+                "multiple values in ID3v2.3 '$id'",
+                "ID3v2.3 '$id' has no unambiguous list representation; write ID3v2.4 to preserve these values",
+            )
+        }
+        return distinct
+    }
+
     /**
      * Chooses the narrowest encoding that can hold every value.
      *
@@ -183,20 +208,29 @@ internal object Id3v2Writer {
     private fun urlFrame(id: String, url: String, major: Int): ByteArray =
         frame(id, TagText.encodeLatin1(url), major)
 
-    private fun userTextFrame(description: String, value: String, major: Int): ByteArray {
-        val encoding = encodingFor(listOf(description, value), major)
+    private fun userTextFrame(description: String, value: String, major: Int): ByteArray =
+        userTextFrame(description, listOf(value), major)
+
+    private fun userTextFrame(description: String, values: List<String>, major: Int): ByteArray {
+        val supported = textValues("TXXX:$description", values, major)
+        val encoding = encodingFor(listOf(description) + supported, major)
         val descriptionBytes = encodeText(description, encoding)
-        val valueBytes = encodeText(value, encoding)
+        val parts = supported.map { encodeText(it, encoding) }
         val terminator = TagText.terminatorSize(encoding)
+        var size = 1L + descriptionBytes.size + terminator
+        for (part in parts) size += part.size
+        size += maxOf(0, parts.size - 1).toLong() * terminator
         val body = ByteArray(
-            checkedArraySize(
-                1L + descriptionBytes.size + terminator + valueBytes.size,
-                "an ID3 user-text frame",
-            ),
+            checkedArraySize(size, "an ID3 user-text frame"),
         )
         body[0] = encoding.toByte()
         descriptionBytes.copyInto(body, 1)
-        valueBytes.copyInto(body, 1 + descriptionBytes.size + terminator)
+        var position = 1 + descriptionBytes.size + terminator
+        for (i in parts.indices) {
+            parts[i].copyInto(body, position)
+            position += parts[i].size
+            if (i < parts.lastIndex) position += terminator
+        }
         return frame("TXXX", body, major)
     }
 
@@ -342,6 +376,8 @@ internal object Id3v2Writer {
      */
     private fun unmodelledFrames(tags: TagBundle, major: Int): List<ByteArray> {
         val frames = ArrayList<ByteArray>()
+        val userText = LinkedHashMap<String, MutableList<String>>()
+        val ordinaryText = LinkedHashMap<String, MutableList<String>>()
         for (block in tags.raw.blocks) {
             val isId3 = block.format == TagFormat.ID3V2_2 ||
                 block.format == TagFormat.ID3V2_3 ||
@@ -363,9 +399,24 @@ internal object Id3v2Writer {
                         "this tag contains a three-character frame with no safe ID3v2.3/2.4 equivalent",
                     )
                 }
+                if (key == "UFID" && entry.description == TagMapping.MUSICBRAINZ_OWNER &&
+                    !tags.all(TagField.MUSICBRAINZ_RECORDING_ID).isEmpty()
+                ) continue
+                if (entry.binary == null && entry.text != null) {
+                    if (key == "TXXX") {
+                        userText.getOrPut(entry.description ?: "") { mutableListOf() }.add(entry.text)
+                        continue
+                    }
+                    if (key.startsWith("T")) {
+                        ordinaryText.getOrPut(key) { mutableListOf() }.add(entry.text)
+                        continue
+                    }
+                }
                 rawFrame(key, entry, major)?.let { frames.add(it) }
             }
         }
+        for ((description, values) in userText) frames.add(userTextFrame(description, values.distinct(), major))
+        for ((key, values) in ordinaryText) frames.add(textFrame(key, textValues(key, values.distinct(), major), major))
         return frames
     }
 
@@ -397,6 +448,13 @@ internal object Id3v2Writer {
                 val payload = entry.binary ?: continue
                 val discardOnTagAlter = if (sourceMajor == 4) 0x4000 else 0x8000
                 if (flags and discardOnTagAlter != 0) continue
+                if (entry.key in writtenIds && (entry.key == "UFID" || entry.key == "TXXX")) {
+                    throw UnsupportedFeatureException(
+                        "combining opaque ID3 '${entry.key}' identities",
+                        "this tag holds an unreadable '${entry.key}' owner or description; " +
+                            "it cannot be combined safely with another frame of that kind",
+                    )
+                }
                 if (entry.key in writtenIds) continue
                 if (sourceMajor != major) {
                     throw UnsupportedFeatureException(

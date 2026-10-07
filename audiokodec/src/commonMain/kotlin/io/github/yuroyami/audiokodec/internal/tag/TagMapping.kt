@@ -13,6 +13,27 @@ import io.github.yuroyami.audiokodec.tag.TagFormat
  * through the readers.
  */
 internal object TagMapping {
+    const val MUSICBRAINZ_OWNER: String = "http://musicbrainz.org"
+
+    fun isRecordingIdentifier(value: String): Boolean =
+        value.length in 1..64 && value.all { it in '!'..'~' }
+
+    private fun uniqueFileField(entry: RawTagEntry): TagField? {
+        if (entry.description != MUSICBRAINZ_OWNER || entry.id3FrameFlags != null) return null
+        val bytes = entry.binary
+        val valid = if (bytes != null) {
+            bytes.size in 1..64 && bytes.all { (it.toInt() and 255) in 33..126 }
+        } else {
+            entry.text?.let(::isRecordingIdentifier) == true
+        }
+        return if (valid) TagField.MUSICBRAINZ_RECORDING_ID else null
+    }
+
+    /** Only these ID3v2.3 text fields define slash-separated lists. */
+    fun id3UsesSlashList(key: String, major: Int): Boolean = major == 3 && when (key) {
+        "TPE1", "TCOM", "TEXT", "TOPE", "TOLY" -> true
+        else -> false
+    }
 
     /** ID3v2.3 and 2.4 frame identifiers. */
     private val ID3V2_4: Map<String, TagField> = mapOf(
@@ -223,6 +244,7 @@ internal object TagMapping {
 
     /** Descriptions of `TXXX` frames that carry a field with no frame of its own. */
     private val USER_TEXT: Map<String, TagField> = mapOf(
+        "MUSICBRAINZ_RECORDING_ID" to TagField.MUSICBRAINZ_RECORDING_ID,
         "MUSICBRAINZ ARTIST ID" to TagField.MUSICBRAINZ_ARTIST_ID,
         "MUSICBRAINZ ALBUM ID" to TagField.MUSICBRAINZ_RELEASE_ID,
         "MUSICBRAINZ ALBUM ARTIST ID" to TagField.MUSICBRAINZ_RELEASE_ARTIST_ID,
@@ -250,10 +272,18 @@ internal object TagMapping {
         val key = entry.key
         return when (format) {
             TagFormat.ID3V2_2 -> {
-                if (key == "TXX") userTextField(entry) else ID3V2_2[key]
+                when (key) {
+                    "TXX" -> userTextField(entry)
+                    "UFI" -> uniqueFileField(entry)
+                    else -> ID3V2_2[key]
+                }
             }
             TagFormat.ID3V2_3, TagFormat.ID3V2_4 -> {
-                if (key == "TXXX") userTextField(entry) else ID3V2_4[key]
+                when (key) {
+                    "TXXX" -> userTextField(entry)
+                    "UFID" -> uniqueFileField(entry)
+                    else -> ID3V2_4[key]
+                }
             }
             TagFormat.VORBIS_COMMENT -> VORBIS[key.uppercase()]
             TagFormat.APEV1, TagFormat.APEV2 -> APE[key.uppercase()]
@@ -387,6 +417,14 @@ internal object TagMapping {
 
     /** The `TXXX` description that holds [field], or null. */
     fun userTextDescriptionFor(field: TagField): String? {
+        when (field) {
+            TagField.MUSICBRAINZ_ARTIST_ID -> return "MusicBrainz Artist Id"
+            TagField.MUSICBRAINZ_RELEASE_ID -> return "MusicBrainz Album Id"
+            TagField.MUSICBRAINZ_RELEASE_ARTIST_ID -> return "MusicBrainz Album Artist Id"
+            TagField.MUSICBRAINZ_RELEASE_GROUP_ID -> return "MusicBrainz Release Group Id"
+            TagField.MUSICBRAINZ_TRACK_ID -> return "MusicBrainz Release Track Id"
+            else -> Unit
+        }
         for ((description, mapped) in USER_TEXT) {
             if (mapped == field) return description
         }

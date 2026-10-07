@@ -121,7 +121,7 @@ inspected and edited.
 | Tag format | Read | Write | Notes |
 |---|---|---|---|
 | **ID3v2.4** | ✅ | ✅ | Text frames, multi-value frames, `TXXX`, `COMM`, `USLT`, `APIC`, `UFID`, `CHAP`, all four text encodings, frame-level unsynchronisation, extended header, appended blocks |
-| **ID3v2.3** | ✅ | ✅ | The same set, with the version's own flag bits, size form and frame differences |
+| **ID3v2.3** | ✅ | ✅ | The same set, with the version's own flag bits, size form and frame differences. Named artist/composer/lyricist lists use slashes; unsupported multi-value fields and literal slashes in list values are refused rather than written with duplicate identities |
 | **ID3v2.2** | ✅ | upgraded | Three-character frames and three-byte sizes. Writing produces a 2.3 block, which is what every other tagger does |
 | **ID3v1 and v1.1** | ✅ | update only | Never created. An existing block is kept in step with the real tag, and the 1.1 track number is detected rather than assumed |
 | **APEv2** | ✅ | ✅ | Header and footer, multi-value text items, binary items, cover art. Found at either end of a file |
@@ -245,6 +245,15 @@ write whatever metadata key they were given, using the names Vorbis comments
 use, which means a comment can arrive as a `TXXX` called `comment` rather than
 as a `COMM` frame. AudioKodec understands both, because reading only the first
 loses fields from files that are perfectly ordinary.
+
+**ID3 identities and MusicBrainz IDs.** Recording IDs are mapped to the
+MusicBrainz-owner `UFID`, including reads of v2.2 `UFI` and the old
+`MUSICBRAINZ_RECORDING_ID` user-text alias. Other MusicBrainz IDs use Picard's
+exact `TXXX` descriptions. V2.4 user-text lists use one frame and retain all
+values. V2.3 named slash lists are supported; other multi-value text writes
+are explicitly refused. Mutagen 1.47.0 checks both directions, both versions,
+Unicode and unchanged MP3 audio bytes, including raw user-text lists and
+unrelated binary identifier owners.
 
 ## Where the code went its own way
 

@@ -131,7 +131,13 @@ public enum class TagField {
     /** Composer to sort by. */
     SORT_COMPOSER,
 
-    /** MusicBrainz recording identifier. */
+    /**
+     * MusicBrainz recording identifier.
+     *
+     * ID3 stores one identifier in `UFID` with owner `http://musicbrainz.org`.
+     * Writing ID3 requires 1 to 64 ASCII bytes without whitespace or controls.
+     * Several distinct identifiers cannot be represented under that owner.
+     */
     MUSICBRAINZ_RECORDING_ID,
 
     /** MusicBrainz track identifier, which is release specific. */

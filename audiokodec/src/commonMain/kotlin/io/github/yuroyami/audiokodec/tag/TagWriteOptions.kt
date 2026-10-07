@@ -14,6 +14,11 @@ public class TagWriteOptions(
      * Version 4 is the current one and handles UTF-8, multiple values in a
      * frame and full dates. Version 3 is worth choosing when a file has to
      * play on hardware that predates 2000, which never learned version 4.
+     * Version 3 uses slash lists for artists, composers and lyricists.
+     * Other text fields and user-text frames require one distinct value.
+     * A literal slash in a slash-list value or an unsupported list raises
+     * [io.github.yuroyami.audiokodec.UnsupportedFeatureException]. Use version 4
+     * to preserve those values separately.
      */
     public val id3Version: Int = 4,
 

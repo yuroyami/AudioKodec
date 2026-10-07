@@ -65,8 +65,20 @@ repository.
 ./gradlew :audiokodec:macosArm64Test
 ```
 
-The oracle suites compare against three outside tools: `ffmpeg` and `ffprobe`
+The oracle suites compare against outside tools: `ffmpeg` and `ffprobe`
 for most formats, the reference `flac` tools for FLAC, and Apple's `afconvert`
 for Core Audio Format files on macOS. Each suite skips itself when its tool is
 missing, so a green run on a machine without them is proving less than it
 looks. Install all three before trusting one.
+
+The ID3 identity suite also runs Mutagen through Python. It reports an actual
+test skip when the module is unavailable. Use an isolated interpreter:
+
+```sh
+python3 -m venv /tmp/audiokodec-tag-oracle
+/tmp/audiokodec-tag-oracle/bin/python -m pip install mutagen==1.47.0
+AUDIOKODEC_MUTAGEN_PYTHON=/tmp/audiokodec-tag-oracle/bin/python ./gradlew :audiokodec:jvmTest
+```
+
+Mutagen is a test executable only. Its implementation source must stay
+unopened under the same boundary as every other copyleft oracle.

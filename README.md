@@ -295,6 +295,12 @@ pictures in FLAC and Ogg, an updated ID3v1 block where the file already had one,
 and the metadata chunks of RIFF and AIFF. MP4 atoms arrive with the MP4
 container.
 
+MusicBrainz recording IDs use `UFID:http://musicbrainz.org` in ID3; the other
+MusicBrainz IDs use Picard's `TXXX` descriptions. ID3v2.4 stores multiple text
+values in one frame. ID3v2.3 uses slash lists for artists, composers and
+lyricists, and refuses lists or literal slashes it cannot preserve
+unambiguously. Use `TagWriteOptions(id3Version = 4)` for those values.
+
 ## Name a format
 
 The sniffer names 29 formats, including those AudioKodec cannot decode. That is

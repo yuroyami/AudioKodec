@@ -430,6 +430,38 @@ AudioKodec.writeTags(
 )
 ```
 
+### ID3 values and MusicBrainz identifiers
+
+ID3v2.4 stores each text field or user-text description in one frame, with
+null-separated values. ID3v2.3 defines slash lists for artists, composers,
+lyricists, original artists and original lyricists. Other v2.3 text fields
+and user-text frames require one distinct value. Writing an unsupported list
+or a literal slash in a slash-list value raises `UnsupportedFeatureException`.
+Use `TagWriteOptions(id3Version = 4)` to preserve those values separately.
+
+MusicBrainz identifiers use Picard's ID3 identities:
+
+| Field | Frame or description |
+|---|---|
+| `MUSICBRAINZ_RECORDING_ID` | `UFID` with owner `http://musicbrainz.org` |
+| `MUSICBRAINZ_ARTIST_ID` | `TXXX:MusicBrainz Artist Id` |
+| `MUSICBRAINZ_RELEASE_ID` | `TXXX:MusicBrainz Album Id` |
+| `MUSICBRAINZ_RELEASE_ARTIST_ID` | `TXXX:MusicBrainz Album Artist Id` |
+| `MUSICBRAINZ_RELEASE_GROUP_ID` | `TXXX:MusicBrainz Release Group Id` |
+| `MUSICBRAINZ_TRACK_ID` | `TXXX:MusicBrainz Release Track Id` |
+
+The reader also accepts the old `TXXX:MUSICBRAINZ_RECORDING_ID` description.
+Rewriting it produces the standard `UFID`. A recording identifier must be
+1 to 64 ASCII bytes without whitespace or controls, and ID3 can hold only
+one distinct value under that owner. Unrelated owners' binary identifiers
+are preserved. Malformed MusicBrainz identifiers remain in the raw view;
+setting the named field replaces that owner's old entry.
+
+Compressed or encrypted owner-sensitive frames cannot be combined with new
+`UFID` or `TXXX` frames when their identities cannot be inspected. The writer
+names this limitation instead of deleting the opaque frame or guessing its
+identity.
+
 ### Pictures
 
 ```kotlin
