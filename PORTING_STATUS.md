@@ -161,6 +161,17 @@ WasmJS and WASI.
 Large FLAC value lists and ID3 identities are checked with Mutagen; the JVM
 scaling test records timings without a machine-dependent pass threshold.
 
+Unknown Vorbis comment rewrites append raw entries directly, with work
+proportional to count and text bytes. They retain order, repetitions, key
+spelling and empty values. The separate vendor header is marked internally;
+real `VENDOR` comments remain user comments, and FLAC/Ogg rewrites preserve the
+source header vendor. Only the six modelled ReplayGain/R128 names are excluded
+from raw emission, so unmodelled loudness names survive. Common tests cover
+repeated edits, caller-created entries, gain removal, colliding hashes and
+unchanged audio. Mutagen and `metaflac` check native FLAC in both directions;
+the JVM probe records 8,000 to 64,000-entry rewrite timings without a latency
+threshold.
+
 ### Other tag features
 
 | Feature | Status |

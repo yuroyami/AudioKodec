@@ -36,6 +36,26 @@ class HostileTagTest {
     }
 
     @Test
+    fun unknownVorbisCommentsKeepTypedFailuresUnderTruncationAndMutation() {
+        for (vendor in listOf("", "vendor 日本語")) {
+            val original = TagStressFixtures.flac(listOf("PRIVATE=", "Private=same", "PRIVATE=same", "VENDOR=user", "OTHER=x=y 日本語"), vendor)
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("Vorbis comments truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (value in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    val mutated = original.copyOf().also { it[at] = value }
+                    expectOnlyKiteFailures("Vorbis comments byte $at set to $value") {
+                        AudioKodec.readTags(mutated)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun textListsInEveryEncodingKeepTypedFailuresUnderTruncationAndMutation() {
         for (encoding in Id3TextListFixtures.encodings) {
             val fixtures = listOf(Id3TextListFixtures.tag(encoding)) +

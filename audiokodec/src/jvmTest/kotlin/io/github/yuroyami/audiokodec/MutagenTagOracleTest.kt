@@ -328,6 +328,36 @@ class MutagenTagOracleTest {
         }
     }
 
+    @Test
+    fun unknownFlacCommentsAgreeWithMutagenAndMetaflacAcrossRepeatedEdits() {
+        val python = python
+        val metaflac = findOnPath("metaflac")
+        assumeTrue("metaflac is required for the FLAC comment oracle", metaflac != null)
+        val comments = listOf("PRIVATE=one", "Private=one", "PRIVATE=two", "OTHER=x=y 日本語", "PRIVATE=one", "VENDOR=user", "PRIVATE=", "replaygain_private=state", "R128_PRIVATE=")
+        val file = File(directory, "private-comments.flac")
+        for (vendor in listOf("oracle vendor", "")) {
+            file.writeBytes(TagStressFixtures.flac(comments, vendor))
+            val originalAudio = TagStressFixtures.flacAudio(file.readBytes())
+            run(listOf(python, "-c", CHECK_PRIVATE_FLAC, file.path, vendor, ""))
+            repeat(3) { edit ->
+                val title = "Edit $edit"
+                val written = AudioKodec.writeTags(file.readBytes(), AudioKodec.readTags(file.readBytes()).edit { set(TagField.TITLE, title) })
+                file.writeBytes(written)
+                run(listOf(python, "-c", CHECK_PRIVATE_FLAC, file.path, vendor, title))
+                assertEquals((listOf("TITLE=$title") + comments).joinToString("\n", postfix = "\n"), run(listOf(metaflac!!, "--export-tags-to=-", file.path)))
+                assertContentEquals(originalAudio, TagStressFixtures.flacAudio(written))
+            }
+            file.writeBytes(TagStressFixtures.flac(emptyList()))
+            run(listOf(python, "-c", WRITE_PRIVATE_FLAC, file.path, vendor))
+            val fromMutagen = file.readBytes()
+            val tags = AudioKodec.readTags(fromMutagen)
+            val rewritten = AudioKodec.writeTags(fromMutagen, tags.edit { set(TagField.TITLE, "Changed") })
+            file.writeBytes(rewritten)
+            run(listOf(python, "-c", CHECK_PRIVATE_FLAC, file.path, vendor, "Changed"))
+            assertContentEquals(TagStressFixtures.flacAudio(fromMutagen), TagStressFixtures.flacAudio(rewritten))
+        }
+    }
+
     private fun plainMp3(name: String): File {
         val ffmpeg = findOnPath("ffmpeg")
         assumeTrue("ffmpeg is required for the ID3 oracle's audio fixture", ffmpeg != null)
@@ -336,19 +366,39 @@ class MutagenTagOracleTest {
         return file
     }
 
-    private fun run(command: List<String>) {
+    private fun run(command: List<String>): String {
         val process = ProcessBuilder(command).redirectErrorStream(true).start()
         if (!process.waitFor(60, TimeUnit.SECONDS)) {
             process.destroyForcibly()
             throw AssertionError("${command.first()} did not finish")
         }
-        assertEquals(0, process.exitValue(), process.inputStream.bufferedReader().readText())
+        val output = process.inputStream.bufferedReader().readText()
+        assertEquals(0, process.exitValue(), output)
+        return output
     }
 
     private fun findOnPath(name: String): String? = System.getenv("PATH")?.split(File.pathSeparator)
         ?.map { File(it, name) }?.firstOrNull { it.canExecute() }?.absolutePath
 
     private companion object {
+        const val CHECK_PRIVATE_FLAC = """
+import sys
+from mutagen.flac import FLAC
+tag = FLAC(sys.argv[1]).tags
+expected = [('PRIVATE', 'one'), ('Private', 'one'), ('PRIVATE', 'two'), ('OTHER', 'x=y 日本語'), ('PRIVATE', 'one'), ('VENDOR', 'user'), ('PRIVATE', ''), ('replaygain_private', 'state'), ('R128_PRIVATE', '')]
+if sys.argv[3]: expected.insert(0, ('TITLE', sys.argv[3]))
+assert list(tag) == expected, (list(tag), expected)
+assert tag.vendor == sys.argv[2], (tag.vendor, sys.argv[2])
+"""
+        const val WRITE_PRIVATE_FLAC = """
+import sys
+from mutagen.flac import FLAC
+file = FLAC(sys.argv[1])
+file.tags.clear()
+file.tags.extend([('PRIVATE', 'one'), ('Private', 'one'), ('PRIVATE', 'two'), ('OTHER', 'x=y 日本語'), ('PRIVATE', 'one'), ('VENDOR', 'user'), ('PRIVATE', ''), ('replaygain_private', 'state'), ('R128_PRIVATE', '')])
+file.tags.vendor = sys.argv[2]
+file.save()
+"""
         const val CHECK_UNICODE_EMPTY = """
 import sys
 from mutagen.id3 import ID3

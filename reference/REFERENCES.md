@@ -40,7 +40,7 @@ can hold checkouts without them ever reaching the repository.
 | MP4 and QuickTime containers | Apple QuickTime File Format documentation; [ISO/IEC 14496-12:2005](https://studylib.net/doc/26307294/mp4), clauses 8.31, 8.35 and 8.36 for per-track fragment defaults and data offsets |
 | FLAC | RFC 9639 |
 | Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex |
-| Vorbis | Xiph.Org Vorbis I specification |
+| Vorbis | Xiph.Org Vorbis I specification; [comment specification](https://xiph.org/vorbis/doc/v-comment.html) for counted vectors, repeated names and the separate vendor header |
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |
 | Format magic numbers | The published headers of each format the sniffer names |
 | File output | [kotlinx-io atomic move](https://kotlinlang.org/api/kotlinx-io/kotlinx-io-core/kotlinx.io.files/-file-system/atomic-move.html); [Node.js WASI directory options](https://nodejs.org/api/wasi.html#new-wasioptions) for filesystem tests |
@@ -57,10 +57,10 @@ Run as programs, never read as source.
 | Tool | Used for |
 |---|---|
 | ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write |
-| flac and metaflac | FLAC, natively and inside Ogg, in both directions |
+| flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
 | alacconvert | ALAC, built from Apple's reference at the commit the port follows |
-| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists and comment/lyric text and identities, through its public API as an executable oracle. No implementation source is read |
+| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, and comment/lyric text and identities, through its public API as an executable oracle. No implementation source is read |
 
 ## Permissively licensed implementations for the work still to come
 

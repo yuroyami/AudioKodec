@@ -243,6 +243,15 @@ public class RawTagEntry(
         }
     }
 
+    /** Parser provenance keeps the vendor header distinct from a user comment. */
+    internal var isVorbisVendorHeader: Boolean = false
+        private set
+
+    internal fun markVorbisVendorHeader(): RawTagEntry {
+        isVorbisVendorHeader = true
+        return this
+    }
+
     override fun toString(): String = "RawTagEntry($key=${text ?: "${binary?.size ?: 0} bytes"})"
 }
 

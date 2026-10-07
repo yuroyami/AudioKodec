@@ -99,6 +99,27 @@ class OggTest {
     }
 
     @Test
+    fun repeatedOpusTagEditsRetainUnknownCommentsWithoutAddingVendorComments() {
+        val comments = listOf("PRIVATE=one", "Private=one", "PRIVATE=one", "VENDOR=user", "PRIVATE=", "OTHER=x=y 日本語", "R128_PRIVATE=")
+        val audio = byteArrayOf(1, 0x42, 0x24)
+        var bytes = OggBuilder()
+            .page(serial = 40, sequence = 0, granule = 0, flags = 2, packets = listOf(opusHead(312)))
+            .page(serial = 40, sequence = 1, granule = 0, flags = 0, packets = listOf(opusTags(*comments.toTypedArray())))
+            .page(serial = 40, sequence = 2, granule = 48_312, flags = 4, packets = listOf(audio))
+            .build()
+        repeat(3) { edit ->
+            bytes = AudioKodec.writeTags(bytes, AudioKodec.readTags(bytes).edit { set(TagField.TITLE, "Edit $edit") })
+            val packets = OggReader(SourceReader(bytes.asAudioSource(), DecodeOptions.DEFAULT), DecodeOptions.DEFAULT).packets(40, 0)
+            assertNotNull(packets.next())
+            val comment = assertNotNull(packets.next())
+            assertEquals("AudioKodec tests" to (listOf("TITLE=Edit $edit") + comments), TagStressFixtures.comments(comment.bytes.copyOfRange(8, comment.length)))
+            val writtenAudio = assertNotNull(packets.next())
+            assertContentEquals(audio, writtenAudio.bytes.copyOfRange(0, writtenAudio.length))
+            assertEquals(48_312L, writtenAudio.granule)
+        }
+    }
+
+    @Test
     fun rewritingOpusTagsPreservesItsOpaqueSuffix() {
         val suffix = byteArrayOf(1, 0x42, 0x24, 0x7F)
         val comment = opusTags("TITLE=Before") + suffix

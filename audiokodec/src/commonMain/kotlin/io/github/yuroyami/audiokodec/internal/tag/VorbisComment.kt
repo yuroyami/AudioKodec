@@ -17,9 +17,9 @@ import kotlin.math.roundToInt
  * little-endian, which is the one surprise in a format whose neighbours are
  * big-endian.
  *
- * Keys are case insensitive by specification and are written in capitals by
- * convention. A key may appear more than once, which is how two artists are
- * stored.
+ * Keys are case insensitive by specification. Modelled keys are written in
+ * capitals by convention; raw entries keep their stored spelling. A key may
+ * appear more than once, which is how two artists are stored.
  */
 internal object VorbisComment {
 
@@ -68,12 +68,10 @@ internal object VorbisComment {
                 "remembering Vorbis comment entries",
             )
         }
-        if (vendor.isNotEmpty()) {
-            // The vendor string is where the encoder names itself, which is
-            // the same fact other formats keep in an encoder field.
-            rememberEntry()
-            entries.add(RawTagEntry("VENDOR", text = vendor))
-        }
+        // The header is separate from user comments, including comments
+        // whose key is also VENDOR. Retain even an empty header string.
+        rememberEntry()
+        entries.add(RawTagEntry("VENDOR", text = vendor).markVorbisVendorHeader())
         var read = 0
         while (read < count) {
             if (position > to - 4) return null
@@ -85,12 +83,10 @@ internal object VorbisComment {
             val separator = text.indexOf('=')
             if (separator <= 0) continue
             if (!validFieldName(text, separator)) continue
-            val key = text.substring(0, separator).uppercase()
+            val key = text.substring(0, separator)
             val value = text.substring(separator + 1)
-            if (value.isNotEmpty()) {
-                rememberEntry()
-                entries.add(RawTagEntry(key, text = value))
-            }
+            rememberEntry()
+            entries.add(RawTagEntry(key, text = value))
         }
         return RawTagBlock(TagFormat.VORBIS_COMMENT, offset, size, entries)
     }
@@ -196,14 +192,21 @@ internal object VorbisComment {
         // encoder-specific identifiers and application state live.
         for (block in tags.raw.blocksOf(io.github.yuroyami.audiokodec.tag.TagFormat.VORBIS_COMMENT)) {
             for (entry in block.entries) {
+                if (entry.isVorbisVendorHeader) continue
                 val key = entry.key.uppercase()
                 if (TagMapping.fieldFor(block.format, entry) != null) continue
                 if (!validFieldName(entry.key, entry.key.length)) continue
                 if (key == "METADATA_BLOCK_PICTURE" || key == "COVERART" || key == "COVERARTMIME") continue
-                if (key.startsWith("REPLAYGAIN_") || key.startsWith("R128_")) continue
+                when (key) {
+                    "REPLAYGAIN_TRACK_GAIN", "REPLAYGAIN_TRACK_PEAK",
+                    "REPLAYGAIN_ALBUM_GAIN", "REPLAYGAIN_ALBUM_PEAK",
+                    "R128_TRACK_GAIN", "R128_ALBUM_GAIN",
+                    -> continue
+                }
                 val value = entry.text ?: continue
-                val item = "${entry.key}=$value"
-                if (item !in items) items.add(item)
+                // Repeated comments are stored data, so no membership
+                // check belongs here. Appending retains order in linear work.
+                items.add("${entry.key}=$value")
             }
         }
 

@@ -447,6 +447,25 @@ AudioKodec.writeTags(
 )
 ```
 
+### Unknown Vorbis comments
+
+FLAC and Ogg keep unmodelled Vorbis comments in their stored order, including
+repeated entries, key spelling and empty values. Rewriting those comments
+performs work proportional to their count and text bytes. The merged fields
+still omit empty values and combine repeated modelled values as described above.
+
+The vendor header is separate from user comments. The raw view exposes it as
+its first `VENDOR` entry, with internal provenance that survives ordinary edits
+and reconstruction of a block around the same entries. It is never emitted as
+a user comment. Actual user comments named `VENDOR` remain intact, including
+caller-constructed entries with the same text as the header. FLAC and Ogg tag
+rewrites preserve the source header vendor, including an empty string.
+
+Modelled fields, pictures and the six recognised ReplayGain/R128 names are
+rebuilt from the edited bundle. Removing those values does not reintroduce
+their old raw entries. Unmodelled names sharing the loudness prefixes remain
+raw comments.
+
 ### ID3 values and MusicBrainz identifiers
 
 ID3v2.4 stores each text field or user-text description in one frame, with
