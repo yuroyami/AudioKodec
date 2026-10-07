@@ -31,6 +31,9 @@ internal object FlacMetadata {
     const val TYPE_CUESHEET = 5
     const val TYPE_PICTURE = 6
 
+    /** The body length occupies 24 bits in every metadata block header. */
+    const val MAX_BODY_BYTES = 0xFF_FFFF
+
     /** The mandatory first block, which describes the whole stream. */
     class StreamInfo(
         val minimumBlockSize: Int,

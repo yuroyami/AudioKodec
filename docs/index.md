@@ -793,6 +793,18 @@ The bytes are the image file exactly as it was stored. AudioKodec does not
 decode it, and does not need to: pass them to ImageKodec, or to whatever the
 platform uses.
 
+Native FLAC encoding and tag edits store artwork in separate `PICTURE` blocks.
+Each block retains the image bytes, role, MIME type, UTF-8 description and
+informational dimensions. Vorbis comments carry text and gain fields without
+duplicate `METADATA_BLOCK_PICTURE` values.
+
+A native FLAC picture body can contain at most 16,777,215 bytes. This includes
+32 bytes of length and property fields, the MIME type, the UTF-8 description
+and the image data. Encoding and tag edits check every picture before writing
+output. An oversized picture raises `AudioKodecException` and leaves the sink
+untouched; encoding also leaves the PCM source unread. The encoder then writes
+the supplied image bytes directly to the sink without another full image copy.
+
 `tags.pictures` merges equivalent copies across tag blocks. Images with
 different bytes, roles or captions in a format that carries captions remain
 distinct. Rich picture structures take priority over legacy `COVERART`, MP4

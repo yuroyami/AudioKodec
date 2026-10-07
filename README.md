@@ -120,6 +120,10 @@ their native text chunks plus ID3v2.4 for Unicode and richer fields, while FLAC
 uses Vorbis comments and picture blocks. AU has no structured tag format and
 rejects a non-empty bundle instead of silently dropping it.
 
+FLAC encoding and tag edits store artwork in native `PICTURE` blocks.
+See the [artwork guide](https://yuroyami.github.io/AudioKodec/#pictures) for
+picture properties and size limits.
+
 ## FLAC
 
 FLAC decodes bit-exactly and encodes to files the reference decoder accepts.

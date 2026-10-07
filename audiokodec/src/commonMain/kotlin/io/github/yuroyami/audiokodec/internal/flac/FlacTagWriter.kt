@@ -73,7 +73,7 @@ internal object FlacTagWriter {
             for (picture in tags.pictures) {
                 bodies.add(
                     FlacMetadata.TYPE_PICTURE to
-                        checkedBody("picture", FlacPicture.build(picture)),
+                        FlacPicture.build(picture, FlacMetadata.MAX_BODY_BYTES),
                 )
             }
         }
@@ -101,10 +101,10 @@ internal object FlacTagWriter {
     }
 
     private fun checkedBody(what: String, body: ByteArray): ByteArray {
-        if (body.size > MAX_METADATA_BODY) {
+        if (body.size > FlacMetadata.MAX_BODY_BYTES) {
             throw AudioKodecException(
                 "a FLAC $what is ${body.size} bytes; metadata blocks are limited to " +
-                    "$MAX_METADATA_BODY",
+                    "${FlacMetadata.MAX_BODY_BYTES}",
             )
         }
         return body
@@ -142,5 +142,4 @@ internal object FlacTagWriter {
         }
     }
 
-    private const val MAX_METADATA_BODY = 0xFF_FFFF
 }

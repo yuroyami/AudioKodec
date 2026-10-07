@@ -37,6 +37,30 @@ class HostileTagTest {
     }
 
     @Test
+    fun encodedNativePicturesKeepTypedFailuresUnderTruncationAndMutation() {
+        val original = AudioKodec.encode(FloatArray(16), AudioFormat(8_000, 1), EncodeTarget.flac(),
+            TagBundle(emptyMap(), FlacPictureBlockFixtures.pictures()))
+        val blocks = FlacPictureBlockFixtures.blocks(original)
+        val last = blocks.last()
+        for (length in 0..last.bodyAt + last.size) {
+            expectOnlyKiteFailures("native picture metadata truncated to $length bytes") {
+                AudioKodec.readTags(original.copyOf(length))
+            }
+        }
+        for (picture in blocks.filter { it.type == 6 }) {
+            for (at in picture.bodyAt - 4 until picture.bodyAt + picture.size) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    expectOnlyKiteFailures("native picture byte $at set to $byte") {
+                        val mutated = original.copyOf().also { it[at] = byte }
+                        val read = AudioKodec.readTags(mutated)
+                        AudioKodec.writeTags(mutated, read.edit { set(TagField.TITLE, "Recovered") })
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun chapterSubframesKeepTypedFailuresUnderTruncationAndMutation() {
         for (major in 3..4) {
             val original = ChapterSubframeFixtures.stream(major, ChapterSubframeFixtures.subframes(major))

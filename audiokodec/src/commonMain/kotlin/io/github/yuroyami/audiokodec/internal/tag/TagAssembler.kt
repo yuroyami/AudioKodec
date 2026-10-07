@@ -1,6 +1,7 @@
 package io.github.yuroyami.audiokodec.internal.tag
 
 import io.github.yuroyami.audiokodec.AudioKodecException
+import io.github.yuroyami.audiokodec.AudioSink
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.tag.PictureType
 import io.github.yuroyami.audiokodec.tag.RawTagBlock
@@ -608,8 +609,8 @@ internal object FlacPicture {
         )
     }
 
-    /** Builds the structure, which is what writing a picture to FLAC needs. */
-    fun build(picture: TagPicture): ByteArray {
+    /** Checks the container's limit and retains the supplied image bytes without copying them. */
+    fun prepare(picture: TagPicture, maximumBytes: Int = Int.MAX_VALUE): Prepared {
         val mime = picture.mimeType.encodeToByteArray()
         require(mime.isNotEmpty() && mime.all { (it.toInt() and 0xFF) in 0x20..0x7E }) {
             "a FLAC picture MIME type must be nonempty printable ASCII"
@@ -619,28 +620,56 @@ internal object FlacPicture {
         if (size > Int.MAX_VALUE) {
             throw AudioKodecException("a FLAC picture is too large for a Kotlin array")
         }
-        val out = ByteArray(size.toInt())
-        var position = 0
-        fun writeInt(value: Int) {
-            out[position] = (value ushr 24).toByte()
-            out[position + 1] = (value ushr 16).toByte()
-            out[position + 2] = (value ushr 8).toByte()
-            out[position + 3] = value.toByte()
-            position += 4
+        if (size > maximumBytes) {
+            throw AudioKodecException(
+                "a FLAC picture needs $size bytes; its block is limited to $maximumBytes",
+            )
         }
-        writeInt(picture.type.ordinal)
-        writeInt(mime.size)
-        mime.copyInto(out, position)
-        position += mime.size
-        writeInt(description.size)
-        description.copyInto(out, position)
-        position += description.size
-        writeInt(picture.width)
-        writeInt(picture.height)
-        writeInt(picture.colourDepth)
-        writeInt(picture.colourCount)
-        writeInt(picture.bytes.size)
-        picture.bytes.copyInto(out, position)
-        return out
+        return Prepared(picture, mime, description, size.toInt())
+    }
+
+    /** Builds a picture body, checking the container's limit before allocating it. */
+    fun build(picture: TagPicture, maximumBytes: Int = Int.MAX_VALUE): ByteArray =
+        prepare(picture, maximumBytes).buildBytes()
+
+    class Prepared(
+        private val picture: TagPicture,
+        private val mime: ByteArray,
+        private val description: ByteArray,
+        val size: Int,
+    ) {
+        fun writeTo(sink: AudioSink) = emit { sink.write(it) }
+
+        fun buildBytes(): ByteArray {
+            val out = ByteArray(size)
+            var position = 0
+            emit { bytes ->
+                bytes.copyInto(out, position)
+                position += bytes.size
+            }
+            return out
+        }
+
+        private fun emit(write: (ByteArray) -> Unit) {
+            val number = ByteArray(4)
+            fun writeInt(value: Int) {
+                number[0] = (value ushr 24).toByte()
+                number[1] = (value ushr 16).toByte()
+                number[2] = (value ushr 8).toByte()
+                number[3] = value.toByte()
+                write(number)
+            }
+            writeInt(picture.type.ordinal)
+            writeInt(mime.size)
+            write(mime)
+            writeInt(description.size)
+            write(description)
+            writeInt(picture.width)
+            writeInt(picture.height)
+            writeInt(picture.colourDepth)
+            writeInt(picture.colourCount)
+            writeInt(picture.bytes.size)
+            write(picture.bytes)
+        }
     }
 }

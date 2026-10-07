@@ -206,6 +206,15 @@ Mutagen checks mixed ID3/APE, chapter identities, all APE role keys, and real
 FLAC/Opus files with leading ID3. Audio bytes and Opus packets remain exact.
 Truncation and mutation sweeps cover independent artwork layouts.
 
+Native FLAC encoding writes each supplied image as a separate PICTURE block.
+Encoding and tag edits check the complete 24-bit body limit before output.
+The encoder streams image bytes directly after checking all picture metadata.
+Common cases cover both sink modes, unknown frame counts, size boundaries,
+repeated edits, seeking, duration, exact PCM and malformed metadata. Metaflac
+imports supply independent block bodies and its exports reproduce the image
+bytes. The reference FLAC and FFmpeg decoders check all supported sample depths.
+A 13 MiB image also checks streaming allocations and an exact metaflac export.
+
 ### Other tag features
 
 | Feature | Status |
@@ -221,6 +230,7 @@ Truncation and mutation sweeps cover independent artwork layouts.
 | ID3 legacy date precision and version conversion | ✅ v2.2/v2.3 year/day/month/time groups merged without invented seconds; v2.3 native split output for whole dates and minute precision, original-release years, calendar checks and named precision refusals; incomplete/free-form raw preservation or refusal, explicit primary edits, hostile sweeps, Mutagen, FFprobe and exact MPEG audio checks |
 | Encoding software, human credit and explicit settings kept separate | ✅ ID3 `TSSE`/`TENC`/`TXXX:ENCODERSETTINGS`, native Vorbis/APE and RIFF conventions; combined strings retained intact; common version/edit/hostile cases, Mutagen and FFprobe |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
+| Native FLAC PICTURE blocks during encoding and tag edits | ✅ complete body limit checked before output; direct image streaming during encoding; metaflac import/export, reference FLAC and FFmpeg checks |
 | Equivalent artwork copies merged without growth on repeated edits | ✅ distinct image bytes, roles and rich captions retained; chapter scope kept separate |
 | Unique ID3 picture descriptions and all standard APE picture-role keys | ✅ additional APE images need a richer block; unrepresentable APE-only requests refused before output |
 | Media type sniffed when a format stores a picture without naming one | ✅ |

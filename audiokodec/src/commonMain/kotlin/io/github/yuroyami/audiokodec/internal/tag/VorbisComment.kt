@@ -150,7 +150,7 @@ internal object VorbisComment {
      *
      * Pictures are written as `METADATA_BLOCK_PICTURE`, which is the FLAC
      * picture structure in base64. That is how Ogg carries cover art, and a
-     * FLAC file that writes its pictures as proper blocks passes an empty
+     * FLAC file that writes its pictures as proper blocks passes false for
      * [includePictures] instead.
      */
     fun build(

@@ -7,6 +7,7 @@ import io.github.yuroyami.audiokodec.AudioKodecException
 import io.github.yuroyami.audiokodec.PcmSource
 import io.github.yuroyami.audiokodec.readChecked
 import io.github.yuroyami.audiokodec.internal.bits.BitWriterMsb
+import io.github.yuroyami.audiokodec.internal.tag.FlacPicture
 import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import kotlin.math.abs
@@ -73,12 +74,17 @@ internal class FlacEncoder(
             "FLAC frameCount must be 0..$MAX_TOTAL_SAMPLES, was $declaredFrames"
         }
 
-        val comment = tags?.let { VorbisComment.build(it, includePictures = true) }
-        if (comment != null && comment.size > MAX_METADATA_BODY) {
+        val comment = tags?.let { VorbisComment.build(it, includePictures = false) }
+        if (comment != null && comment.size > FlacMetadata.MAX_BODY_BYTES) {
             throw AudioKodecException(
                 "the FLAC Vorbis comment is ${comment.size} bytes; metadata blocks are " +
-                    "limited to $MAX_METADATA_BODY",
+                    "limited to ${FlacMetadata.MAX_BODY_BYTES}",
             )
+        }
+        // Prepare every picture before output, including size checks on a
+        // later image that would otherwise leave a partly written stream.
+        val pictures = tags?.pictures.orEmpty().map {
+            FlacPicture.prepare(it, FlacMetadata.MAX_BODY_BYTES)
         }
 
         sink.write(MAGIC)
@@ -88,7 +94,7 @@ internal class FlacEncoder(
         // count in advance, and the values that depend on the audio are then
         // left at zero, which the format allows and every decoder handles.
         val streamInfoAt = sink.position + 4
-        writeMetadata(sink, declaredFrames, comment)
+        writeMetadata(sink, declaredFrames, comment, pictures)
 
         val readBuffer = FloatArray(blockSize * channels)
         var totalFrames = 0L
@@ -144,8 +150,13 @@ internal class FlacEncoder(
         sink.patchAt(streamInfoAt, patched)
     }
 
-    private fun writeMetadata(sink: AudioSink, declaredFrames: Long?, comment: ByteArray?) {
-        val hasMore = comment != null || PADDING_BYTES > 0
+    private fun writeMetadata(
+        sink: AudioSink,
+        declaredFrames: Long?,
+        comment: ByteArray?,
+        pictures: List<FlacPicture.Prepared>,
+    ) {
+        val hasMore = comment != null || pictures.isNotEmpty() || PADDING_BYTES > 0
 
         val header = ByteArray(4)
         header[0] = (if (hasMore) FlacMetadata.TYPE_STREAMINFO else 0x80).toByte()
@@ -165,28 +176,35 @@ internal class FlacEncoder(
         sink.write(body)
 
         if (comment != null) {
-            val commentHeader = ByteArray(4)
-            val last = PADDING_BYTES == 0
-            commentHeader[0] =
-                ((if (last) 0x80 else 0) or FlacMetadata.TYPE_VORBIS_COMMENT).toByte()
-            commentHeader[1] = (comment.size ushr 16).toByte()
-            commentHeader[2] = (comment.size ushr 8).toByte()
-            commentHeader[3] = comment.size.toByte()
-            sink.write(commentHeader)
-            sink.write(comment)
+            writeMetadataBlock(sink, FlacMetadata.TYPE_VORBIS_COMMENT, comment,
+                pictures.isEmpty() && PADDING_BYTES == 0)
+        }
+
+        for ((index, picture) in pictures.withIndex()) {
+            writeMetadataHeader(sink, FlacMetadata.TYPE_PICTURE, picture.size,
+                index == pictures.lastIndex && PADDING_BYTES == 0)
+            picture.writeTo(sink)
         }
 
         if (PADDING_BYTES > 0) {
             // Padding leaves room for a later tag edit to grow without the
             // audio having to move.
-            val paddingHeader = ByteArray(4)
-            paddingHeader[0] = (0x80 or FlacMetadata.TYPE_PADDING).toByte()
-            paddingHeader[1] = (PADDING_BYTES ushr 16).toByte()
-            paddingHeader[2] = (PADDING_BYTES ushr 8).toByte()
-            paddingHeader[3] = PADDING_BYTES.toByte()
-            sink.write(paddingHeader)
-            sink.write(ByteArray(PADDING_BYTES))
+            writeMetadataBlock(sink, FlacMetadata.TYPE_PADDING, ByteArray(PADDING_BYTES), true)
         }
+    }
+
+    private fun writeMetadataBlock(sink: AudioSink, type: Int, body: ByteArray, last: Boolean) {
+        writeMetadataHeader(sink, type, body.size, last)
+        sink.write(body)
+    }
+
+    private fun writeMetadataHeader(sink: AudioSink, type: Int, size: Int, last: Boolean) {
+        val header = ByteArray(4)
+        header[0] = ((if (last) 0x80 else 0) or type).toByte()
+        header[1] = (size ushr 16).toByte()
+        header[2] = (size ushr 8).toByte()
+        header[3] = size.toByte()
+        sink.write(header)
     }
 
     private fun writeStreamInfoBody(
@@ -859,6 +877,5 @@ internal class FlacEncoder(
         const val MAX_COEFFICIENT_SHIFT = 15
         const val PADDING_BYTES = 4096
         const val MAX_TOTAL_SAMPLES = 0xF_FFFF_FFFFL
-        const val MAX_METADATA_BODY = 0xFF_FFFF
     }
 }
