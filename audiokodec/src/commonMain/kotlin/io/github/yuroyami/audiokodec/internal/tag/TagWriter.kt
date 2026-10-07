@@ -87,8 +87,11 @@ internal object TagWriter {
             AudioContainer.AIFF -> TagFormat.AIFF_TEXT
             else -> null
         }
+        val riffCodePage = if (nativeFormat == TagFormat.RIFF_INFO) {
+            TagLocator.riffCodePage(reader, container == AudioContainer.RF64)
+        } else null
         val needsId3 = options.formats == null && nativeFormat != null &&
-            NativeTextCapabilities.losses(tags, nativeFormat).isNotEmpty()
+            NativeTextCapabilities.losses(tags, nativeFormat, riffCodePage).isNotEmpty()
         val addId3Chunk = needsId3 && !hadLeadingId3 && !hadTrailingId3 &&
             existing.none { isId3v2(it.format) }
         val willWriteId3 = if (containerHasSeparateMetadata) {
@@ -98,7 +101,7 @@ internal object TagWriter {
             options.formats == null || options.formats.any { isId3v2(it) }
         }
         if (nativeFormat != null && !willWriteId3 && options.formats?.isEmpty() != true) {
-            NativeTextCapabilities.requireComplete(tags, nativeFormat)
+            NativeTextCapabilities.requireComplete(tags, nativeFormat, riffCodePage)
         }
         val artworkTags = if (willWriteId3) {
             Id3v2Writer.normaliseArtwork(tags, requestedId3Version(options))
@@ -141,6 +144,11 @@ internal object TagWriter {
         } else {
             null
         }
+        // Unknown INFO entries have no ID3 projection. Encode them before
+        // emitting an external prefix so a refusal leaves the sink untouched.
+        val preparedInfo = if (nativeFormat == TagFormat.RIFF_INFO &&
+            (options.formats == null || TagFormat.RIFF_INFO in options.formats)
+        ) buildRiffInfo(artworkTags, id3 != null, riffCodePage) else null
         val prefixId3 = if (externalId3) Id3v2Writer.withPadding(id3!!, options.padding) else null
         if (prefixId3 != null) sink.write(prefixId3)
         // FLAC and Ogg writers use -1 to mean "copy to EOF". Chunked
@@ -153,13 +161,13 @@ internal object TagWriter {
         when (container) {
             AudioContainer.WAV ->
                 writeRiff(
-                    reader, artworkTags, sink, options, rf64 = false, sourceEnd = containerEnd,
-                    preparedId3 = id3, addId3Chunk = addId3Chunk,
+                    reader, sink, options, rf64 = false, sourceEnd = containerEnd,
+                    preparedId3 = id3, addId3Chunk = addId3Chunk, preparedInfo = preparedInfo,
                 )
             AudioContainer.RF64 ->
                 writeRiff(
-                    reader, artworkTags, sink, options, rf64 = true, sourceEnd = containerEnd,
-                    preparedId3 = id3, addId3Chunk = addId3Chunk,
+                    reader, sink, options, rf64 = true, sourceEnd = containerEnd,
+                    preparedId3 = id3, addId3Chunk = addId3Chunk, preparedInfo = preparedInfo,
                 )
             AudioContainer.AIFF ->
                 writeAiff(
@@ -421,13 +429,13 @@ internal object TagWriter {
     /** Rewrites a RIFF file, replacing its metadata chunks. */
     private fun writeRiff(
         reader: SourceReader,
-        tags: TagBundle,
         sink: AudioSink,
         options: TagWriteOptions,
         rf64: Boolean,
         sourceEnd: Long,
         preparedId3: ByteArray?,
         addId3Chunk: Boolean,
+        preparedInfo: ByteArray?,
     ) {
         val size = sourceEnd
         reader.seek(0)
@@ -438,11 +446,7 @@ internal object TagWriter {
             throw CorruptStreamException("expected an RF64 or BW64 header, found '$riffId'", 0)
         }
 
-        val info = if (options.formats == null || TagFormat.RIFF_INFO in options.formats) {
-            buildRiffInfo(tags, valuesPreservedInId3 = preparedId3 != null)
-        } else {
-            null
-        }
+        val info = preparedInfo
         val explicitlyWantsId3 = options.formats?.let {
             TagFormat.ID3V2_4 in it || TagFormat.ID3V2_3 in it
         } == true
@@ -680,14 +684,18 @@ internal object TagWriter {
      * way the other writers carry their unknown entries, so an unrelated edit
      * does not delete them.
      */
-    internal fun buildRiffInfo(tags: TagBundle, valuesPreservedInId3: Boolean = false): ByteArray? {
-        if (!valuesPreservedInId3) NativeTextCapabilities.requireComplete(tags, TagFormat.RIFF_INFO)
+    internal fun buildRiffInfo(
+        tags: TagBundle,
+        valuesPreservedInId3: Boolean = false,
+        codePage: Int? = null,
+    ): ByteArray? {
+        if (!valuesPreservedInId3) NativeTextCapabilities.requireComplete(tags, TagFormat.RIFF_INFO, codePage)
         val entries = ArrayList<Pair<String, ByteArray>>()
         for ((field, values) in tags.fields) {
             val key = TagMapping.riffInfoKeyFor(field) ?: continue
             for (value in values) {
-                if (value.isNotEmpty() && NativeTextCapabilities.fits(field, value)) {
-                    entries.add(key to TagText.encodeLatin1(value))
+                if (value.isNotEmpty() && NativeTextCapabilities.fits(field, value, TagFormat.RIFF_INFO, codePage)) {
+                    entries.add(key to NativeTextEncoding.encode(value, codePage))
                 }
             }
         }
@@ -698,7 +706,10 @@ internal object TagWriter {
                 if (key.length != 4 || key.any { it.code !in 0x20..0x7E }) continue
                 if (entries.any { it.first == key }) continue
                 val value = entry.text?.takeIf { it.isNotEmpty() } ?: continue
-                entries.add(key to TagText.encodeLatin1(value))
+                if ('\u0000' in value || value != value.trim() || !NativeTextEncoding.fits(value, codePage)) {
+                    throw UnsupportedFeatureException("RIFF INFO entry $key cannot retain its text in code page ${codePage ?: 65001}")
+                }
+                entries.add(key to NativeTextEncoding.encode(value, codePage))
             }
         }
         if (entries.isEmpty()) return null
@@ -752,7 +763,7 @@ internal object TagWriter {
         for ((field, values) in tags.fields) {
             val id = TagMapping.aiffChunkFor(field) ?: continue
             for (value in values) {
-                if (value.isEmpty() || !NativeTextCapabilities.fits(field, value)) continue
+                if (value.isEmpty() || !NativeTextCapabilities.fits(field, value, TagFormat.AIFF_TEXT)) continue
                 val encoded = TagText.encodeLatin1(value)
                 val chunkSize = 8L + encoded.size + encoded.size % 2
                 if (chunkSize > Int.MAX_VALUE) {

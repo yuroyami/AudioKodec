@@ -519,7 +519,8 @@ retain the raw components until they can be converted or preserved safely.
 Default edits retain modelled metadata by adding an ID3 chunk to WAV, RF64,
 AIFF or AIFF-C when native text cannot express it. This covers fields such as
 album artist, totals, BPM and URL, pictures, chapters, ReplayGain, Unicode
-text beyond Latin-1 and native singleton lists. An existing external ID3
+text outside a declared RIFF code page, non-ASCII AIFF text and native
+singleton lists. An existing external ID3
 block is updated instead of adding another carrier. Compatible native values
 are still written for readers using INFO or AIFF text.
 
@@ -544,6 +545,41 @@ of `4294967295` reserved for an unknown end, and identifiers it cannot encode.
 ID3 URL frames require Latin-1; escape a Unicode URL before writing it.
 Null characters in ID3 or APE modelled text are refused because they would
 become value separators.
+
+### Native text encodings
+
+RIFF INFO reads honour a file-wide `CSET` declaration before or after the INFO list.
+These code pages are supported:
+
+| CSET code page | Encoding |
+|---|---|
+| `0`, `28591` | ISO-8859-1, also called Latin-1 |
+| `1252` | Windows-1252, including its defined punctuation and currency symbols |
+| `65001` | UTF-8 |
+
+Without `CSET`, reads accept valid UTF-8, then fall back to Latin-1.
+This accepts FFmpeg's undeclared UTF-8 and older native text files.
+Some byte sequences are valid in both encodings and have different meanings.
+Undeclared text cannot resolve that ambiguity; valid UTF-8 takes precedence.
+An explicit Latin-1 declaration always prevents UTF-8 guessing.
+
+New undeclared INFO output uses UTF-8, matching FFmpeg's native output.
+A rewrite retains an existing `CSET` and encodes INFO text in its declared code page.
+Other chunks retain their bytes and declaration.
+Readers such as ExifTool need a UTF-8 charset hint for undeclared Unicode INFO.
+Explicit native-only output can retain Unicode without ID3 when the INFO encoding permits it.
+Modelled values outside a declared legacy code page need ID3 or produce a named refusal.
+Unknown INFO text has no ID3 projection and is refused if the declared encoding cannot retain it.
+These refusals happen before any output, including an external ID3 prefix.
+
+AIFF and AIFF-C native output uses the specification's ASCII text encoding.
+Non-ASCII values use ID3; explicit native-only output refuses them.
+Reads also accept valid UTF-8 and legacy Latin-1 native text for compatibility.
+Fresh encoding uses the same native rules and includes complete ID3 metadata.
+
+Unsupported RIFF code pages raise `UnsupportedFeatureException` when INFO text needs decoding or writing.
+Malformed or conflicting `CSET`, invalid declared UTF-8 and undefined Windows-1252 bytes raise `CorruptStreamException`.
+Native text does not replace unrepresentable characters with question marks.
 
 ### Multiple values in native text chunks
 

@@ -48,6 +48,9 @@ public class TagWriteOptions(
      * The default writes an ID3v2 block for bare codec streams, a `LIST INFO`
      * chunk for RIFF files, and text chunks for AIFF. When those native
      * chunks cannot retain the requested metadata, it also writes ID3.
+     * Undeclared RIFF INFO uses UTF-8; an existing supported CSET controls
+     * its encoding during edits. AIFF native text uses ASCII. Unicode beyond
+     * those limits uses ID3 or is refused by a native-only selection.
      * An existing external ID3 block is reused; otherwise it adds a native
      * ID3 chunk. Native-only selections name the unrepresentable fields,
      * lists, pictures, chapters or ReplayGain and refuse before output.

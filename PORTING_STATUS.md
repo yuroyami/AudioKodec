@@ -126,9 +126,9 @@ inspected and edited.
 | **ID3v1 and v1.1** | ✅ | update only | Never created. An existing block is kept in step with the real tag, and the 1.1 track number is detected rather than assumed |
 | **APEv2** | ✅ | ✅ | Header and footer, multi-value text items, binary items, cover art. Found at either end of a file |
 | **APEv1** | ✅ | upgraded | Footer only. Writing produces a v2 block |
-| **RIFF INFO** | ✅ | ✅ | `LIST INFO` inside a WAV |
+| **RIFF INFO** | ✅ | ✅ | UTF-8 `LIST INFO` inside WAV/RF64; supported CSET declarations retain their encoding |
 | **Broadcast Wave `bext`** | ✅ | ❌ | Description, originator, reference, date, time and coding history |
-| **AIFF text chunks** | ✅ | ✅ | `NAME`, `AUTH`, `(c) `, `ANNO` |
+| **AIFF text chunks** | ✅ | ✅ | ASCII `NAME`, `AUTH`, `(c) `, `ANNO`; compatible UTF-8/Latin-1 reads; Unicode output uses ID3 |
 | **ID3v2 in a RIFF or AIFF chunk** | ✅ | ✅ | An `id3 ` or `ID3 ` chunk, selected explicitly or added by default when native text cannot retain the requested metadata |
 | **Lyrics3v2** | ✅ | ❌ | Read for its content and, more importantly, for its length: a reader that does not know it is there gets every other trailing offset wrong |
 | **Vorbis comments** | ✅ | ✅ | In FLAC, and in Ogg for every mapping it carries |
@@ -214,6 +214,7 @@ Truncation and mutation sweeps cover independent artwork layouts.
 | `3/12` split into a number and a total, and joined again on write | ✅ |
 | Comment and lyric whitespace retained in the merged view; unchanged ID3 text keeps every distinct language/description pair | ✅ v2.2/v2.3/v2.4 inputs and v2.3/v2.4 output, with all legal text encodings; Mutagen checks v2.3/v2.4 |
 | Reserved iTunes `COM`/`COMM` frames kept separate from editable user comments | ✅ case-insensitive `iTun` description family retained across comment edits and version conversion; common encoding/hostile cases and Mutagen on real MP3 files |
+| Native text charset handling | ✅ UTF-8 compatibility reads, authoritative RIFF CSET 0/28591/1252/65001, ASCII AIFF output, named refusals before output; FFmpeg, FFprobe, ExifTool, Python codecs and hostile cases |
 | Multiple native text values retained during encoding and edits | ✅ repeated RIFF INFO and AIFF annotations; singular AIFF title/author/copyright with ID3 fallback or named refusal; WAV/RF64/AIFF/AIFF-C, ExifTool, Mutagen and hostile cases |
 | Unrepresentable modelled metadata retained or named and refused before output | ✅ default RIFF/AIFF ID3 fallback, native-only field/component refusals, Vorbis WEBSITE and APE Weblink, standalone and multiple totals, explicit removal and external ID3 carriers; chapter output requires ID3; common boundary/mutation cases and Mutagen with exact encoded and decoded audio checks |
 | Distinct primary and explicit release dates | ✅ `DATE`/`TDRC` kept separate from appended `RELEASE_DATE`/`TDRL`; legacy `TXXX:RELEASEDATE` and native `RELEASEDATE`; repeated independent edits/removals, all ID3 text encodings, hostile cases and Mutagen in both directions |

@@ -295,6 +295,11 @@ pictures in FLAC and Ogg, an updated ID3v1 block where the file already had one,
 and the metadata chunks of RIFF and AIFF. MP4 atoms arrive with the MP4
 container.
 
+Undeclared RIFF INFO uses UTF-8, and edits honour supported `CSET` declarations.
+AIFF native output uses ASCII; Unicode output uses ID3. Native reads also accept
+UTF-8 and legacy Latin-1 text. Unsupported declarations and unrepresentable native-only
+requests produce named errors. See [native text encodings](docs/index.md#native-text-encodings).
+
 Default edits add ID3 to WAV, RF64 and AIFF when their native text cannot
 retain the requested metadata. Explicit native-only selections name the
 unrepresentable fields and components and refuse before output. URLs use

@@ -319,8 +319,8 @@ internal object ContainerWriter {
         val framesPerBlock = encoder.framesPerBlock
         val actualTags = tags?.takeUnless { it.isEmpty }
         val info = actualTags?.let { TagWriter.buildRiffInfo(it, valuesPreservedInId3 = true) }
-        // RIFF INFO is deliberately small and old-player friendly; ID3 keeps
-        // the fields, Unicode, pictures and chapters INFO cannot represent.
+        // RIFF INFO stores UTF-8 text; ID3 also keeps the richer fields,
+        // pictures and chapters that INFO cannot represent.
         val id3 = actualTags?.let { Id3v2Writer.build(it, major = 4, padding = 0) }
 
         val fmtBody = buildWaveFormatChunk(format, target, encoder, extensible)

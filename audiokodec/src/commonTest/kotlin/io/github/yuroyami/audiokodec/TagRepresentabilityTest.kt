@@ -124,7 +124,7 @@ class TagRepresentabilityTest {
     }
 
     @Test
-    fun unicodeAndFreeCommentSpacesUseId3RatherThanLossyNativeText() {
+    fun nativeLimitsUseId3WithoutLosingUnicodeOrCommentSpaces() {
         for (fields in listOf(mapOf(TagField.TITLE to listOf("日本語")),
             mapOf(TagField.COMMENT to listOf(" first ", "日本語\n")))) {
             for ((source, native) in listOf(NativeTextListFixtures.wave() to TagFormat.RIFF_INFO,
@@ -132,13 +132,20 @@ class TagRepresentabilityTest {
                 val written = AudioKodec.writeTags(source, TagBundle(fields))
                 val read = AudioKodec.readTags(written)
                 assertEquals(fields, read.fields)
-                assertTrue(read.raw.blocksOf(native).isEmpty())
                 assertContentEquals(NativeTextListFixtures.payload(source), NativeTextListFixtures.payload(written))
                 val sink = ByteArrayAudioSink()
-                assertFailsWith<UnsupportedFeatureException> {
+                if (native == TagFormat.RIFF_INFO && TagField.TITLE in fields) {
+                    assertEquals(fields, read.fields)
+                    assertTrue(read.raw.blocksOf(TagFormat.ID3V2_4).isEmpty())
                     AudioKodec.writeTags(source.asAudioSource(), TagBundle(fields), sink, TagWriteOptions(formats = setOf(native)))
+                    assertEquals(fields, AudioKodec.readTags(sink.toByteArray()).fields)
+                } else {
+                    assertTrue(read.raw.blocksOf(native).isEmpty())
+                    assertFailsWith<UnsupportedFeatureException> {
+                        AudioKodec.writeTags(source.asAudioSource(), TagBundle(fields), sink, TagWriteOptions(formats = setOf(native)))
+                    }
+                    assertEquals(0L, sink.position)
                 }
-                assertEquals(0L, sink.position)
             }
         }
     }

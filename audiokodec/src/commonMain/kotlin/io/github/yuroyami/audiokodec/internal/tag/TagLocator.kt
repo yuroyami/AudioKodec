@@ -287,18 +287,23 @@ internal object TagLocator {
         return RawTagBlock(block.format, block.offset + by, block.size, block.entries)
     }
 
-    /**
-     * Walks a RIFF file for the chunks that hold metadata.
-     *
-     * Three kinds turn up: a `LIST` of type `INFO`, the Broadcast Wave `bext`
-     * chunk, and an `id3 ` chunk holding a whole ID3v2 block.
-     */
+    /** Reads the file-wide declaration without allocating metadata payloads. */
+    internal fun riffCodePage(reader: SourceReader, rf64: Boolean): Int? =
+        readRiffChunks(reader, ArrayList(), rf64, readMetadata = false)
+
+    private class RiffInfoSpan(val start: Long, val size: Long)
+
+    /** Defers INFO decoding until the complete form supplies its CSET declaration. */
     private fun readRiffChunks(
         reader: SourceReader,
         into: MutableList<RawTagBlock>,
         rf64: Boolean,
-    ) {
-        val formEnd = readRiffFormEnd(reader, rf64) ?: return
+        readMetadata: Boolean = true,
+    ): Int? {
+        val formEnd = readRiffFormEnd(reader, rf64) ?: return null
+        var declaration: Long? = null
+        var codePage: Int? = null
+        val infoSpans = ArrayList<RiffInfoSpan>()
         var dataSize = -1L
         val extraSizes = ArrayList<RiffDs64Entry>()
         reader.seek(12)
@@ -329,10 +334,22 @@ internal object TagLocator {
                 storedSize
             }
             if (chunkSize < 0) break
-            if (bodyStart > formEnd || chunkSize > formEnd - bodyStart) break
+            if (bodyStart > formEnd || chunkSize > formEnd - bodyStart) {
+                if (id == "CSET") throw TruncatedStreamException("RIFF CSET extends past the form end", chunkStart)
+                break
+            }
 
             try {
                 when (id) {
+                    "CSET" -> {
+                        if (chunkSize != 8L) throw CorruptStreamException("RIFF CSET must contain four 16-bit fields", chunkStart)
+                        val value = reader.readI64Le()
+                        if (declaration != null && declaration != value) {
+                            throw CorruptStreamException("conflicting RIFF CSET declarations", chunkStart)
+                        }
+                        declaration = value
+                        codePage = (value and 0xFFFFL).toInt()
+                    }
                     "ds64" -> if (rf64 && chunkSize >= 28) {
                         reader.readI64Le()
                         dataSize = reader.readI64Le()
@@ -352,17 +369,19 @@ internal object TagLocator {
                     }
                     "LIST" -> if (chunkSize >= 4) {
                         val listType = reader.readFourCc()
-                        if (listType == "INFO") {
-                            readRiffInfo(reader, bodyStart + 4, chunkSize - 4, chunkStart, into)
+                        if (listType == "INFO" && readMetadata) {
+                            reader.options.checkAllocation((infoSpans.size.toLong() + 1L) * 24L, "the RIFF INFO span table")
+                            infoSpans.add(RiffInfoSpan(chunkStart, chunkSize))
                         }
                     }
-                    "bext" -> readBext(reader, bodyStart, chunkSize, chunkStart, into)
-                    "id3 ", "ID3 " -> {
+                    "bext" -> if (readMetadata) readBext(reader, bodyStart, chunkSize, chunkStart, into)
+                    "id3 ", "ID3 " -> if (readMetadata) {
                         val body = readSizedBytes(reader, chunkSize, "reading a RIFF ID3 chunk")
                         Id3v2Reader.read(body, 0, bodyStart, reader.options)?.let { into.add(it) }
                     }
                 }
-            } catch (_: TruncatedStreamException) {
+            } catch (error: TruncatedStreamException) {
+                if (id == "CSET") throw error
                 break
             }
 
@@ -376,6 +395,10 @@ internal object TagLocator {
             reader.seek(next)
             if (next == formEnd) break
         }
+        for (span in infoSpans) {
+            readRiffInfo(reader, span.start + 12, span.size - 4, span.start, into, codePage)
+        }
+        return codePage
     }
 
     /**
@@ -427,6 +450,7 @@ internal object TagLocator {
         length: Long,
         blockStart: Long,
         into: MutableList<RawTagBlock>,
+        codePage: Int?,
     ) {
         if (from < 0 || length < 0 || length > Long.MAX_VALUE - from) return
         val entries = ArrayList<RawTagEntry>()
@@ -451,7 +475,7 @@ internal object TagLocator {
             } catch (_: TruncatedStreamException) {
                 break
             }
-            val text = TagText.decodeLatin1(body, 0, body.size, reader.options).trim()
+            val text = NativeTextEncoding.decode(body, codePage, reader.options).trim()
             if (text.isNotEmpty()) entries.add(RawTagEntry(key, text = text))
             val padded = entrySize + (entrySize and 1L)
             if (padded > Long.MAX_VALUE - position - 8) break
@@ -562,7 +586,7 @@ internal object TagLocator {
                 when (id) {
                     "NAME", "AUTH", "(c) ", "ANNO" -> {
                         val body = readSizedBytes(reader, chunkSize, "reading an AIFF text chunk")
-                        val text = TagText.decodeLatin1(body, 0, body.size, reader.options).trim()
+                        val text = NativeTextEncoding.decode(body, null, reader.options).trim()
                         if (text.isNotEmpty()) {
                             entries.add(RawTagEntry(id, text = text))
                             if (firstChunk < 0) firstChunk = chunkStart

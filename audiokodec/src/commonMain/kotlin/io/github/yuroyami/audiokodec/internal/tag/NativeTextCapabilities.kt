@@ -7,11 +7,12 @@ import io.github.yuroyami.audiokodec.tag.TagFormat
 
 /** Limits of the native text projections that accompany complete ID3 metadata. */
 internal object NativeTextCapabilities {
-    fun fits(field: TagField, value: String): Boolean =
-        TagText.isLatin1(value) && '\u0000' !in value &&
+    fun fits(field: TagField, value: String, format: TagFormat, riffCodePage: Int? = null): Boolean =
+        (if (format == TagFormat.RIFF_INFO) NativeTextEncoding.fits(value, riffCodePage)
+        else NativeTextEncoding.fits(value, null) && value.all { it.code <= 0x7F }) && '\u0000' !in value &&
             (field != TagField.COMMENT || value == value.trim())
 
-    fun losses(tags: TagBundle, format: TagFormat): List<String> {
+    fun losses(tags: TagBundle, format: TagFormat, riffCodePage: Int? = null): List<String> {
         val missing = ArrayList<String>()
         for ((field, values) in tags.fields) {
             val nonEmpty = values.filter { it.isNotEmpty() }
@@ -23,7 +24,7 @@ internal object NativeTextCapabilities {
             }
             when {
                 key == null -> missing.add(field.name)
-                nonEmpty.any { !fits(field, it) } -> missing.add("${field.name} ($key text)")
+                nonEmpty.any { !fits(field, it, format, riffCodePage) } -> missing.add("${field.name} ($key text)")
                 format == TagFormat.AIFF_TEXT && key != "ANNO" && nonEmpty.distinct().size > 1 ->
                     missing.add("${field.name} ($key, multiple values)")
             }
@@ -34,8 +35,8 @@ internal object NativeTextCapabilities {
         return missing
     }
 
-    fun requireComplete(tags: TagBundle, format: TagFormat) {
-        val missing = losses(tags, format)
+    fun requireComplete(tags: TagBundle, format: TagFormat, riffCodePage: Int? = null) {
+        val missing = losses(tags, format, riffCodePage)
         if (missing.isNotEmpty()) {
             throw UnsupportedFeatureException(
                 "${format.displayName} cannot retain ${missing.joinToString()}",

@@ -37,6 +37,27 @@ class HostileTagTest {
     }
 
     @Test
+    fun nativeCharsetsKeepTypedFailuresUnderTruncationAndMutation() {
+        for (base in NativeTextEncodingFixtures.sources()) {
+            val original = NativeTextEncodingFixtures.text(base, NativeTextEncodingFixtures.title.encodeToByteArray(),
+                if (base[0] == 'F'.code.toByte()) null else 65001, after = true)
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("native charset truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (byte in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    expectOnlyKiteFailures("native charset byte $at set to $byte") {
+                        val mutated = original.copyOf().also { it[at] = byte }
+                        AudioKodec.writeTags(mutated, AudioKodec.readTags(mutated))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun legacyDatesKeepTypedFailuresUnderTruncationAndMutation() {
         for (version in 2..3) {
             val values = if (version == 2) listOf("TYE" to "2020", "TDA" to "0102", "TIM" to "1230")
