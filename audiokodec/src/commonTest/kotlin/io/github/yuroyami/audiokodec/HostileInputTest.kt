@@ -21,6 +21,22 @@ class HostileInputTest {
     )
 
     @Test
+    fun leadingTagHeaderMutationsAndTruncationsNeverMakeSniffThrow() {
+        for (major in 2..4) {
+            val tag = SniffWindowFixtures.prefix(64, major, footer = major == 4)
+            val source = tag + "RIFFxxxxWAVE".encodeToByteArray()
+            for (length in 0..source.size) AudioKodec.sniff(source.copyOf(length))
+            val positions = (0 until 10).toList() + if (major == 4) (tag.size - 10 until tag.size).toList() else emptyList()
+            for (at in positions) {
+                for (byte in 0..255) {
+                    val mutated = source.copyOf().also { it[at] = byte.toByte() }
+                    AudioKodec.sniff(mutated)
+                }
+            }
+        }
+    }
+
+    @Test
     fun aHeaderClaimingMoreChannelsThanTheOptionsAllowIsRejected() {
         val file = goodFile.copyOf()
         val fmtAt = file.indexOfChunk("fmt ")

@@ -108,7 +108,7 @@ class SnifferTest {
 
             // A caller-supplied short sniff window cannot see through the tag,
             // but source-based APIs read its declared size and jump directly.
-            assertEquals(AudioContainer.MPEG_AUDIO, AudioKodec.sniff(tagged.copyOf(64)))
+            assertNull(AudioKodec.sniff(tagged.copyOf(64)))
             val info = AudioKodec.probe(tagged)
             assertEquals(originalInfo.container, info.container, target.toString())
             assertEquals(
@@ -144,15 +144,14 @@ class SnifferTest {
     }
 
     @Test
-    fun anIdThreeBlockWithNothingAfterItIsCalledAnMp3() {
-        // Almost every file that starts this way is an MP3, and probe reads
-        // the real header afterwards, so this is the useful answer.
+    fun anIdThreeBlockWithoutVisibleAudioIsInconclusive() {
+        // ID3 metadata can precede other containers or stand alone.
         val header = ByteArray(10)
         "ID3".forEachIndexed { i, c -> header[i] = c.code.toByte() }
         header[3] = 3
         header[8] = 0x7F
         header[9] = 0x7F
-        assertEquals(AudioContainer.MPEG_AUDIO, AudioKodec.sniff(header))
+        assertNull(AudioKodec.sniff(header))
     }
 
     @Test

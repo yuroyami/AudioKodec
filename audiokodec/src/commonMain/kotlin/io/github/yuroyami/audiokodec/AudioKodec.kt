@@ -38,18 +38,20 @@ import io.github.yuroyami.audiokodec.tag.TagWriteOptions
  */
 public object AudioKodec {
 
-    /** Bytes worth passing to [sniff] for a reliable answer. */
+    /** Recommended initial [sniff] window. Leading metadata can require more bytes. */
     public const val SNIFF_HEADER_BYTES: Int = 64 * 1024
 
     /**
      * Names the format of a file from its first bytes, or returns null when
-     * nothing matches.
+     * nothing matches or the supplied window is too short to identify it.
      *
      * This never throws and never reads past what it is given. It names
      * formats AudioKodec cannot decode as well as those it can, so check
      * [AudioContainer.isDecodable] before assuming a decoder exists. As little
-     * as 16 bytes is often enough, but a file with a large tag block in front
-     * of it needs more, which is what [SNIFF_HEADER_BYTES] is for.
+     * as 16 bytes is often enough. [SNIFF_HEADER_BYTES] is a recommended initial
+     * window, not a guarantee: leading ID3 metadata and the following signature
+     * must fit. ID3 alone never identifies MPEG audio. Supply more bytes or use
+     * [probe] when the result is null.
      */
     public fun sniff(header: ByteArray): AudioContainer? = Sniffer.sniff(header)
 

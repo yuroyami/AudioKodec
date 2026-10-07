@@ -341,6 +341,12 @@ val container = AudioKodec.sniff(firstBytes)   // AudioContainer.FLAC
 if (container?.isDecodable == true) { /* AudioKodec can read it */ }
 ```
 
+The result is null when the supplied bytes do not identify a format, including
+when leading ID3 metadata hides the audio header. ID3 alone does not identify
+MPEG audio. `SNIFF_HEADER_BYTES` recommends an initial 64 KiB window; larger
+tags can require more bytes. Supply more bytes or use `probe` with a complete
+source. See [sniffing windows](docs/index.md#name-a-format).
+
 ## Formats
 
 ### Read and write

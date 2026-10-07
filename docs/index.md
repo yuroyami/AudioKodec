@@ -58,6 +58,27 @@ including when the `COMM` sample size disagrees.
 CAF IMA accepts a compressed sample width of 0 or 4. Its packet description
 must still specify flags 0, 34 bytes per channel and 64 frames per packet.
 
+## Name a format
+
+`sniff` names 29 formats from the bytes supplied, including formats without a
+decoder. Check `isDecodable` before choosing AudioKodec to read one:
+
+```kotlin
+val container = AudioKodec.sniff(firstBytes)
+if (container?.isDecodable == true) { /* AudioKodec can read it */ }
+```
+
+A null result means the bytes do not identify a format. This includes an
+incomplete leading ID3 tag, a tag without a following audio signature, an
+invalid tag header and unrecognised following bytes. ID3 metadata alone does
+not establish MPEG audio; a visible MPEG frame header is needed.
+
+`AudioKodec.SNIFF_HEADER_BYTES` is a recommended initial window of 64 KiB,
+not a guarantee. Consecutive leading tags, including their footers, and the
+following signature must fit. Supply more bytes when the result is null, or
+use `probe` or `open` with the complete source: these walk valid leading tags
+before reading the audio header.
+
 ## Stream and seek
 
 Whole-file decoding allocates the whole file, so use the streaming decoder for

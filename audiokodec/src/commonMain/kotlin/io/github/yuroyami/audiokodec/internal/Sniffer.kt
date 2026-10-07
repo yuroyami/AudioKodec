@@ -14,7 +14,7 @@ import io.github.yuroyami.audiokodec.internal.io.fourCcOf
  */
 internal object Sniffer {
 
-    /** Bytes worth reading before calling [sniff]. */
+    /** Recommended initial window; leading metadata can require more bytes. */
     const val RECOMMENDED_HEADER_BYTES: Int = 64 * 1024
 
     /**
@@ -36,32 +36,29 @@ internal object Sniffer {
                 2 -> 0x3F
                 3 -> 0x1F
                 4 -> 0x0F
-                else -> return AudioContainer.MPEG_AUDIO
+                else -> return null
             }
             if (revision == 0xFF || flags and reservedMask != 0) {
-                return AudioContainer.MPEG_AUDIO
+                return null
             }
             var size = 0
             for (i in 6..9) {
                 val b = header[offset + i].toInt() and 0xFF
-                if (b and 0x80 != 0) return AudioContainer.MPEG_AUDIO
+                if (b and 0x80 != 0) return null
                 size = (size shl 7) or b
             }
             // A footer, when present, adds ten more bytes after the frames.
             val total = 10 + size + if (flags and 0x10 != 0) 10 else 0
             if (total >= available) {
-                // The tag runs past what was read. Almost every file with a
-                // tag that large is an MP3, and probe reads the real header
-                // afterwards anyway.
-                return AudioContainer.MPEG_AUDIO
+                // Metadata does not identify its container. More bytes are
+                // needed even when the tag ends exactly at the window boundary.
+                return null
             }
             offset += total
         }
 
         val available = header.size - offset
-        if (available < 4) {
-            return if (offset == 0) null else AudioContainer.MPEG_AUDIO
-        }
+        if (available < 4) return null
 
         val id = fourCcOf(header, offset)
         val b0 = header[offset].toInt() and 0xFF
@@ -159,7 +156,7 @@ internal object Sniffer {
             if (hasSync && version != 1 && layer != 0) return AudioContainer.MPEG_AUDIO
         }
 
-        return if (offset == 0) null else AudioContainer.MPEG_AUDIO
+        return null
     }
 
     private fun matches(header: ByteArray, offset: Int, text: String): Boolean {

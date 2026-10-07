@@ -264,9 +264,13 @@ AAC in ADTS and ADIF framing, MP4, Matroska, Monkey's Audio, WavPack,
 Musepack, True Audio, DSF, DSDIFF, AMR-NB, AMR-WB, AC-3, DTS, ASF, MPEG-TS,
 MIDI, Shorten, OptimFROG and TAK.
 
-Consecutive ID3v2 blocks in front of a file are skipped so the format behind
-them is found. When a tag runs past the bytes given to the sniffer, the answer
-is MPEG audio, which is what such a file almost always is.
+Consecutive valid ID3v2 blocks in front of a file are skipped so a visible
+signature can identify the format behind them. Incomplete tags or signatures,
+invalid tag headers, tag-only data and unrecognised following bytes return
+null. ID3 alone does not establish MPEG audio. The recommended 64 KiB window
+can be enlarged, or `probe` and `open` can walk valid leading tags from a
+complete source. Common tests cover tag, footer and stacked-tag boundaries;
+Mutagen-written tags and FFprobe check complete files independently.
 
 Nine container identifiers have decoder paths: WAV, RF64, Wave64, AIFF, AU,
 FLAC, CAF, Ogg and MPEG audio. Ogg decodes the Vorbis and FLAC mappings and
