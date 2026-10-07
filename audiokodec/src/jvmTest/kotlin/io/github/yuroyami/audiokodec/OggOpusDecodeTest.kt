@@ -7,21 +7,22 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
  * Checks Ogg Opus files from end to end: what [AudioKodec.open] makes of
  * files ffmpeg wrote with libopus.
  *
- * The codec itself is checked to the bit elsewhere, against the libopus
- * version it was ported from. Here the comparison is with ffmpeg's own
- * decoding through the libopus installed beside it, which may be another
- * version and is built with SIMD kernels, so the samples agree closely rather
- * than exactly. What has to agree exactly is everything around the codec:
+ * The codec's final range and official conformance vectors are checked elsewhere.
+ * Here each channel must meet the RFC 6716 quality recommendation for 48 kHz
+ * decoding and a separate float waveform bound. What has to agree exactly
+ * is everything around the codec:
  * how many samples come out, where they start, which channel each is in, and
  * the header's gain.
  *
@@ -29,7 +30,36 @@ import kotlin.test.assertTrue
  */
 class OggOpusDecodeTest {
 
-    private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
+    private val ffmpeg: String? by lazy {
+        findOnPath("ffmpeg")?.also { println(run(listOf(it, "-version"))) }
+    }
+
+    @Test
+    fun theComparisonAcceptsSparseRoundingButRejectsStructuralDefects() {
+        val frames = 4_800
+        val reference = FloatArray(frames * 2)
+        for (f in 0 until frames) {
+            reference[2 * f] = (0.4 * sin(2 * PI * 500 * f / 48_000)).toFloat()
+            reference[2 * f + 1] = (0.4 * sin(2 * PI * 1_500 * f / 48_000)).toFloat()
+        }
+        val rounded = reference.copyOf().also { samples ->
+            for (i in samples.indices step 1_000) samples[i] += 8e-5f
+        }
+        assertMatches(reference, rounded, 2, "sparse rounding")
+        val defects = listOf(
+            "swapped channels" to FloatArray(reference.size) { reference[it xor 1] },
+            "silence" to FloatArray(reference.size),
+            "wrong gain" to FloatArray(reference.size) { reference[it] * 0.5f },
+            "inverted polarity" to FloatArray(reference.size) { -reference[it] },
+            "one-frame displacement" to FloatArray(reference.size) { reference[(it + 2) % reference.size] },
+            "changed spectrum" to FloatArray(reference.size) { i -> (0.4 * sin(2 * PI * 3_000 * (i / 2) / 48_000)).toFloat() },
+            "truncated output" to reference.copyOf(reference.size - 2),
+            "non-finite output" to reference.copyOf().also { it[0] = Float.NaN },
+        )
+        for ((what, decoded) in defects) {
+            assertFailsWith<AssertionError>(what) { assertMatches(reference, decoded, 2, what) }
+        }
+    }
 
     @Test
     fun filesDecodeAsLibopusDecodesThem() {
@@ -188,13 +218,38 @@ class OggOpusDecodeTest {
                 "-f", "f32le", reference.path,
             ),
         )
-        val theirs = ByteBuffer.wrap(reference.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+        val buffer = ByteBuffer.wrap(reference.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+        val theirs = FloatArray(buffer.remaining()).also { buffer.get(it) }
         val mine = decodeAll(opus.readBytes())
-        assertEquals(theirs.remaining() / channels, mine.size / channels, "$what: decoded length in frames")
-        var worst = 0f
-        for (i in mine.indices) worst = maxOf(worst, abs(mine[i] - theirs[i]))
-        assertTrue(worst < FFMPEG_TOLERANCE, "$what: the decode differs from libopus's by up to $worst")
+        assertMatches(theirs, mine, channels, what)
     }
+
+    private fun assertMatches(reference: FloatArray, decoded: FloatArray, channels: Int, what: String) {
+        assertEquals(reference.size, decoded.size, "$what: decoded length in samples")
+        assertEquals(0, decoded.size % channels, "$what: whole frames")
+        assertTrue(reference.all { it.isFinite() } && decoded.all { it.isFinite() }, "$what: finite samples")
+        val frames = reference.size / channels
+        for (c in 0 until channels) {
+            // OpusCompare expects a stereo reference. Duplicating one channel
+            // lets its mono path score each speaker independently at 48 kHz.
+            val expected = ShortArray(frames * 2) { pcm16(reference[(it / 2) * channels + c]) }
+            val actual = ShortArray(frames) { pcm16(decoded[it * channels + c]) }
+            val quality = OpusCompare.compare(expected, actual, 1, 48_000)
+            var squared = 0.0
+            var peak = 0.0
+            for (f in 0 until frames) {
+                val error = decoded[f * channels + c].toDouble() - reference[f * channels + c]
+                squared += error * error
+                peak = maxOf(peak, abs(error))
+            }
+            val residual = sqrt(squared / frames)
+            println("$what, channel $c: $quality, float RMS $residual, peak $peak")
+            assertTrue(quality.quality > 90, "$what, channel $c: $quality")
+            assertTrue(residual < WAVEFORM_RMS_LIMIT, "$what, channel $c: float RMS residual $residual")
+        }
+    }
+
+    private fun pcm16(sample: Float): Short = (sample.toDouble() * 32768).roundToInt().coerceIn(-32768, 32767).toShort()
 
     private fun encode(ffmpeg: String, name: String, pcm: ByteArray, channels: Int, vararg options: String): File {
         val raw = temp("$name.pcm").also { it.writeBytes(pcm) }
@@ -283,11 +338,12 @@ class OggOpusDecodeTest {
         return crc
     }
 
-    private fun run(command: List<String>) {
+    private fun run(command: List<String>): String {
         val process = ProcessBuilder(command).redirectErrorStream(true).start()
         val output = process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(180, TimeUnit.SECONDS), "${command.first()} did not finish")
         assertEquals(0, process.exitValue(), "${command.joinToString(" ")} failed:\n$output")
+        return output
     }
 
     private fun temp(name: String): File = File(workDirectory, name)
@@ -298,11 +354,11 @@ class OggOpusDecodeTest {
 
     private companion object {
         /**
-         * How far a sample may stray from ffmpeg's decode, whose libopus is
-         * a different version built with SIMD kernels: a third of one step of
-         * 16-bit audio.
+         * One step at the precision of the signed 16-bit test input. The RMS
+         * residual must be smaller per channel, independently of the RFC's
+         * spectral score, to catch gain, phase and sample placement defects.
          */
-        const val FFMPEG_TOLERANCE = 1e-5f
+        const val WAVEFORM_RMS_LIMIT = 1.0 / 32768
 
         /** Frames read after each seek: 200 ms. */
         const val WINDOW = 9_600
