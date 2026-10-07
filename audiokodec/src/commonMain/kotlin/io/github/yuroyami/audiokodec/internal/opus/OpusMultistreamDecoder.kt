@@ -231,9 +231,12 @@ internal class OpusMultistreamDecoder private constructor(
             )
         }
 
+        internal fun validStreamCounts(streams: Int, coupledStreams: Int): Boolean =
+            streams in 1..255 && coupledStreams in 0..streams && streams + coupledStreams <= 255
+
         private fun checkCounts(channels: Int, streams: Int, coupledStreams: Int) {
             require(channels in 1..255) { "Opus carries 1 to 255 channels, not $channels" }
-            require(streams >= 1 && coupledStreams in 0..streams && streams + coupledStreams <= 255) {
+            require(validStreamCounts(streams, coupledStreams)) {
                 "$streams streams of which $coupledStreams coupled is not a valid Opus layout"
             }
         }

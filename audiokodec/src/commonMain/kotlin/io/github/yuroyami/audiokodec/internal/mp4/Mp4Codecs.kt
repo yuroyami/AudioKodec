@@ -47,19 +47,18 @@ internal object Mp4Codecs {
     fun choose(entry: Mp4Reader.SampleEntry, reader: SourceReader, options: DecodeOptions): Choice {
         val channels = entry.channels
         val rate = entry.sampleRate
-        fun named(codec: AudioCodec, name: String, channelCount: Int = channels, sampleRate: Int = rate) = Choice(
-            codec, name,
-            AudioFormat(sampleRate.coerceAtLeast(1), ChannelLayout.canonical(channelCount.coerceAtLeast(1))),
-            null, 0, null,
-        )
+        fun named(codec: AudioCodec, name: String, channelCount: Int = channels, sampleRate: Int = rate): Choice {
+            checkShape(entry, options, sampleRate, channelCount)
+            return Choice(codec, name, AudioFormat(sampleRate, ChannelLayout.canonical(channelCount)), null, 0, null)
+        }
         return when (entry.format) {
-            "mp4a" -> mpeg4Audio(entry)
+            "mp4a" -> mpeg4Audio(entry, options)
             ".mp3" -> named(AudioCodec.MP3, "MP3")
             "ac-3", "ec-3" -> named(AudioCodec.AC3, if (entry.format == "ac-3") "AC-3" else "Enhanced AC-3")
             "samr" -> named(AudioCodec.AMR_NB, "AMR-NB", 1, 8_000)
             "sawb" -> named(AudioCodec.AMR_WB, "AMR-WB", 1, 16_000)
-            "alac" -> alac(entry)
-            "Opus" -> opus(entry)
+            "alac" -> alac(entry, options)
+            "Opus" -> opus(entry, options)
             "fLaC" -> flac(entry, reader, options)
             else -> {
                 val pcm = pcmCodec(entry, options) ?: return named(AudioCodec.UNKNOWN, "'${entry.format}'")
@@ -68,14 +67,23 @@ internal object Mp4Codecs {
         }
     }
 
+    internal fun checkShape(entry: Mp4Reader.SampleEntry, options: DecodeOptions, rate: Int, channels: Int) {
+        try {
+            options.checkStreamShape(rate, channels)
+        } catch (failure: CorruptStreamException) {
+            throw CorruptStreamException("the '${entry.format}' sample entry: ${failure.message}", entry.offset)
+        }
+    }
+
     // MPEG-4 audio, which is AAC almost always and MP3 sometimes.
 
-    private fun mpeg4Audio(entry: Mp4Reader.SampleEntry): Choice {
+    private fun mpeg4Audio(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice {
         val esds = entry.boxes["esds"]
         val descriptor = esds?.let { decoderConfig(it) }
         val objectType = descriptor?.first ?: 0x40
         if (objectType == 0x69 || objectType == 0x6B) {
-            return Choice(AudioCodec.MP3, "MP3", AudioFormat(entry.sampleRate.coerceAtLeast(1), ChannelLayout.canonical(entry.channels.coerceAtLeast(1))), null, 0, null)
+            checkShape(entry, options, entry.sampleRate, entry.channels)
+            return Choice(AudioCodec.MP3, "MP3", AudioFormat(entry.sampleRate, ChannelLayout.canonical(entry.channels)), null, 0, null)
         }
         // The AudioSpecificConfig states the real channel count and rate,
         // which the sample entry may not: an entry is limited to 65535 Hz and
@@ -88,11 +96,12 @@ internal object Mp4Codecs {
                 if (configChannels > 0) channels = configChannels
             }
         }
+        checkShape(entry, options, rate, channels)
         val name = if (objectType == 0x40 || objectType in 0x66..0x68) "AAC" else "MPEG-4 object type 0x${objectType.toString(16)}"
         return Choice(
             if (name == "AAC") AudioCodec.AAC else AudioCodec.UNKNOWN,
             name,
-            AudioFormat(rate.coerceAtLeast(1), ChannelLayout.canonical(channels.coerceAtLeast(1))),
+            AudioFormat(rate, ChannelLayout.canonical(channels)),
             null, 0, null,
         )
     }
@@ -161,7 +170,7 @@ internal object Mp4Codecs {
 
     // Apple Lossless.
 
-    private fun alac(entry: Mp4Reader.SampleEntry): Choice {
+    private fun alac(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice {
         val box = entry.boxes["alac"] ?: throw CorruptStreamException("an ALAC track has no configuration box", entry.offset)
         // The box is a full box, so its body opens with a version and flags
         // before the configuration itself.
@@ -173,13 +182,14 @@ internal object Mp4Codecs {
         // A sample entry cannot state a rate past 65535 Hz; the configuration can.
         val rate = if (config.sampleRate in 1..Int.MAX_VALUE.toLong()) config.sampleRate.toInt() else entry.sampleRate
         if (rate < 1) throw CorruptStreamException("an ALAC track states no sample rate", entry.offset)
+        checkShape(entry, options, rate, config.channels)
         val codec = AlacPacketCodec(config, rate)
         return Choice(AudioCodec.ALAC, "ALAC", codec.format, config.bitDepth, 0) { _ -> AlacPacketCodec(config, rate) }
     }
 
     // Opus.
 
-    private fun opus(entry: Mp4Reader.SampleEntry): Choice {
+    private fun opus(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice {
         val dops = entry.boxes["dOps"] ?: throw CorruptStreamException("an Opus track has no 'dOps' box", entry.offset)
         val cursor = Mp4Cursor(dops, 0, dops.size, entry.offset, "the 'dOps' box")
         if (cursor.u8() != 0) throw CorruptStreamException("the 'dOps' box has an unknown version", entry.offset)
@@ -189,6 +199,7 @@ internal object Mp4Codecs {
         val gain = cursor.i16()
         val family = cursor.u8()
         if (channels == 0) throw CorruptStreamException("an Opus track declares no channels", entry.offset)
+        checkShape(entry, options, 48_000, channels)
         val streams: Int
         val coupled: Int
         val mapping: IntArray
@@ -202,7 +213,7 @@ internal object Mp4Codecs {
             coupled = cursor.u8()
             mapping = IntArray(channels) { cursor.u8() }
         }
-        if (streams == 0 || coupled > streams || mapping.any { it != OpusMultistreamDecoder.SILENT && it >= streams + coupled }) {
+        if (!OpusMultistreamDecoder.validStreamCounts(streams, coupled) || mapping.any { it != OpusMultistreamDecoder.SILENT && it >= streams + coupled }) {
             throw CorruptStreamException("the 'dOps' box describes an impossible channel layout", entry.offset)
         }
         if (family == 3) {
@@ -357,10 +368,9 @@ internal object Mp4Codecs {
     }
 
     private fun pcmCodec(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice? {
+        checkShape(entry, options, entry.sampleRate, entry.channels)
         val (layout, aLaw) = pcmLayout(entry) ?: return null
         val channels = entry.channels
-        if (channels < 1) throw CorruptStreamException("an uncompressed track declares no channels", entry.offset)
-        if (entry.sampleRate < 1) throw CorruptStreamException("an uncompressed track declares no sample rate", entry.offset)
         val inner: SampleCodec = if (layout == null) G711Codec(channels, aLaw) else LinearPcmCodec(channels, layout)
         val stored = entry.boxes["chan"]?.let { channelsOf(it, channels, entry.offset) }
         val (layoutOut, order) = when {

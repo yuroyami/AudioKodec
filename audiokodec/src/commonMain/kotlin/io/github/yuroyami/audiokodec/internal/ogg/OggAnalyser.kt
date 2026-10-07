@@ -7,6 +7,7 @@ import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.UnsupportedFormatException
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
+import io.github.yuroyami.audiokodec.internal.opus.OpusMultistreamDecoder
 import io.github.yuroyami.audiokodec.internal.opus.OpusPacket
 import io.github.yuroyami.audiokodec.internal.tag.FlacPicture
 import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
@@ -390,7 +391,7 @@ internal object OggAnalyser {
                 // coupled than exist, and that the coded channels fit in a
                 // byte. Output channels may outnumber them, fed twice or left
                 // silent, or be fewer, leaving some unused.
-                if (streams == 0 || coupled > streams || codedChannels > 255) {
+                if (!OpusMultistreamDecoder.validStreamCounts(streams, coupled)) {
                     throw CorruptStreamException(
                         "an OpusHead with $streams streams of which $coupled coupled is not a valid layout",
                         page.offset,

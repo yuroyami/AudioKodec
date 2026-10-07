@@ -1,5 +1,6 @@
 package io.github.yuroyami.audiokodec
 
+import io.github.yuroyami.audiokodec.internal.mp4.Mp4Reader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -19,6 +20,124 @@ import kotlin.test.assertTrue
  * ffmpeg on the JVM.
  */
 class Mp4Test {
+
+    @Test
+    fun sampleEntryChannelBoundsAreCheckedBeforeConstructingLayouts() {
+        for (format in listOf("sowt", "mp4a")) {
+            for (channels in intArrayOf(0, 65, 4_096, 4_097, 65_535)) {
+                val file = build(3, 1, 3, format = format, sampleEntryChannels = channels)
+                for (tolerant in listOf(false, true)) {
+                    val options = DecodeOptions(tolerant = tolerant)
+                    val operations = listOf<() -> Unit>(
+                        { AudioKodec.probe(file, options) },
+                        { AudioKodec.open(file, options).close() },
+                        { AudioKodec.decode(file, options) },
+                    )
+                    for (operation in operations) {
+                        val failure = assertFailsWith<CorruptStreamException>("$format: $channels channels", operation)
+                        assertTrue(format in failure.message.orEmpty(), failure.message)
+                        assertTrue(failure.offset >= 0)
+                    }
+                }
+            }
+        }
+        for (channels in intArrayOf(1, 2, 64, 4_096)) {
+            val file = build(3, channels, 3)
+            val options = DecodeOptions(maxChannels = maxOf(64, channels))
+            assertEquals(channels, AudioKodec.probe(file, options).format.channels)
+            assertEquals(3, AudioKodec.decode(file, options).frames)
+        }
+    }
+
+    @Test
+    fun codecConfigurationCanSupplyTheResolvedStreamShape() {
+        // AAC LC, 8 kHz, stereo, inside the ES and decoder configuration descriptors.
+        val aac = fullBox("esds", 0, 0, byteArrayOf(3, 25, 0, 1, 0, 4, 17, 0x40, 0x15), ByteArray(11), byteArrayOf(5, 2, 0x15, 0x90.toByte(), 6, 1, 2))
+        val alac = fullBox("alac", 0, 0, u32(64), byteArrayOf(0, 16, 40, 10, 14, 2), u16(255), u32(0), u32(0), u32(RATE))
+        for ((format, configuration) in listOf("mp4a" to aac, "alac" to alac)) {
+            val file = build(3, 2, 3, format = format, sampleEntryChannels = 0, sampleEntryRate = 0, sampleEntryBoxes = configuration)
+            val info = AudioKodec.probe(file)
+            assertEquals(2, info.format.channels)
+            assertEquals(RATE, info.format.sampleRate)
+            assertFailsWith<CorruptStreamException> { AudioKodec.probe(file, DecodeOptions(maxChannels = 1)) }
+            assertFailsWith<CorruptStreamException> { AudioKodec.probe(file, DecodeOptions(maxSampleRate = RATE - 1)) }
+        }
+    }
+
+    @Test
+    fun unsignedEditDurationsAndConversionOverflowStayWithinTheErrorContract() {
+        val durations = longArrayOf(0, 1, 1L shl 31, 0xFFFF_FFFFL, 1L shl 32, Long.MAX_VALUE, Long.MIN_VALUE, -1)
+        for (version in 0..1) {
+            for (duration in durations) {
+                if (version == 0 && duration !in 0..0xFFFF_FFFFL) continue
+                val file = build(16, 1, 16, edit = 0L to duration, editVersion = version)
+                for (tolerant in listOf(false, true)) {
+                    val options = DecodeOptions(tolerant = tolerant)
+                    if (duration < 0 || duration == Long.MAX_VALUE) {
+                        for (operation in listOf<() -> Unit>(
+                            { AudioKodec.probe(file, options) },
+                            { AudioKodec.open(file, options).close() },
+                            { AudioKodec.decode(file, options) },
+                        )) {
+                            val failure = assertFailsWith<CorruptStreamException>("elst v$version duration $duration", operation)
+                            assertTrue("elst" in failure.message.orEmpty())
+                            assertTrue(failure.offset >= 0)
+                        }
+                    } else {
+                        val frames = if (duration == 0L) 16L else minOf(16L, duration * 8)
+                        assertEquals(frames, AudioKodec.probe(file, options).durationFrames)
+                        assertEquals(frames.toInt(), AudioKodec.decode(file, options).frames)
+                    }
+                }
+            }
+        }
+        // A large duration is valid when its conversion and end both fit.
+        val representable = build(16, 1, 16, edit = 0L to Long.MAX_VALUE, editVersion = 1, movieTimescale = RATE)
+        assertEquals(16L, AudioKodec.probe(representable).durationFrames)
+        assertEquals(16, AudioKodec.decode(representable).frames)
+        // A positive edit shorter than one sample does not use the zero sentinel.
+        val subFrame = build(16, 1, 16, edit = 0L to 1L, editVersion = 1, movieTimescale = Int.MAX_VALUE)
+        assertEquals(0L, AudioKodec.probe(subFrame).durationFrames)
+        assertEquals(0, AudioKodec.decode(subFrame).frames)
+        val overflowingEnd = build(16, 1, 16, edit = Long.MAX_VALUE to 1L, editVersion = 1, movieTimescale = RATE)
+        for (tolerant in listOf(false, true)) {
+            val failure = assertFailsWith<CorruptStreamException> { AudioKodec.probe(overflowingEnd, DecodeOptions(tolerant = tolerant)) }
+            assertTrue("elst" in failure.message.orEmpty())
+        }
+    }
+
+    @Test
+    fun timeConversionKeepsLargeFractionalProductsExact() {
+        // The intermediate products exceed signed 64-bit range, but the results fit.
+        assertEquals(4_294_967_293L, Mp4Reader.rescale(4_294_967_293L, 4_294_967_295L, 4_294_967_294L))
+        assertEquals(4_294_967_296L, Mp4Reader.rescale(4_294_967_295L, 4_294_967_295L, 4_294_967_294L))
+        assertEquals(Long.MAX_VALUE, Mp4Reader.rescale(Long.MAX_VALUE, 8_000, 8_000))
+        assertFailsWith<CorruptStreamException> { Mp4Reader.rescale(Long.MAX_VALUE, 8_000, 1_000) }
+    }
+
+    @Test
+    fun opusCodedChannelCountsAreValidatedWhileReadingDops() {
+        for ((streams, coupled) in listOf(128 to 127, 255 to 0, 128 to 128, 200 to 100, 255 to 255)) {
+            val dops = box("dOps", byteArrayOf(0, 2), u16(0), u32(48_000), u16(0), byteArrayOf(255.toByte(), streams.toByte(), coupled.toByte(), 0, 1))
+            val file = build(3, 2, 3, format = "Opus", sampleEntryBoxes = dops)
+            for (tolerant in listOf(false, true)) {
+                val options = DecodeOptions(tolerant = tolerant)
+                if (streams + coupled <= 255) {
+                    assertEquals(2, AudioKodec.probe(file, options).format.channels)
+                    AudioKodec.open(file, options).close()
+                } else {
+                    for (operation in listOf<() -> Unit>(
+                        { AudioKodec.probe(file, options) },
+                        { AudioKodec.open(file, options).close() },
+                        { AudioKodec.decode(file, options) },
+                    )) {
+                        val failure = assertFailsWith<CorruptStreamException>("dOps $streams/$coupled", operation)
+                        assertTrue("dOps" in failure.message.orEmpty())
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun aZeroMovieTimescaleIsRejectedBeforeAnyEditArithmetic() {
@@ -248,6 +367,10 @@ class Mp4Test {
         singlePacket: Boolean = false,
         movieTimescale: Int = 1_000,
         movieHeaderVersion: Int = 0,
+        sampleEntryChannels: Int = channels,
+        sampleEntryRate: Int = RATE,
+        sampleEntryBoxes: ByteArray = ByteArray(0),
+        editVersion: Int = 0,
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
         require(!singlePacket || chunkCount == 1)
@@ -277,8 +400,9 @@ class Mp4Test {
                 fullBox("stsc", 0, 0, u32(2), u32(1), u32(chunkFrames), u32(1), u32(chunkCount), u32(lastFrames), u32(1))
             }
             val entry = box(
-                format, ByteArray(6), u16(1), u16(0), u16(0), u32(0), u16(channels), u16(16), u16(0), u16(0), u32(RATE shl 16),
+                format, ByteArray(6), u16(1), u16(0), u16(0), u32(0), u16(sampleEntryChannels), u16(16), u16(0), u16(0), u32(sampleEntryRate shl 16),
                 channelTag?.let { fullBox("chan", 0, 0, u32(it), u32(0), u32(0)) } ?: ByteArray(0),
+                sampleEntryBoxes,
             )
             val stbl = box(
                 "stbl",
@@ -295,7 +419,10 @@ class Mp4Test {
                 fullBox("hdlr", 0, 0, u32(0), ascii("soun"), ByteArray(12), byteArrayOf(0)),
                 box("minf", fullBox("smhd", 0, 0, u32(0)), stbl),
             )
-            val edts = edit?.let { (start, millis) -> box("edts", fullBox("elst", 0, 0, u32(1), u32(millis.toInt()), u32(start.toInt()), u32(0x10000))) }
+            val edts = edit?.let { (start, duration) ->
+                val timing = if (editVersion == 1) u64(duration) + u64(start) else u32(duration.toInt()) + u32(start.toInt())
+                box("edts", fullBox("elst", editVersion, 0, u32(1), timing, u32(0x10000)))
+            }
             val trak = box("trak", *listOfNotNull(fullBox("tkhd", 0, 7, u32(0), u32(0), u32(1), u32(0), u32(frames), ByteArray(60)), edts, mdia).toTypedArray())
             val udta = if (chapters.isEmpty()) null else box(
                 "udta",

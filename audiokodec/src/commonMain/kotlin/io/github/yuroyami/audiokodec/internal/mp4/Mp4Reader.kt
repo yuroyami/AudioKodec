@@ -121,6 +121,9 @@ internal object Mp4Reader {
                 "this MP4 file has no sound track: it holds ${tracks.map { it.handler }.distinct().joinToString(", ").ifEmpty { "no tracks" }}",
             )
         val entry = chosen.entry!!
+        if (isFramewisePcm(entry)) {
+            Mp4Codecs.checkShape(entry, options, entry.sampleRate, entry.channels)
+        }
         val samples = SampleList(options, coalesce = isFramewisePcm(entry))
         expandTables(body, chosen.stbl, samples, base, if (isFramewisePcm(entry)) Mp4Codecs.pcmFrameBytes(entry) else null, options)
         if (fragmented) {
@@ -388,6 +391,9 @@ internal object Mp4Reader {
         class Entry(val duration: Long, val mediaTime: Long)
         val entries = List(count) {
             val duration = if (version == 1) cursor.u64() else cursor.u32()
+            if (duration < 0) {
+                throw CorruptStreamException("the 'elst' box states a duration beyond the supported timing range", base + elst.offset)
+            }
             val mediaTime = if (version == 1) cursor.u64() else cursor.i32().toLong()
             cursor.skip(4)
             Entry(duration, mediaTime)
@@ -413,9 +419,12 @@ internal object Mp4Reader {
                 }
                 break
             }
-            val mediaDuration = rescale(edit.duration, mediaTimescale, movieTimescale)
+            val mediaDuration = rescale(edit.duration, mediaTimescale, movieTimescale, "the 'elst' duration", base + elst.offset)
             // A zero duration in the last edit means it runs to the end of the media.
-            if (mediaDuration == 0L && index == real.lastIndex && real.size == 1) return Edit(edit.mediaTime, null)
+            if (edit.duration == 0L && index == real.lastIndex && real.size == 1) return Edit(edit.mediaTime, null)
+            if (mediaDuration > Long.MAX_VALUE - duration || mediaDuration > Long.MAX_VALUE - edit.mediaTime) {
+                throw CorruptStreamException("the 'elst' box's edit times exceed the supported timing range", base + elst.offset)
+            }
             duration += mediaDuration
             end = edit.mediaTime + mediaDuration
         }
@@ -747,11 +756,19 @@ internal object Mp4Reader {
     private const val MAX_TOP_LEVEL_BOXES = 1 shl 20
 
     /** [value] in units of [from] per second, in units of [to] per second instead. */
-    fun rescale(value: Long, to: Long, from: Long): Long {
+    fun rescale(value: Long, to: Long, from: Long, what: String = "an MP4 time", offset: Long = -1L): Long {
+        if (value < 0 || to !in 1..0xFFFF_FFFFL || from !in 1..0xFFFF_FFFFL) {
+            throw CorruptStreamException("$what uses an invalid time or timescale", offset)
+        }
         if (to == from) return value
-        // Split to keep the product inside 64 bits for any realistic value.
+        // Timescales are unsigned 32-bit fields, so the fractional product
+        // fits unsigned 64 bits even when it exceeds signed 64-bit range.
         val whole = value / from
         val part = value % from
-        return whole * to + part * to / from
+        val fraction = (part.toULong() * to.toULong() / from.toULong()).toLong()
+        if (whole > (Long.MAX_VALUE - fraction) / to) {
+            throw CorruptStreamException("$what exceeds the supported timing range when rescaled", offset)
+        }
+        return whole * to + fraction
     }
 }
