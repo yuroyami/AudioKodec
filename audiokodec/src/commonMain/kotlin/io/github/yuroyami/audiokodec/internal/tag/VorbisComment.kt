@@ -197,12 +197,7 @@ internal object VorbisComment {
                 if (TagMapping.fieldFor(block.format, entry) != null) continue
                 if (!validFieldName(entry.key, entry.key.length)) continue
                 if (key == "METADATA_BLOCK_PICTURE" || key == "COVERART" || key == "COVERARTMIME") continue
-                when (key) {
-                    "REPLAYGAIN_TRACK_GAIN", "REPLAYGAIN_TRACK_PEAK",
-                    "REPLAYGAIN_ALBUM_GAIN", "REPLAYGAIN_ALBUM_PEAK",
-                    "R128_TRACK_GAIN", "R128_ALBUM_GAIN",
-                    -> continue
-                }
+                if (isModelledLoudnessName(entry.key)) continue
                 val value = entry.text ?: continue
                 // Repeated comments are stored data, so no membership
                 // check belongs here. Appending retains order in linear work.

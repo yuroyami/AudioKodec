@@ -226,7 +226,13 @@ internal object Id3v2Writer {
         preserveDuplicates: Boolean = false,
     ): ByteArray {
         val supported = textValues("TXXX:$description", values, major, preserveDuplicates)
-        val encoding = encodingFor(listOf(description) + supported, major)
+        // Some v2.3 readers omit a wholly empty Latin-1 user-text value.
+        // A UTF-16 byte order mark keeps that value readable as one empty string.
+        val encoding = if (major == 3 && supported == listOf("")) {
+            TagText.UTF16_BOM
+        } else {
+            encodingFor(listOf(description) + supported, major)
+        }
         val descriptionBytes = encodeText(description, encoding)
         val parts = supported.map { encodeText(it, encoding) }
         val terminator = TagText.terminatorSize(encoding)
@@ -408,7 +414,9 @@ internal object Id3v2Writer {
                 if (TagMapping.fieldFor(block.format, entry) != null) continue
                 if (TagMapping.numberAndTotalFor(block.format, entry.key) != null) continue
                 if (entry.key == "APIC" || entry.key == "PIC" || entry.key == "CHAP") continue
-                if (isReplayGain(entry)) continue
+                if ((entry.key == "TXXX" || entry.key == "TXX") &&
+                    entry.description?.let { isModelledLoudnessName(it) } == true
+                ) continue
 
                 val key = when {
                     entry.key.length == 4 -> entry.key
@@ -543,11 +551,6 @@ internal object Id3v2Writer {
             key.startsWith("W") -> urlFrame(key, text, major)
             else -> frame(key, TagText.encodeLatin1(text), major)
         }
-    }
-
-    private fun isReplayGain(entry: io.github.yuroyami.audiokodec.tag.RawTagEntry): Boolean {
-        val key = entry.description?.uppercase() ?: entry.key.uppercase()
-        return key.startsWith("REPLAYGAIN_") || key.startsWith("R128_")
     }
 
     private fun frame(id: String, body: ByteArray, major: Int, flags: Int = 0): ByteArray {

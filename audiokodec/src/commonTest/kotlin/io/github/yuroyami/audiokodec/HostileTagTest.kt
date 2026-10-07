@@ -36,6 +36,28 @@ class HostileTagTest {
     }
 
     @Test
+    fun rawLoudnessTagsKeepTypedFailuresUnderTruncationAndMutation() {
+        val audio = ByteArray(32) { 0x55 }
+        val fixtures = (2..4).map { LoudnessTagFixtures.id3(it, 1, lists = it == 4) + audio } +
+            (1..2).map { audio + LoudnessTagFixtures.ape(it, lists = true) }
+        for (original in fixtures) {
+            for (length in 0..original.size) {
+                expectOnlyKiteFailures("loudness tags truncated to $length bytes") {
+                    AudioKodec.readTags(original.copyOf(length))
+                }
+            }
+            for (at in original.indices) {
+                for (value in byteArrayOf(0, 0x80.toByte(), 0xFF.toByte())) {
+                    val mutated = original.copyOf().also { it[at] = value }
+                    expectOnlyKiteFailures("loudness tags byte $at set to $value") {
+                        AudioKodec.readTags(mutated)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun unknownVorbisCommentsKeepTypedFailuresUnderTruncationAndMutation() {
         for (vendor in listOf("", "vendor 日本語")) {
             val original = TagStressFixtures.flac(listOf("PRIVATE=", "Private=same", "PRIVATE=same", "VENDOR=user", "OTHER=x=y 日本語"), vendor)

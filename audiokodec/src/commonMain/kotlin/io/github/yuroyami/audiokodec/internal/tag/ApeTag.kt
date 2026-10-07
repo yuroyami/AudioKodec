@@ -195,20 +195,19 @@ internal object ApeTag {
                     while (start <= valueEnd) {
                         var stop = start
                         while (stop < valueEnd && bytes[stop].toInt() != 0) stop++
-                        if (stop > start) {
-                            val text = if (version >= 2000) {
-                                TagText.decodeUtf8OrNull(
-                                    bytes,
-                                    start,
-                                    stop - start,
-                                    options,
-                                ) ?: return null
-                            } else {
-                                TagText.decodeLatin1(bytes, start, stop - start, options)
-                            }
-                            rememberEntry()
-                            entries.add(RawTagEntry(key, text = text))
+                        val text = if (version >= 2000) {
+                            TagText.decodeUtf8OrNull(
+                                bytes,
+                                start,
+                                stop - start,
+                                options,
+                            ) ?: return null
+                        } else {
+                            TagText.decodeLatin1(bytes, start, stop - start, options)
                         }
+                        rememberEntry()
+                        entries.add(RawTagEntry(key, text = text))
+                        if (stop == valueEnd) break
                         start = stop + 1
                     }
                 }
@@ -368,16 +367,15 @@ internal object ApeTag {
                 if (TagMapping.fieldFor(block.format, entry) != null) continue
                 if (TagMapping.numberAndTotalFor(block.format, entry.key) != null) continue
                 val upper = entry.key.uppercase()
-                if (upper.startsWith("COVER ART") ||
-                    upper.startsWith("REPLAYGAIN_") ||
-                    upper.startsWith("R128_")
-                ) {
+                if (upper.startsWith("COVER ART") || isModelledLoudnessName(entry.key)) {
                     continue
                 }
                 if (entry.binary != null) {
                     if (entry.key !in binary) binary[entry.key] = entry.binary
                 } else {
-                    entry.text?.let { addText(entry.key, it) }
+                    // Raw values retain empty pieces and repetitions. Empty
+                    // merged fields still follow addText's omission rule.
+                    entry.text?.let { text.getOrPut(entry.key) { ArrayList() }.add(it) }
                 }
             }
         }

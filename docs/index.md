@@ -562,6 +562,21 @@ tags.replayGain?.let { gain ->
 }
 ```
 
+ID3, APE and Vorbis writers rebuild only these six names from `replayGain`:
+`REPLAYGAIN_TRACK_GAIN`, `REPLAYGAIN_TRACK_PEAK`, `REPLAYGAIN_ALBUM_GAIN`,
+`REPLAYGAIN_ALBUM_PEAK`, `R128_TRACK_GAIN` and `R128_ALBUM_GAIN`.
+Matching ignores case. ID3 uses the user-text description; APE and Vorbis use
+the item name. Removing `replayGain` removes these names without restoring
+their old raw values.
+
+Other names, such as `REPLAYGAIN_REFERENCE_LOUDNESS` and
+`REPLAYGAIN_TRACK_RANGE`, remain raw metadata through unrelated edits.
+ID3 retains their descriptions and supported value lists. APE retains key
+spelling, binary payloads, repeated values and empty pieces in text lists.
+Empty raw values remain accessible even though merged fields omit them.
+An empty ID3v2.3 user-text value uses UTF-16 with a byte order mark for readers
+that omit the same value in Latin-1.
+
 ## Channel layouts
 
 An `AudioFormat` carries the speaker position of every channel, in the order

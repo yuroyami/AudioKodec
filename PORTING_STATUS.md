@@ -172,6 +172,15 @@ unchanged audio. Mutagen and `metaflac` check native FLAC in both directions;
 the JVM probe records 8,000 to 64,000-entry rewrite timings without a latency
 threshold.
 
+ID3, APE and Vorbis share one exclusion rule for the six modelled loudness
+names. Other names retain their original key or ID3 description. APE raw text
+retains leading, interior and trailing empty pieces, with each entry charged
+to the allocation guard. Invalid UTF-8 still rejects an APEv2 block.
+Common tests cover legal ID3 encodings, v2.2 inputs, v2.3/v2.4 output, APEv1
+upgrades, repeated edits, gain removal, empty values, repetitions, binary
+items and unchanged audio. Mutagen checks ID3v2.3/v2.4 and APEv2 in both
+directions. Truncation and mutation sweeps cover these independent layouts.
+
 ### Other tag features
 
 | Feature | Status |

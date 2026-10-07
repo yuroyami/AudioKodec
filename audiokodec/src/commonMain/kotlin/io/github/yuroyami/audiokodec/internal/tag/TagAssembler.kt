@@ -372,6 +372,15 @@ internal class ReplayGainReader {
     private fun parseQ78(text: String): Double? = text.trim().toIntOrNull()?.let { it / 256.0 }
 }
 
+/** Names rebuilt from [ReplayGain]; all other loudness names remain raw metadata. */
+internal fun isModelledLoudnessName(name: String): Boolean = when (name.uppercase()) {
+    "REPLAYGAIN_TRACK_GAIN", "REPLAYGAIN_TRACK_PEAK",
+    "REPLAYGAIN_ALBUM_GAIN", "REPLAYGAIN_ALBUM_PEAK",
+    "R128_TRACK_GAIN", "R128_ALBUM_GAIN",
+    -> true
+    else -> false
+}
+
 /**
  * Decibels to add to a gain measured against the Opus reference of -23 LUFS
  * to state it against ReplayGain's -18 LUFS. A quieter target needs less

@@ -358,6 +358,48 @@ class MutagenTagOracleTest {
         }
     }
 
+    @Test
+    fun unmodelledId3LoudnessNamesAgreeWithMutagenInBothDirections() {
+        val python = python
+        for (version in 3..4) {
+            val file = plainMp3("private-id3-loudness-$version")
+            val originalAudio = file.readBytes()
+            for (fromMutagen in listOf(false, true)) {
+                file.writeBytes(originalAudio)
+                if (fromMutagen) run(listOf(python, "-c", WRITE_PRIVATE_ID3_LOUDNESS, file.path, version.toString()))
+                else file.writeBytes(LoudnessTagFixtures.id3(version, 1, lists = version == 4, owner = true) + originalAudio)
+                val source = if (fromMutagen) "mutagen" else "independent"
+                run(listOf(python, "-c", CHECK_PRIVATE_ID3_LOUDNESS, file.path, version.toString(), "before", source))
+                val tags = AudioKodec.readTags(file.readBytes())
+                file.writeBytes(AudioKodec.writeTags(file.readBytes(), tags.edit {
+                    set(TagField.TITLE, "Changed")
+                    setReplayGain(null)
+                }, TagWriteOptions(id3Version = version)))
+                run(listOf(python, "-c", CHECK_PRIVATE_ID3_LOUDNESS, file.path, version.toString(), "after", source))
+                assertContentEquals(originalAudio, file.readBytes().takeLast(originalAudio.size).toByteArray())
+            }
+        }
+    }
+
+    @Test
+    fun unmodelledApeLoudnessNamesAndEmptyListsAgreeWithMutagenInBothDirections() {
+        val python = python
+        val file = plainMp3("private-ape-loudness")
+        val originalAudio = file.readBytes()
+        for (fromMutagen in listOf(false, true)) {
+            file.writeBytes(originalAudio)
+            if (fromMutagen) run(listOf(python, "-c", WRITE_PRIVATE_APE_LOUDNESS, file.path))
+            else file.writeBytes(originalAudio + LoudnessTagFixtures.ape(2, lists = true))
+            run(listOf(python, "-c", CHECK_PRIVATE_APE_LOUDNESS, file.path, "before"))
+            file.writeBytes(AudioKodec.writeTags(file.readBytes(), AudioKodec.readTags(file.readBytes()).edit {
+                set(TagField.TITLE, "Changed")
+                setReplayGain(null)
+            }, TagWriteOptions(formats = setOf(TagFormat.APEV2))))
+            run(listOf(python, "-c", CHECK_PRIVATE_APE_LOUDNESS, file.path, "after"))
+            assertContentEquals(originalAudio, file.readBytes().take(originalAudio.size).toByteArray())
+        }
+    }
+
     private fun plainMp3(name: String): File {
         val ffmpeg = findOnPath("ffmpeg")
         assumeTrue("ffmpeg is required for the ID3 oracle's audio fixture", ffmpeg != null)
@@ -381,6 +423,57 @@ class MutagenTagOracleTest {
         ?.map { File(it, name) }?.firstOrNull { it.canExecute() }?.absolutePath
 
     private companion object {
+        const val WRITE_PRIVATE_ID3_LOUDNESS = """
+import sys
+from mutagen.id3 import ID3, TXXX, UFID
+tag = ID3()
+entries = [('replaygain_track_gain', '-3.0 dB'), ('REPLAYGAIN_TRACK_PEAK', '0.9'), ('ReplayGain_Album_Gain', '-4.0 dB'), ('REPLAYGAIN_ALBUM_PEAK', '0.8'), ('R128_TRACK_GAIN', '256'), ('r128_album_gain', '512'), ('REPLAYGAIN_REFERENCE_LOUDNESS', '89.0 dB'), ('replaygain_track_range', '6.0 dB'), ('replaygain_private', 'state')]
+for key, value in entries: tag.add(TXXX(encoding=1, desc=key, text=[value]))
+tag.add(UFID(owner='REPLAYGAIN_TRACK_GAIN', data=b'\x00\xff\x80\x07'))
+if sys.argv[2] == '4': tag.add(TXXX(encoding=1, desc='REPLAYGAIN_PRIVATE_LIST', text=['', 'Björk 日本語', '', 'same', 'same', '']))
+# Mutagen omits a wholly empty TXXX on save, so that case uses independent bytes.
+tag.save(sys.argv[1], v2_version=int(sys.argv[2]))
+"""
+        const val CHECK_PRIVATE_ID3_LOUDNESS = """
+import sys
+from mutagen.id3 import ID3
+tag = ID3(sys.argv[1])
+expected = {'REPLAYGAIN_REFERENCE_LOUDNESS': ['89.0 dB'], 'replaygain_track_range': ['6.0 dB'], 'replaygain_private': ['state']}
+assert tag['UFID:REPLAYGAIN_TRACK_GAIN'].data == b'\x00\xff\x80\x07'
+for key, values in expected.items():
+    assert tag['TXXX:' + key].text == values, (key, tag.get('TXXX:' + key))
+if sys.argv[4] == 'independent': assert tag['TXXX:R128_PRIVATE'].text == ['']
+if sys.argv[2] == '4':
+    assert tag['TXXX:REPLAYGAIN_PRIVATE_LIST'].text == ['', 'Björk 日本語', '', 'same', 'same', '']
+if sys.argv[3] == 'after':
+    modelled = {'REPLAYGAIN_TRACK_GAIN', 'REPLAYGAIN_TRACK_PEAK', 'REPLAYGAIN_ALBUM_GAIN', 'REPLAYGAIN_ALBUM_PEAK', 'R128_TRACK_GAIN', 'R128_ALBUM_GAIN'}
+    assert not any(frame.desc.upper() in modelled for frame in tag.getall('TXXX'))
+    assert tag['TIT2'].text == ['Changed']
+"""
+        const val WRITE_PRIVATE_APE_LOUDNESS = """
+import sys
+from mutagen.apev2 import APEv2
+tag = APEv2()
+entries = [('replaygain_track_gain', '-3.0 dB'), ('REPLAYGAIN_TRACK_PEAK', '0.9'), ('ReplayGain_Album_Gain', '-4.0 dB'), ('REPLAYGAIN_ALBUM_PEAK', '0.8'), ('R128_TRACK_GAIN', '256'), ('r128_album_gain', '512'), ('REPLAYGAIN_REFERENCE_LOUDNESS', '89.0 dB'), ('replaygain_track_range', '6.0 dB'), ('R128_PRIVATE', ''), ('replaygain_private', 'state')]
+for key, value in entries: tag[key] = value
+tag['REPLAYGAIN_PRIVATE_LIST'] = ['', 'Björk 日本語', '', 'same', 'same', '']
+tag['R128_PRIVATE_BYTES'] = b'\x00\xff\x80\x07'
+tag.save(sys.argv[1])
+"""
+        const val CHECK_PRIVATE_APE_LOUDNESS = """
+import sys
+from mutagen.apev2 import APEv2
+tag = APEv2(sys.argv[1])
+expected = {'REPLAYGAIN_REFERENCE_LOUDNESS': ['89.0 dB'], 'replaygain_track_range': ['6.0 dB'], 'R128_PRIVATE': [''], 'replaygain_private': ['state'], 'REPLAYGAIN_PRIVATE_LIST': ['', 'Björk 日本語', '', 'same', 'same', '']}
+for key, values in expected.items():
+    assert list(tag[key]) == values, (key, list(tag[key]))
+assert all(key in tag.keys() for key in expected), list(tag.keys())
+assert bytes(tag['R128_PRIVATE_BYTES']) == b'\x00\xff\x80\x07'
+if sys.argv[2] == 'after':
+    modelled = {'REPLAYGAIN_TRACK_GAIN', 'REPLAYGAIN_TRACK_PEAK', 'REPLAYGAIN_ALBUM_GAIN', 'REPLAYGAIN_ALBUM_PEAK', 'R128_TRACK_GAIN', 'R128_ALBUM_GAIN'}
+    assert not any(key.upper() in modelled for key in tag)
+    assert list(tag['Title']) == ['Changed']
+"""
         const val CHECK_PRIVATE_FLAC = """
 import sys
 from mutagen.flac import FLAC
