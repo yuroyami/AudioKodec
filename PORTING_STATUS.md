@@ -129,7 +129,7 @@ inspected and edited.
 | **RIFF INFO** | ✅ | ✅ | `LIST INFO` inside a WAV |
 | **Broadcast Wave `bext`** | ✅ | ❌ | Description, originator, reference, date, time and coding history |
 | **AIFF text chunks** | ✅ | ✅ | `NAME`, `AUTH`, `(c) `, `ANNO` |
-| **ID3v2 in a RIFF or AIFF chunk** | ✅ | on request | An `id3 ` or `ID3 ` chunk. Writing one is asked for through `TagWriteOptions.formats` |
+| **ID3v2 in a RIFF or AIFF chunk** | ✅ | ✅ | An `id3 ` or `ID3 ` chunk, selected explicitly or added by default when native text cannot retain the requested metadata |
 | **Lyrics3v2** | ✅ | ❌ | Read for its content and, more importantly, for its length: a reader that does not know it is there gets every other trailing offset wrong |
 | **Vorbis comments** | ✅ | ✅ | In FLAC, and in Ogg for every mapping it carries |
 | **FLAC metadata blocks** | ✅ | ✅ | Comment and picture blocks are rewritten; seek tables, cue sheets and application blocks are carried across untouched; padding is regenerated so the next edit need not move the audio |
@@ -215,6 +215,7 @@ Truncation and mutation sweeps cover independent artwork layouts.
 | Comment and lyric whitespace retained in the merged view; unchanged ID3 text keeps every distinct language/description pair | ✅ v2.2/v2.3/v2.4 inputs and v2.3/v2.4 output, with all legal text encodings; Mutagen checks v2.3/v2.4 |
 | Reserved iTunes `COM`/`COMM` frames kept separate from editable user comments | ✅ case-insensitive `iTun` description family retained across comment edits and version conversion; common encoding/hostile cases and Mutagen on real MP3 files |
 | Multiple native text values retained during encoding and edits | ✅ repeated RIFF INFO and AIFF annotations; singular AIFF title/author/copyright with ID3 fallback or named refusal; WAV/RF64/AIFF/AIFF-C, ExifTool, Mutagen and hostile cases |
+| Unrepresentable modelled metadata retained or named and refused before output | ✅ default RIFF/AIFF ID3 fallback, native-only field/component refusals, Vorbis WEBSITE and APE Weblink, standalone and multiple totals, explicit removal and external ID3 carriers; chapter output requires ID3; common boundary/mutation cases and Mutagen with exact encoded and decoded audio checks |
 | Encoding software, human credit and explicit settings kept separate | ✅ ID3 `TSSE`/`TENC`/`TXXX:ENCODERSETTINGS`, native Vorbis/APE and RIFF conventions; combined strings retained intact; common version/edit/hostile cases, Mutagen and FFprobe |
 | Pictures from ID3v2, APE, `METADATA_BLOCK_PICTURE` and `COVERART` | ✅ |
 | Equivalent artwork copies merged without growth on repeated edits | ✅ distinct image bytes, roles and rich captions retained; chapter scope kept separate |

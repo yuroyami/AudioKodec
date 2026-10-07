@@ -157,11 +157,15 @@ internal object VorbisComment {
         tags: TagBundle,
         vendor: String = DEFAULT_VENDOR,
         includePictures: Boolean = true,
+        chaptersPreservedElsewhere: Boolean = false,
     ): ByteArray {
+        requireRepresentable(tags, chaptersPreservedElsewhere)
         val items = ArrayList<String>()
 
         for ((field, values) in tags.fields) {
-            val key = TagMapping.vorbisKeyFor(field) ?: continue
+            val key = TagMapping.vorbisKeyFor(field) ?: throw UnsupportedFeatureException(
+                "${field.name} in Vorbis comments",
+            )
             for (value in values) {
                 if (value.isEmpty()) continue
                 items.add("$key=$value")
@@ -247,12 +251,28 @@ internal object VorbisComment {
         return out
     }
 
+    /** Checks native limits before a surrounding ID3 block can reach the sink. */
+    fun requireRepresentable(tags: TagBundle, chaptersPreservedElsewhere: Boolean) {
+        if (!chaptersPreservedElsewhere && tags.chapters.isNotEmpty()) {
+            throw UnsupportedFeatureException("chapters in Vorbis comments without ID3")
+        }
+        val missing = tags.fields.filter { (field, values) ->
+            values.any { it.isNotEmpty() } && !canCarry(field)
+        }.keys
+        if (missing.isNotEmpty()) {
+            throw UnsupportedFeatureException("${missing.joinToString()} in Vorbis comments")
+        }
+        tags.replayGain?.takeIf { it.isR128 }?.let { gain ->
+            gain.trackGainDb?.let { formatR128Gain("R128_TRACK_GAIN", it) }
+            gain.albumGainDb?.let { formatR128Gain("R128_ALBUM_GAIN", it) }
+        }
+    }
+
     /**
      * Which fields go into a comment block and which need somewhere else.
      *
-     * Everything AudioKodec models has a Vorbis key except a plain URL, which
-     * has no agreed spelling. This is here so a writer can tell whether it is
-     * about to drop something.
+     * Modelled text fields have conventional keys, including WEBSITE for URL.
+     * Chapters require another carrier.
      */
     fun canCarry(field: TagField): Boolean = TagMapping.vorbisKeyFor(field) != null
 

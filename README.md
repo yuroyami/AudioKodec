@@ -295,6 +295,14 @@ pictures in FLAC and Ogg, an updated ID3v1 block where the file already had one,
 and the metadata chunks of RIFF and AIFF. MP4 atoms arrive with the MP4
 container.
 
+Default edits add ID3 to WAV, RF64 and AIFF when their native text cannot
+retain the requested metadata. Explicit native-only selections name the
+unrepresentable fields and components and refuse before output. URLs use
+`WEBSITE` in Vorbis comments and `Weblink` in APE. Standalone track and disc
+totals are retained without inventing a number. FLAC, Ogg and APE refuse
+chapters unless another complete ID3 carrier is being written in the file.
+See [the tag writing rules](docs/index.md#metadata-that-needs-a-richer-carrier).
+
 MusicBrainz recording IDs use `UFID:http://musicbrainz.org` in ID3; the other
 MusicBrainz IDs use Picard's `TXXX` descriptions. ID3v2.4 stores multiple text
 values in one frame. ID3v2.3 uses slash lists for artists, composers and

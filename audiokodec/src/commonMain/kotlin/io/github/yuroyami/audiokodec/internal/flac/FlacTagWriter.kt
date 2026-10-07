@@ -36,6 +36,7 @@ internal object FlacTagWriter {
         options: DecodeOptions,
         includeTags: Boolean = true,
         audioEnd: Long = reader.size,
+        chaptersPreservedElsewhere: Boolean = false,
     ) {
         val parsed = FlacMetadata.parse(reader, options)
 
@@ -64,7 +65,10 @@ internal object FlacTagWriter {
             val vendor = parsed.tagBlocks.asSequence()
                 .flatMap { it.entries.asSequence() }
                 .firstOrNull { it.isVorbisVendorHeader }?.text ?: VorbisComment.DEFAULT_VENDOR
-            val comment = VorbisComment.build(tags, vendor, includePictures = false)
+            val comment = VorbisComment.build(
+                tags, vendor, includePictures = false,
+                chaptersPreservedElsewhere = chaptersPreservedElsewhere,
+            )
             bodies.add(FlacMetadata.TYPE_VORBIS_COMMENT to checkedBody("Vorbis comment", comment))
             for (picture in tags.pictures) {
                 bodies.add(

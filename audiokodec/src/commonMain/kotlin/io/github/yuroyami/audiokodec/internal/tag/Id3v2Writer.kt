@@ -31,23 +31,28 @@ internal object Id3v2Writer {
 
         for ((field, values) in tags.fields) {
             if (values.isEmpty()) continue
+            if (values.any { '\u0000' in it }) {
+                throw UnsupportedFeatureException("null characters in ID3 ${field.name}")
+            }
             when (field) {
-                // The totals are written into the frame that holds the number.
-                TagField.TRACK_TOTAL, TagField.DISC_TOTAL -> continue
-                TagField.TRACK_NUMBER -> frames.add(
-                    textFrame(
-                        TagMapping.id3FrameFor(field, major)!!,
-                        listOf(joinWithTotal(values.first(), tags[TagField.TRACK_TOTAL])),
-                        major,
-                    ),
-                )
-                TagField.DISC_NUMBER -> frames.add(
-                    textFrame(
-                        TagMapping.id3FrameFor(field, major)!!,
-                        listOf(joinWithTotal(values.first(), tags[TagField.DISC_TOTAL])),
-                        major,
-                    ),
-                )
+                TagField.TRACK_TOTAL, TagField.DISC_TOTAL -> {
+                    // A missing number or several totals needs its own field;
+                    // pairing lists would invent relationships the caller never stated.
+                    val numberField = if (field == TagField.TRACK_TOTAL) TagField.TRACK_NUMBER else TagField.DISC_NUMBER
+                    if (tags.all(numberField).isEmpty() || values.distinct().size > 1) {
+                        frames.add(userTextFrame(TagMapping.vorbisKeyFor(field)!!, values, major))
+                    }
+                }
+                TagField.TRACK_NUMBER, TagField.DISC_NUMBER -> {
+                    if (values.any { '/' in it }) {
+                        throw UnsupportedFeatureException("a slash inside ID3 ${field.name}")
+                    }
+                    val totalField = if (field == TagField.TRACK_NUMBER) TagField.TRACK_TOTAL else TagField.DISC_TOTAL
+                    val total = tags.all(totalField).distinct().singleOrNull()
+                    val id = TagMapping.id3FrameFor(field, major)!!
+                    val numbered = values.map { joinWithTotal(it, total) }
+                    frames.add(textFrame(id, textValues(id, numbered, major), major))
+                }
                 TagField.COMMENT -> frames.addAll(commentLikeFrames("COMM", "COM", values, tags, major))
                 TagField.LYRICS -> frames.addAll(commentLikeFrames("USLT", "ULT", values, tags, major))
                 TagField.MUSICBRAINZ_RECORDING_ID -> frames.add(recordingFrame(values, major))
@@ -120,6 +125,16 @@ internal object Id3v2Writer {
             position += frame.size
         }
         return out
+    }
+
+    /** Adds external padding without rebuilding or revalidating the frames. */
+    fun withPadding(tag: ByteArray, padding: Int): ByteArray {
+        if (padding == 0) return tag
+        val payload = tag.size.toLong() - HEADER + padding
+        if (payload > MAX_SYNCSAFE_SIZE) {
+            throw AudioKodecException("an ID3v2 tag including padding exceeds its synchsafe size")
+        }
+        return tag.copyOf(HEADER + payload.toInt()).also { writeSyncsafe(it, 6, payload.toInt()) }
     }
 
     /** Bytes in the header, which the declared size excludes. */
@@ -212,8 +227,15 @@ internal object Id3v2Writer {
     }
 
     /** A URL link frame, whose body is the Latin-1 URL with no encoding byte. */
-    private fun urlFrame(id: String, url: String, major: Int): ByteArray =
-        frame(id, TagText.encodeLatin1(url), major)
+    private fun urlFrame(id: String, url: String, major: Int): ByteArray {
+        if (!TagText.isLatin1(url) || '\u0000' in url) {
+            throw UnsupportedFeatureException(
+                "representing URL in ID3 '$id'",
+                "ID3 URL frames require Latin-1 without null characters; use an escaped URL",
+            )
+        }
+        return frame(id, TagText.encodeLatin1(url), major)
+    }
 
     private fun userTextFrame(description: String, value: String, major: Int): ByteArray =
         userTextFrame(description, listOf(value), major)
@@ -421,7 +443,14 @@ internal object Id3v2Writer {
 
     /** Writes a CHAP frame, including its title and chapter-local pictures. */
     private fun chapterFrame(chapter: TagChapter, major: Int): ByteArray {
-        require('\u0000' !in chapter.id) { "an ID3 chapter id cannot contain a null character" }
+        if (!TagText.isLatin1(chapter.id) || '\u0000' in chapter.id ||
+            chapter.title?.contains('\u0000') == true
+        ) {
+            throw UnsupportedFeatureException("representing an ID3 chapter identifier or title")
+        }
+        if (chapter.startMillis > 0xFFFF_FFFFL || chapter.endMillis >= 0xFFFF_FFFFL) {
+            throw UnsupportedFeatureException("chapter times outside ID3's unsigned 32-bit range")
+        }
         val id = TagText.encodeLatin1(chapter.id)
         val nested = ArrayList<ByteArray>()
         chapter.title?.takeIf { it.isNotEmpty() }?.let {
@@ -434,11 +463,11 @@ internal object Id3v2Writer {
         val body = ByteArray(checkedArraySize(size, "an ID3 chapter frame"))
         id.copyInto(body, 0)
         var position = id.size + 1
-        writeUInt32Be(body, position, chapter.startMillis.coerceIn(0, 0xFFFF_FFFFL))
+        writeUInt32Be(body, position, chapter.startMillis)
         writeUInt32Be(
             body,
             position + 4,
-            if (chapter.endMillis < 0) 0xFFFF_FFFFL else chapter.endMillis.coerceAtMost(0xFFFF_FFFFL),
+            if (chapter.endMillis < 0) 0xFFFF_FFFFL else chapter.endMillis,
         )
         // Byte offsets are unknown and therefore use the value the ID3
         // specification reserves for "not stated".

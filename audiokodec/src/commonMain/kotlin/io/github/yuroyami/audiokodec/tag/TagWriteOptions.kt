@@ -46,10 +46,14 @@ public class TagWriteOptions(
      * Which tag formats to write, or null to use what suits the container.
      *
      * The default writes an ID3v2 block for bare codec streams, a `LIST INFO`
-     * chunk for RIFF files, and text chunks for AIFF. Multiple AIFF title,
-     * author or copyright values also need ID3, which the default adds when
-     * none exists. A native-text-only selection refuses those lists before
-     * output. A non-null set selects every writable format to keep. For example, use
+     * chunk for RIFF files, and text chunks for AIFF. When those native
+     * chunks cannot retain the requested metadata, it also writes ID3.
+     * An existing external ID3 block is reused; otherwise it adds a native
+     * ID3 chunk. Native-only selections name the unrepresentable fields,
+     * lists, pictures, chapters or ReplayGain and refuse before output.
+     * FLAC and Ogg use Vorbis comments and pictures. Their chapter output,
+     * and APE chapter output, requires an existing or selected ID3 carrier.
+     * A non-null set selects every writable format to keep. For example, use
      * `setOf(RIFF_INFO, ID3V2_4)` to put both kinds in a WAV file, or an empty
      * set to remove its writable tag chunks. Read-only blocks such as `bext`
      * and Lyrics3 are preserved.

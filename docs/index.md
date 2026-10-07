@@ -455,6 +455,37 @@ AudioKodec.writeTags(
 )
 ```
 
+### Metadata that needs a richer carrier
+
+Default edits retain modelled metadata by adding an ID3 chunk to WAV, RF64,
+AIFF or AIFF-C when native text cannot express it. This covers fields such as
+album artist, totals, BPM and URL, pictures, chapters, ReplayGain, Unicode
+text beyond Latin-1 and native singleton lists. An existing external ID3
+block is updated instead of adding another carrier. Compatible native values
+are still written for readers using INFO or AIFF text.
+
+An explicit native-only selection raises `UnsupportedFeatureException` naming
+all the modelled fields and components it cannot retain, before writing bytes.
+Include ID3 or leave `formats` at its default to keep those values. An explicitly
+empty selection still removes writable metadata intentionally. Ogg requires
+its comment header and refuses an empty format selection.
+
+Vorbis comments store URLs under `WEBSITE`; APE writes `Weblink` and reads
+`WEBSITE`, `URL` and `Weblink`. Track and disc totals without a number use
+`TRACKTOTAL` and `DISCTOTAL`, including ID3 user-text frames. A single total
+accompanies each number in the conventional number/total field. Several
+numbers and totals use separate lists so no relationship is guessed.
+ID3v2.3 refuses number or total lists it cannot represent; use version 4.
+
+FLAC, Ogg and APE chapter writing requires another complete ID3 carrier in the
+same file. Without one, chapters are named and refused. Fresh FLAC encoding
+also refuses chapters before output. Native chapter writing remains unsupported.
+ID3 rejects chapter times beyond its unsigned 32-bit range, an explicit end
+of `4294967295` reserved for an unknown end, and identifiers it cannot encode.
+ID3 URL frames require Latin-1; escape a Unicode URL before writing it.
+Null characters in ID3 or APE modelled text are refused because they would
+become value separators.
+
 ### Multiple values in native text chunks
 
 WAV and RF64 write each non-empty modelled RIFF INFO value in a separate
@@ -465,7 +496,7 @@ non-empty values.
 AIFF permits only one native title (`NAME`), author (`AUTH`) and copyright
 (`(c) `) chunk. Several distinct values need an ID3 carrier. The default
 rewrite adds an ID3 chunk when none exists, keeping the complete list there.
-The native chunk holds the first non-empty value for readers using native text.
+The native chunk holds the first non-empty compatible value for readers using native text.
 Fresh encoding uses the same native chunk rules and already includes ID3.
 
 An explicit `setOf(TagFormat.AIFF_TEXT)` selection refuses a singleton list
@@ -494,7 +525,7 @@ preserving each value without concatenation.
 Vorbis and APE also recognise `ENCODED-BY` and `ENCODED_BY` as human
 credits, and `ENCODING` as a combined encoder/settings value. RIFF input
 recognises `ITCH` as another human-credit convention.
-Use an ID3 chunk alongside RIFF INFO when explicit settings must survive.
+The default adds ID3 alongside RIFF INFO when explicit settings need it.
 
 Earlier versions exposed ID3 `TENC` as `ENCODER` and `TSSE` as
 `ENCODING_SETTINGS`. Read the source tags again when migrating stored

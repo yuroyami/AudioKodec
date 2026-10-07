@@ -42,6 +42,7 @@ internal object OggTagWriter {
         sink: AudioSink,
         options: DecodeOptions,
         sourceEnd: Long = reader.size,
+        chaptersPreservedElsewhere: Boolean = false,
     ) {
         val parsed = OggAnalyser.parse(reader, options)
         val stream = parsed.audio ?: throw UnsupportedFeatureException(
@@ -71,7 +72,7 @@ internal object OggTagWriter {
         }
 
         val commentIndex = commentIndex(stream.codec, headers)
-        headers[commentIndex] = buildComment(stream.codec, tags, headers, commentIndex)
+        headers[commentIndex] = buildComment(stream.codec, tags, headers, commentIndex, chaptersPreservedElsewhere)
         if (stream.codec == AudioCodec.FLAC) {
             rebuildFlacPictures(headers, tags)
         }
@@ -119,6 +120,7 @@ internal object OggTagWriter {
         tags: TagBundle,
         headers: List<ByteArray>,
         commentIndex: Int,
+        chaptersPreservedElsewhere: Boolean,
     ): ByteArray {
         val vendor = existingVendor(codec, headers, commentIndex) ?: VorbisComment.DEFAULT_VENDOR
         val body = VorbisComment.build(
@@ -127,6 +129,7 @@ internal object OggTagWriter {
             // Ogg FLAC has native PICTURE metadata packets. The other Ogg
             // mappings carry pictures as base64 comments.
             includePictures = codec != AudioCodec.FLAC,
+            chaptersPreservedElsewhere = chaptersPreservedElsewhere,
         )
         val suffix = existingCommentSuffix(codec, headers, commentIndex)
         return when (codec) {

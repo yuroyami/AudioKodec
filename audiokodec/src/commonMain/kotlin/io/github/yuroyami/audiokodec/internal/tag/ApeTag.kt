@@ -308,9 +308,13 @@ internal object ApeTag {
     }
 
     /** Builds an APEv2 block, retaining entries outside AudioKodec's model. */
-    fun build(tags: TagBundle, picturesPreservedElsewhere: Boolean = false): ByteArray {
-        if (!picturesPreservedElsewhere && tags.chapters.any { it.pictures.isNotEmpty() }) {
-            throw UnsupportedFeatureException("chapter-local artwork in APE")
+    fun build(
+        tags: TagBundle,
+        picturesPreservedElsewhere: Boolean = false,
+        chaptersPreservedElsewhere: Boolean = false,
+    ): ByteArray {
+        if (!chaptersPreservedElsewhere && tags.chapters.isNotEmpty()) {
+            throw UnsupportedFeatureException("chapters and chapter-local artwork in APE without ID3")
         }
         val text = LinkedHashMap<String, MutableList<String>>()
         val binary = LinkedHashMap<String, ByteArray>()
@@ -321,16 +325,27 @@ internal object ApeTag {
 
         for ((field, values) in tags.fields) {
             if (values.isEmpty()) continue
+            if (values.any { '\u0000' in it }) {
+                throw UnsupportedFeatureException("null characters in APE ${field.name}")
+            }
             when (field) {
-                TagField.TRACK_TOTAL, TagField.DISC_TOTAL -> Unit
-                TagField.TRACK_NUMBER -> addText(
-                    "Track",
-                    joinWithTotal(values.first(), tags[TagField.TRACK_TOTAL]),
-                )
-                TagField.DISC_NUMBER -> addText(
-                    "Disc",
-                    joinWithTotal(values.first(), tags[TagField.DISC_TOTAL]),
-                )
+                TagField.TRACK_TOTAL, TagField.DISC_TOTAL -> {
+                    // A missing number or several totals needs its own field;
+                    // pairing lists would invent relationships the caller never stated.
+                    val numberField = if (field == TagField.TRACK_TOTAL) TagField.TRACK_NUMBER else TagField.DISC_NUMBER
+                    if (tags.all(numberField).isEmpty() || values.distinct().size > 1) {
+                        for (value in values) addText(TagMapping.vorbisKeyFor(field)!!, value)
+                    }
+                }
+                TagField.TRACK_NUMBER, TagField.DISC_NUMBER -> {
+                    if (values.any { '/' in it }) {
+                        throw UnsupportedFeatureException("a slash inside APE ${field.name}")
+                    }
+                    val totalField = if (field == TagField.TRACK_NUMBER) TagField.TRACK_TOTAL else TagField.DISC_TOTAL
+                    val total = tags.all(totalField).distinct().singleOrNull()
+                    val key = if (field == TagField.TRACK_NUMBER) "Track" else "Disc"
+                    for (value in values) addText(key, joinWithTotal(value, total))
+                }
                 else -> {
                     val key = TagMapping.apeKeyFor(field)
                         ?: TagMapping.vorbisKeyFor(field)

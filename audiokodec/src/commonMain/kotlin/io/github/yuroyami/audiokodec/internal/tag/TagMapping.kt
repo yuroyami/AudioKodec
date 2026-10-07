@@ -139,6 +139,8 @@ internal object TagMapping {
         "DESCRIPTION" to TagField.DESCRIPTION,
         "LYRICS" to TagField.LYRICS,
         "UNSYNCEDLYRICS" to TagField.LYRICS,
+        "WEBSITE" to TagField.URL,
+        "URL" to TagField.URL,
         "GROUPING" to TagField.GROUPING,
         "BPM" to TagField.BPM,
         "KEY" to TagField.KEY,
@@ -200,6 +202,7 @@ internal object TagMapping {
         "COMPILATION" to TagField.COMPILATION,
         "LYRICS" to TagField.LYRICS,
         "BPM" to TagField.BPM,
+        "WEBLINK" to TagField.URL,
         "TOOL NAME" to TagField.ENCODER,
         "TOOL VERSION" to TagField.ENCODING_SETTINGS,
     )
@@ -446,6 +449,7 @@ internal object TagMapping {
 
     /** The preferred APE key for [field], or null when APE has no convention. */
     fun apeKeyFor(field: TagField): String? {
+        if (field == TagField.URL) return "Weblink"
         for ((key, mapped) in APE) {
             if (mapped == field) return key
         }
@@ -477,7 +481,7 @@ internal object TagMapping {
         TagField.ORIGINAL_DATE -> "ORIGINALDATE"
         TagField.CATALOG_NUMBER -> "CATALOGNUMBER"
         TagField.ENCODING_SETTINGS -> "ENCODERSETTINGS"
-        TagField.URL -> null
+        TagField.URL -> "WEBSITE"
         else -> field.name
     }
 
