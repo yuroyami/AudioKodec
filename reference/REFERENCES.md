@@ -68,7 +68,7 @@ Run as programs, never read as source.
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
-| alacconvert | ALAC, built from Apple's reference at the commit the port follows |
+| alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
 
@@ -334,7 +334,7 @@ first line was written.
 | Repository | https://github.com/macosforge/alac |
 | Commit | `c38887c5c5e64a4b31108733bd79ca9b2496d987` |
 | Licence | Apache-2.0, the `LICENSE` file at that commit and the header of every source file |
-| Files | `codec/ALACDecoder.cpp`, `ag_dec.c`, `dp_dec.c`, `matrix_dec.c`, `ALACBitUtilities.c` and their headers, and `ALACMagicCookieDescription.txt` for the configuration and channel orders |
+| Files | `codec/ALACDecoder.cpp`, `ag_dec.c`, `dp_dec.c`, `matrix_dec.c`, `ALACBitUtilities.c` and their headers, and `ALACMagicCookieDescription.txt` for the configuration and channel orders. `codec/ALACEncoder.h` and `codec/ALACAudioTypes.h` describe the oracle's public API |
 | Not ported | The encoder, until the decoder passes; the `convert-utility` command line |
 
 The `codec` folder also holds a copy of the Apple Public Source License 2.0,
@@ -353,6 +353,16 @@ and which is also what Kotlin's shifts do.
 
 The test oracle is `alacconvert`, built from the same commit and run, which
 encodes WAV to ALAC in CAF and decodes it back.
+
+For 20-bit audio, `audiokodec/src/jvmTest/resources/alac_20bit_oracle.cpp`
+links the same pinned `libalac.a` and calls its public `ALACEncoder` API.
+It supplies high-aligned 20-bit PCM in 24-bit slots and wraps the returned
+packets and opaque magic cookie in CAF, bypassing `alacconvert`'s faulty
+20-bit WAV reader. Mono, stereo and 5.1 tone and full-range noise fixtures
+exercise prediction and escape coding. The JVM tests require exact input
+integers through `IntPcmAccess`, including extrema, low bits, short final
+packets and packet-boundary seeks. The 5.1 expectation uses the channel
+order declared in Apple's public header independently of the Kotlin decoder.
 
 ## Never opened
 

@@ -199,8 +199,9 @@ included. AAC, MP3, AC-3 and AMR are named, with their length and chapters, and
 ALAC decodes from MP4 and from CAF, at 16, 20, 24 and 32 bits and with one to
 eight channels, reordered from ALAC's own speaker order into AudioKodec's, and
 exact integers are available through `IntPcmAccess`. It is translated from
-Apple's Apache-2.0 reference, and every file that reference encodes decodes to
-exactly the samples that went in.
+Apple's Apache-2.0 reference. Independent comparisons require the exact input
+integers at 16, 24 and 32 bits with one to eight channels, and at 20 bits with
+mono, stereo and 5.1 audio.
 
 Vorbis decodes floor type 1 and all three residue kinds,
 channel coupling, block switching, and up to eight channels reordered into
