@@ -17,6 +17,10 @@ opening repeats that page walk; folder scans must account for this I/O.
 Tolerant native FLAC inspection decodes remaining frames for a stream-copy cut
 with a nonzero first-frame origin. Positions and seeks are rebased, duration
 comes from complete consecutive frames and the original MD5 is unavailable.
+Native FLAC also recognises pre-2007 variable-block sample numbering by
+verifying the first frame and its successor's header when STREAMINFO bounds
+are unequal. This inspection decodes one frame; modern fixed-block streams
+with a short final block retain frame numbering.
 
 The common and JVM suites include the optional `audiokodec-io` bridge and
 external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),
@@ -59,6 +63,15 @@ reports, failed tests and unexpected skips. Linux permits only the five
 `afconvert` comparisons that require macOS; macOS permits no skips. The Opus
 vectors are checksum-verified before the tests run. Hosted validation remains
 subject to runner availability, including account billing. Within the suites:
+
+- All 86 published IETF CELLAR FLAC vectors at commit
+  `aa7b0c6cf32994c106ae517a08134c28a96ff5b2` run individually: 69 exact integer
+  PCM and seek comparisons with FLAC 1.5.0, checking stored MD5 and duration
+  where present; six typed refusals
+  for changing stream shapes or absent metadata; eleven strict/tolerant safety
+  cases. The subset includes the legacy Flake 0.11 variable-block format,
+  non-byte-aligned depths, 32-bit predictors and large metadata. A committed
+  SHA-256 manifest verifies all inputs; missing configured vectors fail.
 
 - Integer PCM at every depth, IEEE float, AIFF, AU, A-law, mu-law and
   Microsoft ADPCM all decode **bit-identically to ffmpeg**. IMA ADPCM does

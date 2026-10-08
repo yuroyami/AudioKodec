@@ -55,6 +55,11 @@ bounded to a fixed header window. Other formats read their metadata and index
 tables. Opening Ogg repeats the page walk before the first decoded frame.
 Tolerant native FLAC inspection decodes frames when the first frame retains
 a nonzero origin, deriving the complete duration of a stream-copy cut.
+Older FLAC variable-block files can store sample numbers with the blocking
+strategy bit clear. When unequal STREAMINFO bounds make the numbering
+ambiguous, inspection verifies the first frame and the following header.
+That single-frame decode distinguishes legacy sample numbers from modern
+fixed-block frame numbers, including streams with a short final block.
 
 CAF ALAC packet tables from some encoders, including ffmpeg, count a short
 final packet as a full one. `probe` reports that metadata duration. `open`

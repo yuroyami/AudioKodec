@@ -72,3 +72,5 @@ if download != target:
     download.rename(target)
 print('Opus vector checksum verified')
 PY
+
+python3 .github/scripts/prepare-flac-conformance.py

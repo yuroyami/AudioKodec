@@ -77,6 +77,22 @@ the Linux and macOS dependencies with `.github/scripts/prepare-codec-oracles.sh`
 and checks JVM reports with `.github/scripts/check-oracle-results.py`. Linux
 permits the five macOS-only `afconvert` skips; the macOS job runs them as well.
 
+The published FLAC decoder corpus is pinned by commit, byte lengths and
+SHA-256 in `test-data/flac-conformance/manifest.tsv`. Its two small committed
+vectors run without a download; prepare all 86 licensed vectors with:
+
+```sh
+python3 .github/scripts/prepare-flac-conformance.py
+./gradlew :audiokodec:jvmTest --tests '*FlacConformanceTest*'
+```
+
+The complete corpus occupies about 310 MB in the ignored build cache. Use
+`--destination PATH` and `AUDIOKODEC_FLAC_CONFORMANCE_DIR=PATH` to share it between
+checkouts. Missing unconfigured vectors are individual skips; a configured
+cache with a missing or changed file fails. CI prepares the full corpus and
+requires a report for every vector. Exact PCM comparisons, typed refusals for
+unsupported stream shapes, and faulty-file safety checks are reported separately.
+
 The ID3 identity and mixed-artwork suites also run Mutagen through Python. It reports an actual
 test skip when the module is unavailable. Use an isolated interpreter:
 

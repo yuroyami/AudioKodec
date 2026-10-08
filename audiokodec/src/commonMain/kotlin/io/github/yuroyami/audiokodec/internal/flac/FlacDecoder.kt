@@ -36,13 +36,15 @@ internal class FlacDecoder(
     private val streamInfo = parsed.streamInfo
     private val frames = FlacFrameReader(reader, streamInfo, options)
 
-    private val sourceOrigin: Long = try {
-        frames.headerAt(parsed.audioOffset)?.let { firstSampleOf(it.sampleNumber, it.frameNumber) } ?: 0L
+    private val sourceHeader: FlacFrameReader.Position? = try {
+        frames.headerAt(parsed.audioOffset)
     } catch (_: CorruptStreamException) {
-        0L // Frame decoding retains the original typed failure.
+        null // Frame decoding retains the original typed failure.
     } catch (_: TruncatedStreamException) {
-        0L
+        null
     }
+    private val legacySampleNumbers: Boolean = detectLegacySampleNumbers()
+    private val sourceOrigin: Long = sourceHeader?.let { firstSampleOf(it.sampleNumber, it.frameNumber) } ?: 0L
     private val codedOrigin: Long = if (options.tolerant) sourceOrigin else 0L
 
     override val format: AudioFormat = AudioFormat(
@@ -417,14 +419,7 @@ internal class FlacDecoder(
         return landing
     }
 
-    /**
-     * The block size a fixed-size stream uses.
-     *
-     * The stream information block says so by giving the same minimum and
-     * maximum. When it does not, the stream is variable-size and its frames
-     * carry sample numbers rather than frame numbers, so this is never
-     * consulted.
-     */
+    /** Interprets the strategy's coded position, including verified legacy sample numbers. */
     private fun firstSampleOf(frame: FlacFrameReader.Frame): Long = firstSampleOf(frame.sampleNumber, frame.frameNumber)
 
     private fun firstSampleOf(sampleNumber: Long, frameNumber: Long): Long {
@@ -432,11 +427,38 @@ internal class FlacDecoder(
         if (frameNumber < 0) {
             throw CorruptStreamException("a FLAC frame states neither a frame nor sample number")
         }
+        if (legacySampleNumbers) return frameNumber
         val fixedBlockSize = streamInfo.maximumBlockSize.toLong()
         if (frameNumber > Long.MAX_VALUE / fixedBlockSize) {
             throw CorruptStreamException("a FLAC frame number overflows its sample position")
         }
         return frameNumber * fixedBlockSize
+    }
+
+    /**
+     * Before the blocking-strategy bit was introduced, variable-size streams
+     * used sample numbers with that bit clear. Unequal STREAMINFO bounds alone
+     * do not identify them: modern fixed-size streams can state a short final
+     * block. Verify the first frame and its successor's header, requiring the
+     * coded number to advance by the first block's size rather than by one.
+     */
+    private fun detectLegacySampleNumbers(): Boolean {
+        val first = sourceHeader ?: return false
+        if (first.sampleNumber >= 0 || first.frameNumber < 0 || first.blockSize < 16 ||
+            streamInfo.minimumBlockSize == streamInfo.maximumBlockSize
+        ) return false
+        return try {
+            val frame = frames.decodeAt(parsed.audioOffset) ?: return false
+            if (parsed.audioOffset > Long.MAX_VALUE - frame.byteLength ||
+                first.frameNumber > Long.MAX_VALUE - first.blockSize
+            ) return false
+            val second = frames.headerAt(parsed.audioOffset + frame.byteLength) ?: return false
+            second.sampleNumber < 0 && second.frameNumber == first.frameNumber + first.blockSize
+        } catch (_: CorruptStreamException) {
+            false
+        } catch (_: TruncatedStreamException) {
+            false
+        }
     }
 
     private fun requireSupportedOrigin() {

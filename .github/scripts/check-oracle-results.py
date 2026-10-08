@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 reports = Path("audiokodec/build/test-results/jvmTest")
 required = {
     "AiffCOracleTest", "AlacOracleTest", "CafOracleTest", "FfmpegOracleTest",
-    "FfmpegTagOracleTest", "FlacEncodeOracleTest", "FlacOracleTest",
+    "FfmpegTagOracleTest", "FlacEncodeOracleTest", "FlacOracleTest", "FlacConformanceTest",
     "Mp4OracleTest", "MpegCrcOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
     "OggOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
     "OpusJoinOracleTest", "OpusMultistreamOracleTest", "OpusOracleTest",
@@ -31,6 +31,14 @@ for report in reports.glob("TEST-*.xml"):
         if not any(all(case.find(outcome) is None for outcome in ("skipped", "failure", "error"))
                    for case in suite.findall("testcase")):
             failures.append(f"{name}: no comparisons ran")
+    if name == "FlacConformanceTest":
+        manifest = Path("test-data/flac-conformance/manifest.tsv")
+        vectors = [line.split("\t")[0] for line in manifest.read_text().splitlines()
+                   if line and not line.startswith("#") and line.split("\t")[0].endswith(".flac")]
+        cases = [case.attrib["name"] for case in suite.findall("testcase")]
+        for vector in vectors:
+            if not any(f"[{vector}]" in case for case in cases):
+                failures.append(f"FlacConformanceTest: missing published vector {vector}")
     for case in suite.findall("testcase"):
         method = case.attrib["name"].split("[")[0]
         if case.find("skipped") is not None:
