@@ -33,6 +33,9 @@ passing one. Within them:
   tests cover leading padding, bounded atom detection and malformed sizes.
 - FLAC files written by the reference encoder decode **bit-exactly** at 8, 16
   and 24 bits, 1, 2 and 6 channels, and every compression level from 0 to 8.
+- Tolerant FLAC decoding stops after the valid prefix when a later frame's
+  number or declared range is inconsistent, for both float and integer reads.
+  Strict decoding and damage before the first valid frame still fail.
 - FLAC files AudioKodec writes pass `flac --test`, which verifies every frame
   checksum and the stream MD5, and `flac --decode` returns the samples that
   went in.

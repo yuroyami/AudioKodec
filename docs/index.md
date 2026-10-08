@@ -926,6 +926,11 @@ A truncated file throws by default. To salvage what is there instead:
 AudioKodec.decode(bytes, DecodeOptions(tolerant = true))
 ```
 
+For FLAC, tolerant decoding stops at the first damaged frame after valid
+output, including inconsistent frame numbering or a frame extending beyond
+the declared sample total. Float and integer reads retain the same complete
+prefix. Damage before any valid output still throws.
+
 `DecodeOptions.maxAllocationBytes` caps what any single allocation may be, and
 defaults to one gibibyte. The check happens before the allocation, not after
 it fails.

@@ -5,9 +5,12 @@ import io.github.yuroyami.audiokodec.tag.TagFormat
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -23,6 +26,33 @@ import kotlin.test.assertTrue
 class FlacOracleTest {
 
     private val flac: String? by lazy { findOnPath("flac") }
+
+    @Test
+    fun tolerantContinuityFailureKeepsTheReferenceEncodedPrefix() {
+        val flac = flac ?: return org.junit.Assume.assumeTrue("flac is required", false)
+        val source = temp("continuity.wav")
+        source.writeBytes(AudioKodec.encode(FlacContinuityFixtures.samples(), AudioFormat(44_100, 1), EncodeTarget.wav(16)))
+        val encoded = temp("continuity.flac")
+        run(listOf(flac, "--silent", "--force", "--no-padding", "--no-seektable", "--blocksize=4096",
+            "-o", encoded.path, source.path))
+        val valid = encoded.readBytes()
+        assertEquals(true, AudioKodec.verifyFlacMd5(valid))
+        assertContentEquals(FlacContinuityFixtures.samples(), AudioKodec.decode(valid).samples)
+        for (bytes in listOf(
+            FlacContinuityFixtures.renumber(valid, 1, 3),
+            FlacContinuityFixtures.withTotal(valid, 6000),
+        )) {
+            assertFailsWith<CorruptStreamException> { AudioKodec.decode(bytes) }
+            val recovered = AudioKodec.decode(bytes, DecodeOptions(tolerant = true))
+            assertContentEquals(FlacContinuityFixtures.samples().copyOf(4096), recovered.samples)
+            AudioKodec.open(bytes, DecodeOptions(tolerant = true)).use { decoder ->
+                val block = (decoder as IntPcmAccess).nextIntFrame()
+                assertNotNull(block)
+                assertContentEquals(IntArray(4096) { 4096 }, block.samples)
+                assertNull(decoder.nextIntFrame())
+            }
+        }
+    }
 
     @Test
     fun decodingIsBitExactAtEveryDepthAndChannelCount() {

@@ -141,7 +141,7 @@ internal class FlacDecoder(
 
         while (true) {
             val frame = try {
-                frames.decodeAt(nextFrameOffset)
+                readFrame()
             } catch (e: TruncatedStreamException) {
                 exhausted = true
                 if (options.tolerant && decodedAny) return null
@@ -167,36 +167,6 @@ internal class FlacDecoder(
                 return null
             }
 
-            val statedStart = firstSampleOf(frame)
-            if (statedStart != nextCodedPosition) {
-                throw CorruptStreamException(
-                    "a FLAC frame starts at sample $statedStart, expected $nextCodedPosition",
-                    nextFrameOffset,
-                )
-            }
-            if (statedStart > Long.MAX_VALUE - frame.blockSize) {
-                throw CorruptStreamException(
-                    "a FLAC frame's sample range overflows 64 bits",
-                    nextFrameOffset,
-                )
-            }
-            val codedEnd = statedStart + frame.blockSize
-            if (total != null && codedEnd > total) {
-                throw CorruptStreamException(
-                    "a FLAC frame ends at sample $codedEnd, past STREAMINFO's total of $total",
-                    nextFrameOffset,
-                )
-            }
-            nextCodedPosition = codedEnd
-
-            if (nextFrameOffset > Long.MAX_VALUE - frame.byteLength) {
-                throw CorruptStreamException(
-                    "a FLAC frame offset overflows 64 bits",
-                    nextFrameOffset,
-                )
-            }
-            nextFrameOffset += frame.byteLength
-
             val skip = minOf(pendingSkip, frame.blockSize.toLong()).toInt()
             pendingSkip -= skip
             var usable = frame.blockSize - skip
@@ -215,6 +185,41 @@ internal class FlacDecoder(
             decodedAny = true
             return Block(frame, skip, usable)
         }
+    }
+
+    /** Decodes and validates a whole frame before advancing either coded position. */
+    private fun readFrame(): FlacFrameReader.Frame? {
+        val frame = frames.decodeAt(nextFrameOffset) ?: return null
+        val statedStart = firstSampleOf(frame)
+        if (statedStart != nextCodedPosition) {
+            throw CorruptStreamException(
+                "a FLAC frame starts at sample $statedStart, expected $nextCodedPosition",
+                nextFrameOffset,
+            )
+        }
+        if (statedStart > Long.MAX_VALUE - frame.blockSize) {
+            throw CorruptStreamException(
+                "a FLAC frame's sample range overflows 64 bits",
+                nextFrameOffset,
+            )
+        }
+        val codedEnd = statedStart + frame.blockSize
+        val total = durationFrames
+        if (total != null && codedEnd > total) {
+            throw CorruptStreamException(
+                "a FLAC frame ends at sample $codedEnd, past STREAMINFO's total of $total",
+                nextFrameOffset,
+            )
+        }
+        if (nextFrameOffset > Long.MAX_VALUE - frame.byteLength) {
+            throw CorruptStreamException(
+                "a FLAC frame offset overflows 64 bits",
+                nextFrameOffset,
+            )
+        }
+        nextCodedPosition = codedEnd
+        nextFrameOffset += frame.byteLength
+        return frame
     }
 
     override fun seek(frameIndex: Long): Long {
