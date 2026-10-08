@@ -12,6 +12,9 @@ page is the full list of what works today and what is coming.
 
 ## Install
 
+0.1.0 is unreleased and is not yet published to Maven Central. The snippet
+below shows the planned coordinates for that release.
+
 ```kotlin
 dependencies {
     implementation("io.github.yuroyami:audiokodec:0.1.0")
