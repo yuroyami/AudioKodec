@@ -136,7 +136,7 @@ subject to runner availability, including account billing. Within the suites:
   read with either bit, a book ending on a 32-bit codeword, and a book
   declaring more lookup values than the stream holds.
 
-`audiokodec` builds for 22 targets and `audiokodec-io` for 21. The README lists
+`audiokodec` and `audiokodec-io` both build for 22 targets. The README lists
 them.
 
 ## Containers
