@@ -25,6 +25,12 @@ import kotlin.test.assertTrue
  */
 class Mp4Test {
 
+    internal fun hostileFixtures(): List<Pair<String, ByteArray>> = listOf(
+        "MP4 indexed" to build(16, 1, 4),
+        "MP4 indexed first" to build(16, 1, 4, moovFirst = true, useCo64 = true),
+        "MP4 fragmented" to buildFragmented(16, 1, 4),
+    )
+
     @Test
     fun chunkOffsetsMustKeepCompletePacketsInsideMediaData() {
         for (wide in listOf(false, true)) {

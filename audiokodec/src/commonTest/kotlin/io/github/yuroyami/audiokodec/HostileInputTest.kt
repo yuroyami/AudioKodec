@@ -19,6 +19,24 @@ class HostileInputTest {
     private val goodFile = AudioKodec.encode(
         TestSignals.quantise(TestSignals.sine(600, 2), 16), format, EncodeTarget.wav(16),
     )
+    private val fixtures by lazy { HostileInputFixtures.files() }
+    private val strictSweep = DecodeOptions(maxAllocationBytes = 1L shl 20)
+    private val tolerantSweep = strictSweep.copy(tolerant = true)
+
+    @Test
+    fun everyDecodableContainerHasAValidFixtureInTheSharedSweep() {
+        val covered = fixtures.map { (name, bytes) ->
+            val decoded = AudioKodec.decode(bytes, strictSweep)
+            assertTrue(decoded.frames > 0, "$name has no valid baseline audio")
+            TestSignals.assertExact(decoded.samples,
+                AudioKodec.decode(OggDamageFixtures.source(bytes, knownSize = false), strictSweep).samples, name)
+            decoded.info.container
+        }.toSet()
+        assertEquals(AudioContainer.entries.filter { it.isDecodable }.toSet(), covered,
+            "add a short valid fixture when a new container gains a decoder")
+        val bytes = fixtures.sumOf { it.second.size }
+        println("Hostile coverage: ${fixtures.size} fixtures, $bytes truncation boundaries, ${bytes * 9} byte mutations, ${fixtures.size * 100} random bodies")
+    }
 
     @Test
     fun leadingTagHeaderMutationsAndTruncationsNeverMakeSniffThrow() {
@@ -75,16 +93,13 @@ class HostileInputTest {
 
     @Test
     fun everyTruncationPointIsHandledWithoutAnUnexpectedFailure() {
-        for (length in 0 until goodFile.size step 7) {
-            val cut = goodFile.copyOf(length)
-            expectOnlyKiteFailures("truncated to $length bytes") {
-                AudioKodec.decode(cut)
-            }
-            expectOnlyKiteFailures("truncated to $length bytes, tolerant") {
-                AudioKodec.decode(cut, DecodeOptions(tolerant = true))
-            }
-            expectOnlyKiteFailures("probing $length bytes") {
-                AudioKodec.probe(cut)
+        for ((name, original) in fixtures) {
+            println("Truncation sweep: $name (${original.size} bytes)")
+            for (length in 0 until original.size) {
+                val cut = original.copyOf(length)
+                for (options in listOf(strictSweep, tolerantSweep)) {
+                    exercise("$name truncated to $length bytes", cut, options)
+                }
             }
         }
     }
@@ -102,16 +117,15 @@ class HostileInputTest {
 
     @Test
     fun mutatingSingleBytesOfAValidFileNeverProducesAnUnexpectedFailure() {
-        var state = 987_654_321
-        repeat(4_000) {
-            state = state * 1_103_515_245 + 12_345
-            val at = ((state ushr 8) and 0x7FFF_FFFF) % goodFile.size
-            state = state * 1_103_515_245 + 12_345
-            val value = ((state ushr 16) and 0xFF).toByte()
-            val mutated = goodFile.copyOf()
-            mutated[at] = value
-            expectOnlyKiteFailures("byte $at set to $value") {
-                AudioKodec.decode(mutated, DecodeOptions(tolerant = true))
+        for ((name, original) in fixtures) {
+            println("Mutation sweep: $name (${original.size} bytes)")
+            for (at in original.indices) {
+                for (mask in (0..7).map { 1 shl it } + 0xFF) {
+                    val mutated = original.copyOf().also { it[at] = (it[at].toInt() xor mask).toByte() }
+                    for (options in listOf(strictSweep, tolerantSweep)) {
+                        exercise("$name byte $at XOR $mask", mutated, options)
+                    }
+                }
             }
         }
     }
@@ -119,18 +133,20 @@ class HostileInputTest {
     @Test
     fun randomBytesBehindAValidMagicNumberAreRejectedCleanly() {
         var state = 42
-        repeat(2_000) {
-            val bytes = ByteArray(96)
-            "RIFF".forEachIndexed { i, c -> bytes[i] = c.code.toByte() }
-            "WAVE".forEachIndexed { i, c -> bytes[8 + i] = c.code.toByte() }
-            for (i in 12 until bytes.size) {
-                state = state * 1_103_515_245 + 12_345
-                bytes[i] = ((state ushr 16) and 0xFF).toByte()
-            }
-            // The size field is left random on purpose: it is the field most
-            // likely to send a reader somewhere it should not go.
-            expectOnlyKiteFailures("random RIFF body") {
-                AudioKodec.decode(bytes, DecodeOptions(tolerant = true))
+        for ((name, original) in fixtures) {
+            println("Random-body sweep: $name")
+            val container = AudioKodec.probe(original).container
+            repeat(100) {
+                val bytes = ByteArray(minOf(original.size, 256)) {
+                    state = state * 1_103_515_245 + 12_345
+                    ((state ushr 16) and 0xFF).toByte()
+                }
+                for (range in HostileInputFixtures.magicRanges(container)) {
+                    original.copyInto(bytes, range.first, range.first, range.last + 1)
+                }
+                for (options in listOf(strictSweep, tolerantSweep)) {
+                    exercise("random $name body", bytes, options)
+                }
             }
         }
     }
@@ -171,6 +187,30 @@ class HostileInputTest {
             AudioKodec.probe("this is a text file, not audio at all".encodeToByteArray())
         }
         assertTrue(failure.format == null)
+    }
+
+    private fun exercise(what: String, bytes: ByteArray, options: DecodeOptions) {
+        expectOnlyKiteFailures("$what streaming, tolerant=${options.tolerant}") {
+            AudioKodec.open(bytes, options.copy(reuseBuffers = true)).use { decoder ->
+                var position = 0L
+                repeat(4096) {
+                    val block = decoder.nextFrame() ?: return@use
+                    assertTrue(block.frameCount > 0, "$what returned an empty block without ending")
+                    assertEquals(position, block.positionFrames, "$what did not advance continuously")
+                    position += block.frameCount
+                    // Whole-file decoding reaches its allocation guard at
+                    // this size; there is no need to retain a longer stream.
+                    if (position > options.maxAllocationBytes / 4 / decoder.format.channels) return@use
+                }
+                throw AssertionError("$what did not end within 4096 decoded blocks")
+            }
+        }
+        expectOnlyKiteFailures("$what decoding, tolerant=${options.tolerant}") {
+            AudioKodec.decode(bytes, options)
+        }
+        expectOnlyKiteFailures("$what probing, tolerant=${options.tolerant}") {
+            AudioKodec.probe(bytes, options)
+        }
     }
 
     /**

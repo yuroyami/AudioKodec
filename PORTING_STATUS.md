@@ -23,6 +23,15 @@ external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),
 wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
+The shared hostile-input sweep covers all ten decodable containers through
+21 short fixtures, including every Ogg codec, all three MPEG layers, CAF
+ALAC/IMA and fragmented MP4. It tests every truncation boundary, all eight
+individual bit flips and an inverted byte at every position, and 100 random
+bodies per fixture behind its format signature. Strict and tolerant probing,
+streaming and complete decoding use a one-mebibyte allocation ceiling.
+Streaming checks positive progress and bounded block counts. A new decoder
+container must supply a fixture before the coverage check can pass.
+
 The I/O bridge also publishes JavaScript. Its Node suite includes file
 operations, while the Chromium suite exercises only the browser-safe buffer
 and raw stream bridge. The browser task excludes `AudioFileTest` because

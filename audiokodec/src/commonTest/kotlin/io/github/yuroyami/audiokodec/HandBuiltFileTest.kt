@@ -19,6 +19,19 @@ import kotlin.test.assertTrue
  */
 class HandBuiltFileTest {
 
+    internal fun hostileFixtures(): List<Pair<String, ByteArray>> {
+        val samples = ShortArray(16) { (it * 997 - 8000).toShort() }
+        val rf64 = buildRf64(44_100, 1, samples)
+        return listOf(
+            "RF64" to rf64,
+            "BW64" to rf64.copyOf().also { "BW64".encodeToByteArray().copyInto(it) },
+            "Wave64" to buildWave64(44_100, 1, samples),
+            "Wave64 extensible" to buildWave64(44_100, 1, samples, extensible = true),
+            "CAF PCM" to buildLayoutCaf(1, null, IntArray(samples.size) { samples[it].toInt() }),
+            "CAF packet trim" to buildTrimmedCaf(),
+        )
+    }
+
     @Test
     fun tolerantCafAndWave64RecoverCompleteFramesFromAShortPayload() {
         val samples = ShortArray(5_000) { ((it % 511) - 255).toShort() }

@@ -61,7 +61,7 @@ class CafImaTest {
         }
     }
 
-    private fun file(channels: Int, width: Int): ByteArray {
+    internal fun file(channels: Int, width: Int): ByteArray {
         val dataBytes = 3 * channels * 34
         return ByteArray(68 + dataBytes).also { bytes ->
             "caff".encodeToByteArray().copyInto(bytes)

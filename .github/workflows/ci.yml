@@ -61,6 +61,9 @@ jobs:
           :audiokodec-io:wasmWasiNodeTest
           --stacktrace
 
+      - name: Hostile-input sweeps (Chromium)
+        run: ./gradlew :audiokodec:jsBrowserTest --tests '*HostileInputTest*' --stacktrace
+
       - name: Core tests (native)
         run: ./gradlew :audiokodec:linuxX64Test :audiokodec-io:linuxX64Test --stacktrace
 

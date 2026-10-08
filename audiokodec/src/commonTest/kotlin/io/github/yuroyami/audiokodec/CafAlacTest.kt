@@ -8,6 +8,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class CafAlacTest {
+    internal fun hostileFixture(): ByteArray = file(1, intArrayOf(17), validFrames = 17, remainder = 47).first
+
     @Test
     fun alacStateHonoursAllocationLimitsBeforeProbeOrOpen() {
         for ((frameLength, channels, limit) in listOf(Triple(4_096, 2, 16_384L), Triple(8_192, 1, 40_960L))) {

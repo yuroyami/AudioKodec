@@ -21,6 +21,10 @@ C.
    `AudioKodecException`, and none may hang. A new container goes into the
    shared sweep in `HostileInputTest` rather than getting its own hand-written
    cases.
+   Add a short valid file to `HostileInputFixtures` when a container gains a
+   decoder. Its coverage check follows `AudioContainer.isDecodable`; the shared
+   tests visit every truncation boundary and every byte's eight individual bit
+   flips, in strict and tolerant probing, streaming and complete decoding.
 3. Seeking and duration tests where the format supports them.
 4. Tag round-trips where the format carries tags, with the audio payload
    proved byte-identical across a tag write.

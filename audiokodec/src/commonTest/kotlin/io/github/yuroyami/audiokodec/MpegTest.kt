@@ -35,11 +35,12 @@ class MpegTest {
     }
 
     /** Five hundred silent 44.1 kHz frames of [layer], with no Xing or VBRI header. */
-    private fun silentFrames(layer: Int): ByteArray {
-        val header = byteArrayOf(0xFF.toByte(), (0xE0 or (3 shl 3) or ((4 - layer) shl 1) or 1).toByte(), 0x90.toByte(), 0)
+    internal fun silentFrames(layer: Int, count: Int = 500, compact: Boolean = false): ByteArray {
+        val header = byteArrayOf(0xFF.toByte(), (0xE0 or (3 shl 3) or ((4 - layer) shl 1) or 1).toByte(),
+            if (compact) 0x14 else 0x90.toByte(), if (compact) 0xC0.toByte() else 0)
         val length = io.github.yuroyami.audiokodec.internal.mpeg.MpegFrameHeader.parse(header, 0)!!.frameBytes
         val frame = ByteArray(length).also { header.copyInto(it) }
-        return ByteArray(length * 500).also { all -> repeat(500) { frame.copyInto(all, it * length) } }
+        return ByteArray(length * count).also { all -> repeat(count) { frame.copyInto(all, it * length) } }
     }
 
     @Test

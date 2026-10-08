@@ -1029,6 +1029,12 @@ Every failure AudioKodec reports is an `AudioKodecException`:
 
 Nothing else escapes a decoder, whatever the input.
 
+The common hostile-input suite checks every supported container using short
+valid fixtures. It visits every truncation boundary and every byte with all
+eight individual bit flips and a full-byte inversion, then randomises bodies
+behind valid signatures. Probing, streaming and complete decoding run in both
+modes under an allocation ceiling, and streaming must keep advancing.
+
 A truncated file throws by default. To salvage what is there instead:
 
 ```kotlin
