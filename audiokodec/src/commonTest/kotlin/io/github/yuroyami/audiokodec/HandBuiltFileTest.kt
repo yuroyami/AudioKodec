@@ -8,6 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -17,6 +18,64 @@ import kotlin.test.assertTrue
  * reader agrees with the format rather than merely with our own writer.
  */
 class HandBuiltFileTest {
+
+    @Test
+    fun tolerantCafAndWave64RecoverCompleteFramesFromAShortPayload() {
+        val samples = ShortArray(5_000) { ((it % 511) - 255).toShort() }
+        val files = listOf(
+            buildWave64(48_000, 1, samples),
+            buildIntegerCaf(CafPcmCase(16, 2, false, IntArray(samples.size) { samples[it].toInt() })),
+        )
+        for (file in files) {
+            val expected = AudioKodec.decode(file).samples
+            for (missing in intArrayOf(1, 200)) {
+                val cut = file.copyOf(file.size - missing)
+                val recoveredFrames = samples.size - (missing + 1) / 2
+                for (knownSize in listOf(false, true)) {
+                    fun source(): AudioSource = object : AudioSource {
+                        private val delegate = cut.asAudioSource()
+                        override val size: Long = if (knownSize) cut.size.toLong() else -1L
+                        override fun readAt(position: Long, into: ByteArray, offset: Int, count: Int): Int =
+                            delegate.readAt(position, into, offset, minOf(count, 7))
+                        override fun close() = Unit
+                    }
+                    assertFailsWith<TruncatedStreamException> { AudioKodec.decode(source()) }
+                    val tolerant = DecodeOptions(tolerant = true)
+                    val decoded = AudioKodec.decode(source(), tolerant)
+                    assertEquals(recoveredFrames, decoded.frames)
+                    TestSignals.assertExact(expected.copyOf(recoveredFrames), decoded.samples)
+                    AudioKodec.open(source(), tolerant).use { decoder ->
+                        decoder.seek((recoveredFrames - 1).toLong())
+                        val last = decoder.nextFrame() ?: throw AssertionError("no recovered frame after seeking")
+                        assertEquals(expected[recoveredFrames - 1], last.samples[0])
+                        assertNull(decoder.nextFrame())
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun tolerantContainerRecoveryStillRejectsIncompleteHeadersAndEmptyAudio() {
+        val samples = ShortArray(100) { it.toShort() }
+        val files = listOf(
+            buildWave64(48_000, 1, samples),
+            buildIntegerCaf(CafPcmCase(16, 2, false, IntArray(samples.size) { samples[it].toInt() })),
+        )
+        for (file in files) {
+            val data = AudioKodec.probe(file).dataOffset.toInt()
+            for (length in intArrayOf(12, data - 1, data, data + 1)) {
+                assertFailsWith<AudioKodecException> {
+                    AudioKodec.decode(file.copyOf(length), DecodeOptions(tolerant = true))
+                }
+            }
+        }
+        val pastForm = files[0].copyOf()
+        writeI64Le(pastForm, 96, readI64Le(pastForm, 96) + 8)
+        assertFailsWith<CorruptStreamException> {
+            AudioKodec.probe(pastForm, DecodeOptions(tolerant = true))
+        }
+    }
 
     @Test
     fun aWave64FileReadsBackAsTheSamplesItHolds() {

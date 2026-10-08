@@ -83,6 +83,10 @@ subject to runner availability, including account billing. Within the suites:
   encodings at 16 and 24 bits pass reference decoding with exact samples.
 - CAF files from `afconvert` decode bit-exactly across its uncompressed data
   formats in both byte orders.
+- Tolerant CAF and Wave64 playback recovers complete blocks from a shortened
+  audio payload. Required headers and declared container boundaries remain
+  checked; common short-read tests and FFmpeg PCM comparisons cover recovery,
+  strict truncation failures and files with no complete audio frame.
 - CAF ALAC files from ffmpeg decode bit-exactly at 16 and 24 bits in mono
   and stereo, including a short final packet whose packet table overstates
   its length. Opening resolves that duration; seeking and strict EOF agree.

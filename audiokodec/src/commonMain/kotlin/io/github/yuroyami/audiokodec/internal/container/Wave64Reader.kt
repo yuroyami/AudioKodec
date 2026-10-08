@@ -65,7 +65,7 @@ internal object Wave64Reader {
                 16,
             )
         }
-        if (reader.size >= 0 && declaredSize > reader.size) {
+        if (!options.tolerant && reader.size >= 0 && declaredSize > reader.size) {
             throw TruncatedStreamException(
                 "the Wave64 header declares $declaredSize bytes but only ${reader.size} exist",
                 16,
@@ -80,7 +80,9 @@ internal object Wave64Reader {
         var dataOffset = -1L
         var dataBytes = -1L
         val sourceSize = reader.size
-        val formEnd = if (sourceSize >= 0) minOf(sourceSize, declaredSize) else declaredSize
+        // The declared form bounds its chunks. Physical EOF is separate so a
+        // shortened data payload can reach the tolerant block decoder.
+        val formEnd = declaredSize
 
         while (true) {
             val remaining = formEnd - reader.position
@@ -135,6 +137,11 @@ internal object Wave64Reader {
                     "a Wave64 chunk extends past the end of its enclosing form",
                     chunkStart,
                 )
+            }
+            if (sourceSize >= 0 && next > sourceSize &&
+                (!options.tolerant || !isWave64Guid(guid, "data"))
+            ) {
+                throw TruncatedStreamException("a Wave64 chunk extends past end of input", chunkStart)
             }
 
             when {

@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -24,6 +25,25 @@ import kotlin.test.assertTrue
 class FfmpegOracleTest {
 
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
+
+    @Test
+    fun truncatedCafAndWave64RetainTheReferencePcmPrefix() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (extension in listOf("caf", "w64")) {
+            for (channels in 1..2) {
+                val file = temp("truncated_${channels}.$extension")
+                generate(ffmpeg, file, "pcm_s16le", channels, seconds = 0.5)
+                val expected = decodeWithFfmpeg(ffmpeg, file)
+                val bytes = file.readBytes()
+                val cut = bytes.copyOf(bytes.size - 200)
+                assertFailsWith<TruncatedStreamException> { AudioKodec.decode(cut) }
+                val recovered = AudioKodec.decode(cut, DecodeOptions(tolerant = true))
+                val retained = expected.size - 100 // 200 bytes are 100 16-bit samples.
+                assertEquals(retained / channels, recovered.frames)
+                TestSignals.assertExact(expected.copyOf(retained), recovered.samples, "$extension, $channels channels")
+            }
+        }
+    }
 
     @Test
     fun ffmpegAndAudioKodecDecodeTheSameWaveFilesIdentically() {

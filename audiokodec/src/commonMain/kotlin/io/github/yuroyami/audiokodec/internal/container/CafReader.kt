@@ -364,6 +364,10 @@ internal object CafReader {
             }
             val next = bodyStart + bodySize
             if (size >= 0 && next > size) {
+                // Required data headers have already been read. Keep the
+                // declared payload length so the decoder can recover complete
+                // blocks and handle the short tail through its normal policy.
+                if (options.tolerant && chunkType == "data") break
                 throw TruncatedStreamException(
                     "CAF chunk '$chunkType' declares $bodySize bytes past end of input",
                     chunkStart,
