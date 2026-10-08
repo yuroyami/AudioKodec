@@ -751,10 +751,14 @@ one distinct value under that owner. Unrelated owners' binary identifiers
 are preserved. Malformed MusicBrainz identifiers remain in the raw view;
 setting the named field replaces that owner's old entry.
 
-Compressed or encrypted owner-sensitive frames cannot be combined with new
-`UFID` or `TXXX` frames when their identities cannot be inspected. The writer
-names this limitation instead of deleting the opaque frame or guessing its
-identity.
+Compressed or encrypted frames keep their payloads and flags across edits
+within the same ID3 version. Frames marked for removal when the tag changes
+are discarded as requested by their flags. Other opaque frames cannot be
+converted to another version or combined with a rewritten frame of the same
+identifier, including `PRIV`, `APIC`, `COMM`, `UFID` and `TXXX`. The writer
+raises `UnsupportedFeatureException` before emitting output, so an unreadable
+identity cannot be silently replaced. Discarding such metadata requires
+explicitly removing its raw entry or clearing the tags before rebuilding them.
 
 ### Editing ID3 chapters
 

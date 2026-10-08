@@ -593,9 +593,9 @@ internal object Id3v2Writer {
      * these flags in different bits and the bytes they announce in a different
      * order. A rewrite that would change the version is refused rather than
      * written without the frames. A frame flagged to be discarded when the
-     * tag is altered is discarded, as the specification asks, and one whose
-     * identifier this writer has just written from the caller's values is
-     * superseded by it.
+     * tag is altered is discarded, as the specification asks. A collision
+     * with a rewritten frame is refused because its unreadable identity
+     * cannot safely be matched to the caller's values.
      */
     private fun opaqueFrames(tags: TagBundle, major: Int, written: List<ByteArray>, datesUnchanged: Boolean): List<ByteArray> {
         val writtenIds = written.mapTo(HashSet()) { it.decodeToString(0, 4) }
@@ -620,7 +620,14 @@ internal object Id3v2Writer {
                             "it cannot be combined safely with another frame of that kind",
                     )
                 }
-                if (entry.key in writtenIds) continue
+                if (entry.key in writtenIds) {
+                    throw UnsupportedFeatureException(
+                        "rewriting metadata beside an opaque ID3 '${entry.key}' frame",
+                        "this tag holds an unreadable '${entry.key}' frame that cannot safely be " +
+                            "combined with or replaced by another frame of that kind; " +
+                            "remove the opaque entry explicitly to discard it",
+                    )
+                }
                 if (sourceMajor != major) {
                     throw UnsupportedFeatureException(
                         "converting a compressed or encrypted ID3 frame between versions",

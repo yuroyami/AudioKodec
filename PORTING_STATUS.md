@@ -253,7 +253,7 @@ A 13 MiB image also checks streaming allocations and an exact metaflac export.
 | ReplayGain 2 and the Opus R128 convention, kept apart | ✅ |
 | Audio payload byte-identical after a tag write | ✅ checked with a full decode comparison |
 | Padding after the frames, so the next edit need not move the audio | ✅ |
-| Compressed and encrypted ID3v2 frames kept as stored across an edit in the same version, and a version change that would lose them refused | ✅ |
+| Compressed and encrypted ID3v2 frames kept as stored across an edit in the same version, with retention flags honoured; incompatible version changes and collisions with rewritten frames refused before output | ✅ |
 | Encoding chosen to be the narrowest that fits, for old-player compatibility | ✅ |
 
 ## PCM model
