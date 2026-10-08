@@ -28,6 +28,11 @@ passing one. Within them:
 - Layer III frames whose empty final granule starts exactly at the end of
   their main data retain every sample, checked against a padded control and
   ffmpeg's float decoder. Missing granule data is rejected before synthesis.
+- Strict MPEG trailer handling accepts ID3v1, enhanced ID3v1 and Lyrics3 with
+  known or unknown source sizes, short non-audio tails and zero padding.
+  Playback stops at a stored duration; missing declared frame payloads remain
+  truncation errors. Common-target regressions and FFmpeg comparisons cover
+  all three layers.
 - Tolerant MPEG decoding retains complete output before damaged frame
   contents in every layer, with the retained prefix checked against ffmpeg.
   Strict decoding and damage before any output retain their typed failures.

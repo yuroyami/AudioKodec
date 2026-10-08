@@ -25,6 +25,34 @@ class MpegOracleTest {
     private val lame: String? by lazy { findOnPath("lame") }
 
     @Test
+    fun strictTrailerHandlingKeepsTheAudioVerifiedByFfmpeg() {
+        val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
+        for (case in MpegTolerantFrameFixtures.cases().take(3)) {
+            val audio = MpegTrailerFixtures.audio(case)
+            val file = temp("trailers_${case.name}.mp3").also { it.writeBytes(audio) }
+            val codec = when (case.name) {
+                "layer1" -> "mp1float"
+                "layer2" -> "mp2float"
+                else -> "mp3float"
+            }
+            val reference = decodeWithFfmpeg(ffmpeg, file, 44_100, case.channels, codec)
+            val streams = if (case.name.startsWith("layer3")) listOf(audio, MpegTrailerFixtures.xing(case) + audio) else listOf(audio)
+            for (stream in streams) {
+                for (tail in MpegTrailerFixtures.tails(case)) {
+                    for (unknown in listOf(false, true)) {
+                        val decoded = AudioKodec.decode(MpegTrailerFixtures.source(stream + tail, unknown))
+                        assertEquals(reference.size, decoded.samples.size, case.name)
+                        val worst = reference.indices.maxOf { abs(reference[it] - decoded.samples[it]) }
+                        // Floating-point synthesis order has the same allowance
+                        // as the existing granule and tolerant-prefix comparisons.
+                        assertTrue(worst < 1e-5f, "${case.name}: worst trailer sample difference $worst")
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun tolerantRecoveryKeepsThePrefixVerifiedByFfmpeg() {
         val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
         for (case in MpegTolerantFrameFixtures.cases()) {

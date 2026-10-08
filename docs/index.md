@@ -376,6 +376,12 @@ couple of kilobytes. A candidate frame is therefore only believed once the
 frames that should follow it do. Without that a decoder starts mid-frame and
 plays noise, or finds its first frame inside a cover image.
 
+Strict MPEG decoding accepts non-audio bytes shorter than a frame header and
+zero padding after the final complete frame. ID3v1, enhanced ID3v1 and Lyrics3
+trailers end the frame scan even when the source cannot report its size.
+Playback stops before reading beyond a stored duration. A complete frame
+header whose declared payload is cut short still raises `TruncatedStreamException`.
+
 Files using the free format, whose frames state no length at all, are named and
 refused rather than measured by guesswork.
 

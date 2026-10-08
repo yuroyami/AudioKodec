@@ -207,14 +207,14 @@ internal class MpegStream(
             while (at <= to && to - at >= 4) {
                 reader.seek(at)
                 val got = reader.readSome(bytes, 0, bytes.size)
-                if (got < bytes.size) {
-                    if (got > 0 && !reader.options.tolerant) {
-                        throw TruncatedStreamException(
-                            "the MPEG stream ends after $got of 4 frame-header bytes",
-                            at,
-                        )
-                    }
-                    break
+                // A partial header cannot identify another audio frame.
+                if (got < bytes.size || isTrailingTag(reader, at, bytes)) break
+                if (bytes.all { it == 0.toByte() }) {
+                    // Padding can be longer than the damaged-gap search limit.
+                    // Keep confirming any frame found on its far side.
+                    at += bytes.size
+                    resynchronising = true
+                    continue
                 }
                 val header = MpegFrameHeader.parse(bytes, 0)
                 val accepted = header != null &&
@@ -258,14 +258,6 @@ internal class MpegStream(
                 lastFrameEnd = at
                 resynchronising = false
                 skipped = 0
-            }
-            if (to != Long.MAX_VALUE && at < to && to - at < 4 &&
-                !reader.options.tolerant
-            ) {
-                throw TruncatedStreamException(
-                    "the MPEG stream ends with ${to - at} bytes that do not make a frame",
-                    at,
-                )
             }
             return FrameScan(count, constant, lastFrameEnd)
         }
@@ -336,10 +328,36 @@ internal class MpegStream(
                 if (next > to || to - next < 4) return true
                 reader.seek(next)
                 if (reader.readSome(probe, 0, 4) < 4) return true
+                if (isTrailingTag(reader, next, probe)) return true
+                if (probe.all { it == 0.toByte() } && zeroPaddingToEnd(reader, next, to)) return true
                 val following = MpegFrameHeader.parse(probe, 0) ?: return false
                 if (!following.matches(current)) return false
                 at = next
                 current = following
+            }
+            return true
+        }
+
+        /** Trailer signatures recognised at an expected frame boundary, even without a source size. */
+        fun isTrailingTag(reader: SourceReader, at: Long, header: ByteArray): Boolean {
+            if (matches(header, 0, "TAG")) return true // ID3v1 and enhanced ID3v1.
+            if (!matches(header, 0, "LYRI")) return false
+            val marker = ByteArray(11)
+            reader.seek(at)
+            return reader.readSome(marker, 0, marker.size) == marker.size && matches(marker, 0, "LYRICSBEGIN")
+        }
+
+        /** Confirm a lone frame followed by padding without accepting a false sync before later audio. */
+        private fun zeroPaddingToEnd(reader: SourceReader, from: Long, to: Long): Boolean {
+            val bytes = ByteArray(4_096)
+            var at = from
+            while (at < to) {
+                reader.seek(at)
+                val want = minOf(bytes.size.toLong(), to - at).toInt()
+                val got = reader.readSome(bytes, 0, want)
+                for (index in 0 until got) if (bytes[index] != 0.toByte()) return false
+                if (got < want) return true
+                at += got
             }
             return true
         }

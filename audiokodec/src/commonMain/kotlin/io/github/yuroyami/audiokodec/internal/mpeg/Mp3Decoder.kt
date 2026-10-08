@@ -109,7 +109,10 @@ internal class Mp3Decoder(
     override fun nextFrame(): AudioFrame? {
         checkOpen()
         while (true) {
-            if (finished) return null
+            if (finished || durationFrames?.let { positionFrames >= it } == true) {
+                finished = true
+                return null
+            }
             val header = readFrame()
             if (header == null) {
                 finished = true
@@ -190,15 +193,7 @@ internal class Mp3Decoder(
         while (at + 4 <= stream.audioEnd) {
             reader.seek(at)
             val got = reader.readSome(frameBytes, 0, 4)
-            if (got < 4) {
-                if (!options.tolerant || !decodedAny) {
-                    throw io.github.yuroyami.audiokodec.TruncatedStreamException(
-                        "the final MPEG frame header ends after $got of 4 bytes",
-                        at,
-                    )
-                }
-                return null
-            }
+            if (got < 4 || MpegStream.isTrailingTag(reader, at, frameBytes)) return null
             val header = MpegFrameHeader.parse(frameBytes, 0)
             if (header == null || !header.matches(header0)) {
                 at++
@@ -242,12 +237,6 @@ internal class Mp3Decoder(
             at += length
             frameNumber++
             return header
-        }
-        if (at < stream.audioEnd && (!options.tolerant || !decodedAny)) {
-            throw io.github.yuroyami.audiokodec.TruncatedStreamException(
-                "the MPEG stream ends with ${stream.audioEnd - at} bytes that do not make a frame",
-                at,
-            )
         }
         return null
     }
