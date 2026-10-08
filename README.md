@@ -56,8 +56,12 @@ println("${audio.durationSeconds} seconds")
 
 ## Read a header without decoding
 
-`probe` reads headers and nothing else, so scanning a folder costs a few
-kilobytes per file rather than a full decode.
+`probe` does not decode samples, but its reads depend on the format. Ogg
+walks the pages through the stream end, reading payloads to check their
+checksums. MPEG without a stored Xing or VBRI frame count scans frame headers
+across the file for an exact duration. These paths can read the whole file;
+other formats read their metadata and index tables. Opening Ogg performs the
+same page walk before playback.
 
 ```kotlin
 val info = AudioKodec.probe(bytes)

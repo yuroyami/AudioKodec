@@ -59,9 +59,12 @@ public object AudioKodec {
     /**
      * Reads what a file's header says, without decoding any audio.
      *
-     * This never decodes sample payloads. Formats with a global index require
-     * only metadata reads; an unindexed MPEG or Ogg stream may require a
-     * lightweight scan of frame or page headers across the file.
+     * This never decodes samples, but reads are not bounded to a header
+     * window. Ogg walks pages through the stream end and reads their payloads
+     * to verify checksums. MPEG without a stored Xing or VBRI frame count
+     * scans frame headers across the file for an exact duration. These paths
+     * can read the whole file; other formats read metadata and index tables.
+     * Opening Ogg performs the same page walk before playback.
      *
      * The source is not closed.
      */

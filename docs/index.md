@@ -47,8 +47,12 @@ println(info.codec.displayName)
 println(info.durationSeconds)
 ```
 
-`probe` reads headers only. Scanning a folder of music costs a few kilobytes
-of reads per file rather than a full decode of each one.
+`probe` does not decode samples. Its I/O depends on the format: Ogg walks
+pages to the stream end and reads their payloads to verify checksums; MPEG
+without a stored Xing or VBRI frame count scans frame headers across the file
+for an exact duration. Both can read the whole file, so a folder scan is not
+bounded to a fixed header window. Other formats read their metadata and index
+tables. Opening Ogg repeats the page walk before the first decoded frame.
 
 CAF ALAC packet tables from some encoders, including ffmpeg, count a short
 final packet as a full one. `probe` reports that metadata duration. `open`

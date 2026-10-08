@@ -11,6 +11,10 @@ reading or changing playback state. Known durations clamp requests past their
 end; unknown durations retain the requested logical position until the next
 read determines whether audio is available.
 
+Probing avoids sample decoding, but Ogg page checksum verification and MPEG
+duration scans without a stored frame count can read the whole file. Ogg
+opening repeats that page walk; folder scans must account for this I/O.
+
 The common and JVM suites include the optional `audiokodec-io` bridge and
 external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),
 wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
