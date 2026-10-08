@@ -11,6 +11,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -32,6 +33,34 @@ class OggOracleTest {
 
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
     private val flac: String? by lazy { findOnPath("flac") }
+
+    @Test
+    fun aSharedFinalHeaderPageCannotDeleteReferenceEncodedOpusPacketsDuringATagEdit() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val original = temp("shared_header_original.opus")
+        run(listOf(ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i",
+            "sine=frequency=440:sample_rate=48000:duration=1.1", "-c:a", "libopus",
+            "-page_duration", "1000000", "-metadata", "title=Seed", original.absolutePath), "Opus")
+        val bytes = original.readBytes()
+        val shared = OggSharedHeaderFixtures.merge(bytes)
+        val malformed = temp("shared_header_malformed.opus").also { it.writeBytes(shared) }
+        assertEquals(56, OggSharedHeaderFixtures.audioPackets(shared).size)
+        for (file in listOf(original, malformed)) {
+            val pcm = temp("${file.nameWithoutExtension}.f32")
+            run(listOf(ffmpeg, "-v", "error", "-y", "-i", file.absolutePath,
+                "-f", "f32le", pcm.absolutePath), "decoding the complete Opus recording")
+            assertEquals(52_800 * 4L, pcm.length(), file.name)
+        }
+        assertContentEquals(temp("shared_header_original.f32").readBytes(),
+            temp("shared_header_malformed.f32").readBytes())
+        val sink = ByteArrayAudioSink()
+        assertFailsWith<UnsupportedFeatureException> {
+            AudioKodec.writeTags(shared.asAudioSource(),
+                AudioKodec.readTags(shared).edit { set(TagField.TITLE, "Changed") },
+                sink, decodeOptions = DecodeOptions(tolerant = true))
+        }
+        assertEquals(0, sink.toByteArray().size)
+    }
 
     @Test
     fun malformedCommentTextDoesNotChangeReferenceEncodedAudio() {

@@ -8,6 +8,7 @@ import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.container.RiffSizeTable
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
+import io.github.yuroyami.audiokodec.internal.ogg.OggTagWriter
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
 import io.github.yuroyami.audiokodec.tag.TagFormat
@@ -38,6 +39,7 @@ internal object TagWriter {
         options: TagWriteOptions,
     ) {
         validateRequestedFormats(container, options.formats)
+        val preparedOgg = if (container == AudioContainer.OGG) OggTagWriter.prepare(reader, reader.options) else null
 
         // A leading ID3 block may sit in front of a real container. Container
         // writers operate on the logical view that starts at its own header,
@@ -185,9 +187,10 @@ internal object TagWriter {
                 audioEnd = containerEnd,
                 chaptersPreservedElsewhere = willWriteId3,
             )
-            AudioContainer.OGG -> io.github.yuroyami.audiokodec.internal.ogg.OggTagWriter.write(
+            AudioContainer.OGG -> OggTagWriter.write(
                 reader, artworkTags, sink, reader.options, sourceEnd = containerEnd,
                 chaptersPreservedElsewhere = willWriteId3,
+                prepared = preparedOgg,
             )
             null,
             AudioContainer.MPEG_AUDIO,

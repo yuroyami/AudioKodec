@@ -122,6 +122,8 @@ internal object OggAnalyser {
          * a header packet in the audio.
          */
         val headerPacketCount: Int,
+        /** Whether the final header packet ends its page, leaving no audio to discard. */
+        val headersEndAtPageBoundary: Boolean,
     )
 
     private class Headers(
@@ -130,6 +132,7 @@ internal object OggAnalyser {
         val tagBlocks: List<RawTagBlock>,
         val packets: List<ByteArray>,
         val endOffset: Long,
+        val endsPage: Boolean,
     )
 
     /** Reads metadata packets without depending on later setup or audio pages. */
@@ -172,6 +175,7 @@ internal object OggAnalyser {
             headerPackets = headers.packets,
             startGranule = startGranule,
             headerPacketCount = headers.packets.size,
+            headersEndAtPageBoundary = headers.endsPage,
         )
     }
 
@@ -348,6 +352,7 @@ internal object OggAnalyser {
             tagBlocks = blocks,
             packets = headerPackets,
             endOffset = lastHeader.pageEndOffset,
+            endsPage = lastHeader.endsPage,
         )
     }
 

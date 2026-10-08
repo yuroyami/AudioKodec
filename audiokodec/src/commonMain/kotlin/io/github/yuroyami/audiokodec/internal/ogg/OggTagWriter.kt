@@ -35,14 +35,8 @@ internal object OggTagWriter {
     /** Bytes of payload a rebuilt page carries at most. */
     private const val TARGET_PAGE_PAYLOAD = 4096
 
-    fun write(
-        reader: SourceReader,
-        tags: TagBundle,
-        sink: AudioSink,
-        options: DecodeOptions,
-        sourceEnd: Long = reader.size,
-        chaptersPreservedElsewhere: Boolean = false,
-    ) {
+    /** Validates the copy boundary before any container or external tag output. */
+    fun prepare(reader: SourceReader, options: DecodeOptions): OggAnalyser.Parsed {
         val parsed = OggAnalyser.parse(reader, options)
         val stream = parsed.audio ?: throw UnsupportedFeatureException(
             "writing tags into an Ogg file with no recognised audio",
@@ -55,6 +49,27 @@ internal object OggTagWriter {
                     "AudioKodec only rewrites the tags of a file that carries one",
             )
         }
+        if (!parsed.headersEndAtPageBoundary) {
+            throw UnsupportedFeatureException(
+                "writing Ogg tags when audio shares the final header page",
+                "the last ${stream.codecName} header shares its Ogg page with audio; " +
+                    "rewriting the headers would discard those packets",
+            )
+        }
+        return parsed
+    }
+
+    fun write(
+        reader: SourceReader,
+        tags: TagBundle,
+        sink: AudioSink,
+        options: DecodeOptions,
+        sourceEnd: Long = reader.size,
+        chaptersPreservedElsewhere: Boolean = false,
+        prepared: OggAnalyser.Parsed? = null,
+    ) {
+        val parsed = prepared ?: prepare(reader, options)
+        val stream = parsed.audio ?: throw CorruptStreamException("the prepared Ogg stream has no audio")
 
         val serial = stream.serialNumber
 

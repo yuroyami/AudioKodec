@@ -40,7 +40,7 @@ can hold checkouts without them ever reaching the repository.
 | MP4 and QuickTime containers | Apple QuickTime File Format documentation; [ISO/IEC 14496-12:2005](https://studylib.net/doc/26307294/mp4), clauses 8.31, 8.35 and 8.36 for per-track fragment defaults and data offsets |
 | MP4 sample ownership | [Apple data references](https://developer.apple.com/documentation/quicktime-file-format/Media_data_reference_atom/Data_references), for self-reference flags and alias/URL entries. Packet ranges are checked against declared media-data payloads; external files and resource-fork references are refused |
 | FLAC | [RFC 9639](https://www.rfc-editor.org/rfc/rfc9639.html), including sections 8.1 and 8.8 for the metadata body limit and native PICTURE layout |
-| Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex |
+| Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex. The shared final header/audio page regression in `OggHeaderBoundaryWriteTest` assembles and checksums pages from these specifications; `OggOracleTest` independently verifies all 56 packets of an FFmpeg-generated Opus file and byte-identical FFmpeg PCM after that boundary mutation. Tag writing refuses this layout before output (#92) |
 | R128 gain tags | [RFC 7845 section 5.2.1](https://www.rfc-editor.org/rfc/rfc7845#section-5.2.1), for the signed 16-bit range, six-character ASCII grammar and gain reference |
 | Vorbis | Xiph.Org Vorbis I specification; [comment specification](https://xiph.org/vorbis/doc/v-comment.html) for counted vectors, repeated names and the separate vendor header |
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |

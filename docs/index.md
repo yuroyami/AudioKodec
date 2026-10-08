@@ -337,6 +337,11 @@ the whole page, and the pages after it are numbered consecutively. So the header
 pages are rebuilt and the later pages renumbered, with every audio packet copied
 across untouched.
 
+A final header packet sharing its page with audio is refused before any output.
+Strict mode reports the invalid header boundary as `CorruptStreamException`;
+tolerant mode reports `UnsupportedFeatureException` because copying only the
+later pages would lose audio. An external ID3 prefix is also left unwritten.
+
 A file interleaving several logical streams, such as a video with a soundtrack,
 is refused rather than repaginated. Rebuilding the interleaving is a job worth
 doing properly or not at all.

@@ -219,9 +219,10 @@ println(info.durationSeconds)        // 213.5
 println(AudioKodec.readTags(oggBytes)[TagField.TITLE])
 ```
 
-Tags can be rewritten in any single-stream Ogg file. The header pages are
-rebuilt and the pages after them renumbered, with the audio packets copied
-untouched.
+Tags can be rewritten in a single-stream Ogg file whose final header packet
+ends its page. The header pages are rebuilt and the pages after them renumbered,
+with the audio packets copied untouched. A shared header/audio page is refused
+before any output, including in tolerant mode.
 
 ## MPEG audio
 

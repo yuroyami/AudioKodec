@@ -213,7 +213,7 @@ inspected and edited.
 | **Lyrics3v2** | ✅ | ❌ | Read for its content and, more importantly, for its length: a reader that does not know it is there gets every other trailing offset wrong |
 | **Vorbis comments** | ✅ | ✅ | In FLAC, and in Ogg for every mapping it carries |
 | **FLAC metadata blocks** | ✅ | ✅ | Comment and picture blocks are rewritten; seek tables, cue sheets and application blocks are carried across untouched; padding is regenerated so the next edit need not move the audio |
-| **Ogg comment headers** | ✅ | ✅ | Vorbis, Opus, FLAC and Speex. Writing rebuilds the header pages and renumbers the pages after them, leaving the audio packets untouched. A file interleaving several logical streams is refused rather than repaginated |
+| **Ogg comment headers** | ✅ | ✅ | Vorbis, Opus, FLAC and Speex. Writing rebuilds the header pages and renumbers the pages after them, leaving the audio packets untouched. Interleaved logical streams and a final header sharing its page with audio are refused before output, including in tolerant mode |
 | MP4 `ilst` | ❌ | ❌ | #8, once the container in #7 is read |
 | Matroska tags | ❌ | ❌ | #41 |
 
