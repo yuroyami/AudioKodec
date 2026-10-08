@@ -250,11 +250,16 @@ println(info.durationSeconds)        // 213.5, with the encoder's padding off
 println(info.isVariableBitrate)      // true
 ```
 
-The length is exact rather than estimated. A constant bitrate file divides out,
-a variable bitrate one carries its frame count in a `Xing` or `VBRI` block
-inside a silent first frame, and where LAME wrote its gapless numbers the
-samples of silence it added at each end are taken off, so one track follows
-another with no gap.
+The length comes from a stored `Xing`, `Info` or `VBRI` frame count, or a walk
+of complete frame headers when that count is absent. The silent metadata
+frame is excluded, and LAME's encoder delay and padding are removed from the
+playable duration.
+
+A valid `Xing` or `Info` table also supports seeking with `allowSlowSeek = false`.
+Its byte hints are refined into exact frame positions before decoder history
+is primed. A far seek reads the remaining frame headers around the hint rather
+than the whole preceding audio. See [MPEG seeking](docs/index.md#mpeg-audio)
+for refinement costs, optional counts and invalid-table handling.
 
 A sync word turns up in ordinary audio data every couple of kilobytes, so a
 candidate frame is only believed once the frames after it agree with it. Files

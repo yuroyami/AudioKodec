@@ -79,6 +79,13 @@ subject to runner availability, including account billing. Within the suites:
 - Tags written by ffmpeg into real MP3 files are read back field for field,
   and tags AudioKodec writes are read back by `ffprobe`, in both ID3v2.3 and
   ID3v2.4 and including text outside ISO-8859-1.
+- Xing/Info tables guide sample-accurate MPEG seeking with slow seeking off.
+  Quantised hints use verified suffix counts, while nearer walked positions
+  retain their existing index. Common fixtures cover all three layers, all
+  MPEG versions, omitted byte counts, padding, malformed hints and unsigned
+  byte lengths. FFmpeg VBR files at 44.1, 22.05 and 11.025 kHz retain exact
+  playback after seeks and refused refinements; far seeks read 21-36 KB from
+  files of 122-131 KB.
 - Tagging an MP3 is checked to leave the decoded audio identical sample for
   sample, by decoding the file with ffmpeg before and after.
 - Layer III frames whose empty final granule starts exactly at the end of

@@ -21,8 +21,8 @@ internal class MpegVbrHeader(
     val isConstantBitrate: Boolean,
     /** Frames the file holds, or -1. The header frame is not one of them. */
     val frameCount: Int,
-    /** Bytes the audio occupies, or -1. */
-    val byteCount: Int,
+    /** Bytes from the VBR header frame through the last audio frame, unsigned 32-bit, or -1. */
+    val byteCount: Long,
     /** 100 entries, each a 256th of the file at a hundredth of the duration. */
     val tableOfContents: ByteArray?,
     /** Samples the encoder put in front of the recording, or -1. */
@@ -69,7 +69,7 @@ internal class MpegVbrHeader(
             val flags = readInt(frame, at + 4)
             var cursor = at + 8
             var frames = -1
-            var bytes = -1
+            var bytes = -1L
             var toc: ByteArray? = null
             if (flags and 0x1 != 0) {
                 if (cursor + 4 > frame.size) return null
@@ -78,7 +78,7 @@ internal class MpegVbrHeader(
             }
             if (flags and 0x2 != 0) {
                 if (cursor + 4 > frame.size) return null
-                bytes = readInt(frame, cursor)
+                bytes = readInt(frame, cursor).toLong() and 0xFFFF_FFFFL
                 cursor += 4
             }
             if (flags and 0x4 != 0) {
@@ -126,7 +126,7 @@ internal class MpegVbrHeader(
         private fun vbriAt(frame: ByteArray, at: Int): MpegVbrHeader? {
             if (at + 26 > frame.size) return null
             if (!matches(frame, at, "VBRI")) return null
-            val bytes = readInt(frame, at + 10)
+            val bytes = readInt(frame, at + 10).toLong() and 0xFFFF_FFFFL
             val frames = readInt(frame, at + 14)
             return MpegVbrHeader(
                 // Fraunhofer only ever wrote this on variable bitrate files.

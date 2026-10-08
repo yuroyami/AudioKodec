@@ -435,12 +435,26 @@ println(info.durationSeconds)     // exact, not estimated
 println(info.dataOffset)          // where the audio begins, past the tags
 ```
 
-Three things make the length exact. A constant bitrate file divides out. A
-variable bitrate one almost always carries its frame count in a `Xing` or
-`VBRI` block hidden inside a silent first frame, which is counted as
-bookkeeping rather than as audio. And where LAME recorded its gapless numbers,
-the samples of silence it added at each end come off, along with the 529
-samples of delay every MPEG decoder's own filter introduces.
+The stored frame count in a `Xing`, `Info` or `VBRI` block gives the length when
+present. Otherwise AudioKodec counts complete frame headers, including bitrate
+changes and padding. The silent metadata frame is excluded from audio. LAME's
+stored encoder delay and padding shorten the playable duration; playback also
+accounts for the decoder filter's 529-sample delay when dropping the front.
+
+Seeking uses a valid `Xing` or `Info` table of contents, including with
+`DecodeOptions(allowSlowSeek = false)`. The table's quantised byte hints are
+refined by counting complete frames from the hint to the stream end, preserving
+sample-accurate output. The decoder then primes its bit reservoir and filter
+history before returning the requested sample. A nearer index built during
+playback is used when it costs fewer headers. Far seeks avoid reading the
+whole preceding audio, but refinement can read the suffix beyond the target.
+Sources whose size is unknown still require a header walk during opening.
+
+An omitted byte count uses the observed stream extent. Trailing zero padding
+is verified and excluded from the frame count. Backwards or out-of-range
+hints are ignored; a table that cannot be refined falls back to the walked
+index when slow seeking is allowed, or produces `UnsupportedFeatureException`.
+A failed refinement preserves playback state.
 
 A sync word is eleven set bits, which turns up in ordinary audio data every
 couple of kilobytes. A candidate frame is therefore only believed once the

@@ -32,11 +32,12 @@ public class DecodeOptions(
     /**
      * Whether a seek may fall back to scanning the stream.
      *
-     * Some files carry no seek table: a VBR MP3 without a Xing header is the
-     * common case. Landing exactly on a position then means decoding from the
-     * last known point, which is fast for a short file and slow for a long
-     * one. False makes such a seek throw [UnsupportedFeatureException] rather
-     * than block.
+     * Some files carry no seek table, such as a VBR MP3 without a useful Xing
+     * TOC. Landing exactly then requires walking from the last known point.
+     * False makes an unindexed seek throw [UnsupportedFeatureException].
+     * MPEG seeks can use a stored Xing/Info TOC or the index built by playback.
+     * Refining the quantised TOC can read a suffix of frame headers; it keeps
+     * the resulting seek sample accurate.
      */
     public val allowSlowSeek: Boolean = true,
 

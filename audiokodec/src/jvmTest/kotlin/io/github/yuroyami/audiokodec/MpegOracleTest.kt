@@ -3,9 +3,12 @@ package io.github.yuroyami.audiokodec
 import java.io.File
 import java.util.concurrent.TimeUnit
 import io.github.yuroyami.audiokodec.internal.mpeg.MpegFrameHeader
+import io.github.yuroyami.audiokodec.internal.mpeg.MpegStream
+import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -24,6 +27,68 @@ class MpegOracleTest {
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
     private val ffprobe: String? by lazy { findOnPath("ffprobe") }
     private val lame: String? by lazy { findOnPath("lame") }
+
+    @Test
+    fun xingSeekingKeepsReferenceSamplesAndAvoidsReadingTheWholePrefix() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (rate in listOf(44_100, 22_050, 11_025)) {
+            val mp3 = encode(ffmpeg, rate * 20, 2, rate, "-q:a", "3", "xing_seek_$rate")
+            val bytes = mp3.readBytes()
+            val whole = AudioKodec.decode(bytes)
+            val reference = decodeWithFfmpeg(ffmpeg, mp3, rate, 2, "mp3float")
+            TestSignals.assertClose(reference, whole.samples, 1e-4f, "Xing VBR at $rate Hz")
+            for (knownSize in listOf(false, true)) {
+                for (allowSlow in listOf(false, true)) {
+                    val source = MpegXingFixtures.CountingSource(bytes, knownSize)
+                    AudioKodec.open(source, DecodeOptions(allowSlowSeek = allowSlow)).use { decoder ->
+                        val target = whole.frames * 97L / 100
+                        source.transferred = 0
+                        assertEquals(target, decoder.seek(target))
+                        assertTrue(source.transferred < bytes.size * 2L / 3,
+                            "$rate Hz: seek read ${source.transferred} of ${bytes.size} bytes")
+                        println("Xing reference seek: $rate Hz, ${source.transferred}/${bytes.size} bytes")
+                        for (position in listOf(target, 0L, whole.frames / 4L, whole.frames * 3L / 4)) {
+                            assertEquals(position, decoder.seek(position))
+                            val block = assertNotNull(decoder.nextFrame())
+                            assertEquals(position, block.positionFrames)
+                            // Ten priming frames restore the bit reservoir,
+                            // IMDCT overlap and synthesis history. Only the
+                            // existing floating-point rounding bound remains.
+                            TestSignals.assertClose(whole.samples.copyOfRange((position * 2).toInt(),
+                                ((position + block.frameCount) * 2).toInt()),
+                                block.samples.copyOf(block.sampleCount), 1e-5f, "$rate Hz at $position")
+                        }
+                    }
+                }
+            }
+            if (rate == 44_100) {
+                val reader = SourceReader(bytes.asAudioSource(), DecodeOptions())
+                val stream = MpegStream.parse(reader, DecodeOptions())
+                var offset = stream.audioOffset
+                var lastOffset = offset
+                repeat(stream.frameCount.toInt()) {
+                    lastOffset = offset
+                    offset += assertNotNull(MpegFrameHeader.parse(bytes, offset.toInt())).frameBytes
+                }
+                val damaged = bytes.copyOf().also { it[lastOffset.toInt()] = 0 }
+                AudioKodec.open(bytes).use { expected ->
+                    AudioKodec.open(damaged, DecodeOptions(allowSlowSeek = false)).use { actual ->
+                        repeat(20) {
+                            assertNotNull(expected.nextFrame())
+                            assertNotNull(actual.nextFrame())
+                        }
+                        val before = actual.positionFrames
+                        assertFailsWith<UnsupportedFeatureException> { actual.seek(whole.frames * 97L / 100) }
+                        assertEquals(before, actual.positionFrames)
+                        val referenceBlock = assertNotNull(expected.nextFrame())
+                        val block = assertNotNull(actual.nextFrame())
+                        TestSignals.assertClose(referenceBlock.samples.copyOf(referenceBlock.sampleCount),
+                            block.samples.copyOf(block.sampleCount), 1e-5f, "playback after a refused Xing seek")
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun intensityWindowsAndActualRightSpectrumBoundariesMatchFfmpeg() {

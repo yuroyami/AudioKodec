@@ -79,6 +79,7 @@ internal class Mp3Decoder(
      * be counted, and this is what stops every seek counting them again.
      */
     private val index = ArrayList<Long>().apply { add(stream.audioOffset) }
+    private val xingSeek = MpegXingSeek(reader, stream)
 
     /** Samples still to be dropped from the front of what comes out. */
     private var pendingTrim: Int = stream.startTrim
@@ -367,18 +368,19 @@ internal class Mp3Decoder(
         // landing inside the part of the stream already indexed costs a few
         // headers; one beyond it means walking the stream, which the caller
         // may have ruled out.
-        if (!options.allowSlowSeek && primeFrom / INDEX_STRIDE >= index.size) {
+        if (!options.allowSlowSeek && primeFrom / INDEX_STRIDE >= index.size && !xingSeek.usable) {
             throw UnsupportedFeatureException(
                 "seeking an MPEG stream past what has been indexed",
                 "this stream has no seek table reaching frame $wanted, and slow seeking is off",
             )
         }
 
+        val landingOffset = frameOffsetOf(primeFrom)
         reservoir.clear()
         synthesis.reset()
         for (granule in granules) granule.spectrum.fill(0.0)
 
-        at = frameOffsetOf(primeFrom)
+        at = landingOffset
         frameNumber = primeFrom
         finished = false
         priming = (wanted - primeFrom).toInt()
@@ -408,6 +410,17 @@ internal class Mp3Decoder(
         val slot = ((target / INDEX_STRIDE).toInt()).coerceAtMost(index.size - 1)
         var offset = index[slot]
         var counted = slot.toLong() * INDEX_STRIDE
+
+        // A verified TOC suffix is cheaper for a distant target. Retain the
+        // walked prefix for nearer targets and already indexed positions.
+        val suffixDistance = minOf(stream.frameCount - target, xingSeek.cachedDistance(target) ?: Long.MAX_VALUE)
+        if (xingSeek.usable && target - counted > suffixDistance) {
+            xingSeek.find(target)?.let { return it.offset }
+            if (!options.allowSlowSeek) {
+                throw UnsupportedFeatureException("an unusable Xing seek table",
+                    "the Xing hint could not be refined into a complete frame sequence")
+            }
+        }
 
         val probe = ByteArray(4)
         while (counted < target && offset + 4 <= stream.audioEnd) {

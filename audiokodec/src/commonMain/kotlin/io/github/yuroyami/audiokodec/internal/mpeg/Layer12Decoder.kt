@@ -69,6 +69,7 @@ internal class Layer12Decoder(
     private var at: Long = stream.audioOffset
     private var frameNumber: Long = 0L
     private val index = ArrayList<Long>().apply { add(stream.audioOffset) }
+    private val xingSeek = MpegXingSeek(reader, stream)
 
     private var pendingTrim: Int = stream.startTrim
     private var finished = false
@@ -439,15 +440,16 @@ internal class Layer12Decoder(
         // landing inside the part of the stream already indexed costs a few
         // headers; one beyond it means walking the stream, which the caller
         // may have ruled out.
-        if (!options.allowSlowSeek && primeFrom / INDEX_STRIDE >= index.size) {
+        if (!options.allowSlowSeek && primeFrom / INDEX_STRIDE >= index.size && !xingSeek.usable) {
             throw UnsupportedFeatureException(
                 "seeking an MPEG stream past what has been indexed",
                 "this stream has no seek table reaching frame $wanted, and slow seeking is off",
             )
         }
 
+        val landingOffset = frameOffsetOf(primeFrom)
         filter.reset()
-        at = frameOffsetOf(primeFrom)
+        at = landingOffset
         frameNumber = primeFrom
         finished = false
         priming = (wanted - primeFrom).toInt()
@@ -467,6 +469,15 @@ internal class Layer12Decoder(
         val slot = ((target / INDEX_STRIDE).toInt()).coerceAtMost(index.size - 1)
         var offset = index[slot]
         var counted = slot.toLong() * INDEX_STRIDE
+
+        val suffixDistance = minOf(stream.frameCount - target, xingSeek.cachedDistance(target) ?: Long.MAX_VALUE)
+        if (xingSeek.usable && target - counted > suffixDistance) {
+            xingSeek.find(target)?.let { return it.offset }
+            if (!options.allowSlowSeek) {
+                throw UnsupportedFeatureException("an unusable Xing seek table",
+                    "the Xing hint could not be refined into a complete frame sequence")
+            }
+        }
 
         val probe = ByteArray(4)
         while (counted < target && offset + 4 <= stream.audioEnd) {
