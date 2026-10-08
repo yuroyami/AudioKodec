@@ -77,8 +77,9 @@ internal object FlacMetadata {
      * with unusable points are discarded so playback can scan the frames.
      * Invalid metadata lengths and allocation requests still fail before
      * reading or retaining their bodies.
+     * [readSeekTable] is false for tag reads, which need no playback index.
      */
-    fun parse(reader: SourceReader, options: DecodeOptions): Parsed {
+    fun parse(reader: SourceReader, options: DecodeOptions, readSeekTable: Boolean = true): Parsed {
         reader.seek(0)
         val magic = reader.readFourCc()
         if (magic != MAGIC) {
@@ -144,7 +145,7 @@ internal object FlacMetadata {
                     streamInfo = readStreamInfo(reader, options, bodyAt)
                 }
 
-                TYPE_SEEKTABLE -> {
+                TYPE_SEEKTABLE -> if (readSeekTable) {
                     if (length % 18 != 0) {
                         throw CorruptStreamException(
                             "a FLAC seek table size must be a multiple of 18, this one is $length",

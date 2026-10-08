@@ -8,6 +8,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -26,6 +27,34 @@ class OggOracleTest {
 
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
     private val flac: String? by lazy { findOnPath("flac") }
+
+    @Test
+    fun referenceTagsRemainReadableWhenLaterAudioPagesAreDamaged() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (encoder in listOf("libvorbis", "libopus", "flac")) {
+            val file = temp("damaged_tags_$encoder.ogg")
+            run(listOf(
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                "sine=frequency=440:sample_rate=48000:duration=1.0", "-c:a", encoder,
+                "-metadata", "title=Still readable", "-metadata", "artist=An artist", file.absolutePath,
+            ), encoder)
+            val original = file.readBytes()
+            val info = AudioKodec.probe(original)
+            val page = assertNotNull(OggReader(SourceReader(original.asAudioSource(), DecodeOptions.DEFAULT), DecodeOptions.DEFAULT).pageAt(info.dataOffset))
+            val damaged = original.copyOf().also {
+                val at = (page.offset + page.byteLength - 1).toInt()
+                it[at] = (it[at].toInt() xor 1).toByte()
+            }
+            val cut = original.copyOf(original.size - 20)
+            for (bytes in listOf(original, damaged, cut)) {
+                val tags = AudioKodec.readTags(bytes)
+                assertEquals("Still readable", tags[TagField.TITLE], encoder)
+                assertEquals("An artist", tags[TagField.ARTIST], encoder)
+            }
+            assertFailsWith<AudioKodecException> { AudioKodec.probe(damaged) }
+            assertFailsWith<AudioKodecException> { AudioKodec.probe(cut) }
+        }
+    }
 
     @Test
     fun referenceEncodersAgreeOnEverySurroundMappingLayout() {

@@ -533,10 +533,11 @@ internal object TagLocator {
      * file, so the walk is the same one the decoder does. A block chain that is
      * malformed yields no tags rather than failing the read, because a caller
      * asking for tags did not ask to be told the audio is broken.
+     * Seek-table contents are skipped, so an unusable index cannot hide tags.
      */
     private fun readFlacBlocks(reader: SourceReader, into: MutableList<RawTagBlock>) {
         val parsed = try {
-            io.github.yuroyami.audiokodec.internal.flac.FlacMetadata.parse(reader, reader.options)
+            io.github.yuroyami.audiokodec.internal.flac.FlacMetadata.parse(reader, reader.options, readSeekTable = false)
         } catch (_: io.github.yuroyami.audiokodec.AudioKodecException) {
             return
         }
@@ -548,15 +549,16 @@ internal object TagLocator {
      *
      * Every audio mapping Ogg carries puts its tags in the second packet, in
      * the same Vorbis comment structure, so one path serves Vorbis, Opus, FLAC
-     * and Speex alike.
+     * and Speex alike. FLAC pictures also live in metadata packets; later
+     * Vorbis setup, Speex extra headers and all audio pages are left unread.
      */
     private fun readOggBlocks(reader: SourceReader, into: MutableList<RawTagBlock>) {
-        val parsed = try {
-            io.github.yuroyami.audiokodec.internal.ogg.OggAnalyser.parse(reader, reader.options)
+        val blocks = try {
+            io.github.yuroyami.audiokodec.internal.ogg.OggAnalyser.readTagBlocks(reader, reader.options)
         } catch (_: io.github.yuroyami.audiokodec.AudioKodecException) {
             return
         }
-        into.addAll(parsed.tagBlocks)
+        into.addAll(blocks)
     }
 
     /** Walks an AIFF file for its text chunks and any ID3 chunk. */

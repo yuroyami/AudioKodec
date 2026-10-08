@@ -434,6 +434,12 @@ println(tags.all(TagField.ARTIST))    // a file may name more than one
 println(tags.number(TagField.TRACK_NUMBER))
 ```
 
+Ogg tag reads stop after the comment packets and any FLAC picture metadata.
+Later setup or audio damage does not discard intact tags. Native FLAC tag
+reads skip seek-table contents and do not allocate a playback index. The tag
+blocks themselves must still be readable; tag reading remains best-effort
+when their structure or containing page checksum is damaged.
+
 ### Where the values come from
 
 A file often carries more than one tag block, and they disagree. `TagBundle`

@@ -124,7 +124,58 @@ internal object OggAnalyser {
         val headerPacketCount: Int,
     )
 
+    private class Headers(
+        val streams: List<Stream>,
+        val audio: Stream,
+        val tagBlocks: List<RawTagBlock>,
+        val packets: List<ByteArray>,
+        val endOffset: Long,
+    )
+
+    /** Reads metadata packets without depending on later setup or audio pages. */
+    fun readTagBlocks(reader: SourceReader, options: DecodeOptions): List<RawTagBlock> =
+        readHeaders(reader, options, tagsOnly = true).tagBlocks
+
     fun parse(reader: SourceReader, options: DecodeOptions): Parsed {
+        val headers = readHeaders(reader, options, tagsOnly = false)
+        val audio = headers.audio
+        val audioStart = headers.endOffset
+        val ogg = OggReader(reader, options)
+
+        // The last page of the stream states where it ends, which is the only
+        // place an Ogg file records its length.
+        val last = ogg.findStreamEndPage(audio.serialNumber, audio.firstPageOffset)
+        val granule = last?.granulePosition ?: -1L
+        val streamEnd = if (last != null) {
+            if (last.offset > Long.MAX_VALUE - last.byteLength) {
+                throw CorruptStreamException("an Ogg page offset overflows 64 bits", last.offset)
+            }
+            last.offset + last.byteLength
+        } else {
+            audioStart
+        }
+        val startGranule = if (audio.codec == AudioCodec.OPUS) opusStartGranule(ogg, audio, audioStart, options) else 0L
+        val duration = when {
+            // Header-only granules cannot state an audio length. Unknown lets
+            // the decoder meet any later damage rather than declaring EOF.
+            granule <= 0 -> null
+            audio.codec == AudioCodec.OPUS -> (granule - startGranule - audio.preSkip).coerceAtLeast(0L)
+            else -> granule
+        }
+        return Parsed(
+            streams = headers.streams,
+            audio = audio,
+            tagBlocks = headers.tagBlocks,
+            durationFrames = duration,
+            audioStartOffset = audioStart,
+            streamEndOffset = streamEnd,
+            headerPackets = headers.packets,
+            startGranule = startGranule,
+            headerPacketCount = headers.packets.size,
+        )
+    }
+
+    private fun readHeaders(reader: SourceReader, options: DecodeOptions, tagsOnly: Boolean): Headers {
         val ogg = OggReader(reader, options)
         val heads = ogg.readStreamHeads()
         if (heads.isEmpty()) {
@@ -151,9 +202,9 @@ internal object OggAnalyser {
         var tagBlock: RawTagBlock? = null
 
         val fixedHeaderCount = when (audio.codec) {
-            AudioCodec.VORBIS -> 3
+            AudioCodec.VORBIS -> if (tagsOnly) 2 else 3
             AudioCodec.OPUS -> 2
-            AudioCodec.SPEEX -> speexHeaderCount(audio.identification, options, audio.firstPageOffset)
+            AudioCodec.SPEEX -> if (tagsOnly) 2 else speexHeaderCount(audio.identification, options, audio.firstPageOffset)
             AudioCodec.FLAC -> declaredFlacHeaderCount(audio.identification)
             else -> 2
         }
@@ -273,43 +324,17 @@ internal object OggAnalyser {
             "the ${audio.codecName} stream has no identification packet",
             audio.firstPageOffset,
         )
-        if (!lastHeader.endsPage && !options.tolerant) {
+        if (!tagsOnly && !lastHeader.endsPage && !options.tolerant) {
             throw CorruptStreamException(
                 "the last ${audio.codecName} header does not finish its Ogg page",
                 lastHeader.endOffset,
             )
         }
-        if (lastHeader.granule != 0L && !options.tolerant) {
+        if (!tagsOnly && lastHeader.granule != 0L && !options.tolerant) {
             throw CorruptStreamException(
                 "the ${audio.codecName} header page has granule position ${lastHeader.granule}, not zero",
                 lastHeader.pageEndOffset,
             )
-        }
-        val audioStart = lastHeader.pageEndOffset
-
-        // The last page of the stream states where it ends, which is the only
-        // place an Ogg file records its length.
-        val last = ogg.findStreamEndPage(audio.serialNumber, audio.firstPageOffset)
-        val granule = last?.granulePosition ?: -1L
-        val streamEnd = if (last != null) {
-            if (last.offset > Long.MAX_VALUE - last.byteLength) {
-                throw CorruptStreamException("an Ogg page offset overflows 64 bits", last.offset)
-            }
-            last.offset + last.byteLength
-        } else {
-            audioStart
-        }
-        val startGranule = if (audio.codec == AudioCodec.OPUS) opusStartGranule(ogg, audio, audioStart, options) else 0L
-        val duration = when {
-            // A granule of zero means no audio packet has finished yet, which
-            // is what the header pages carry. Reading it as a length would say
-            // a file is empty, and a damaged last page is exactly how that
-            // happens: the search falls back to a header page. Unknown is the
-            // honest answer, and it lets the decoder meet the damage and
-            // report it rather than stopping before it.
-            granule <= 0 -> null
-            audio.codec == AudioCodec.OPUS -> (granule - startGranule - audio.preSkip).coerceAtLeast(0L)
-            else -> granule
         }
 
         val blocks = buildList {
@@ -317,16 +342,12 @@ internal object OggAnalyser {
             addAll(flacPictureBlocks)
         }
 
-        return Parsed(
+        return Headers(
             streams = streams,
             audio = audio,
             tagBlocks = blocks,
-            durationFrames = duration,
-            audioStartOffset = audioStart,
-            streamEndOffset = streamEnd,
-            headerPackets = headerPackets,
-            startGranule = startGranule,
-            headerPacketCount = headerPackets.size,
+            packets = headerPackets,
+            endOffset = lastHeader.pageEndOffset,
         )
     }
 
