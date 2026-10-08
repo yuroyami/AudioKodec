@@ -249,6 +249,12 @@ inside it. AudioKodec reads the container in full: pages and their checksums,
 packets reassembled across page boundaries, files carrying several logical
 streams at once, and files chained one after another.
 
+Opening a file accepts up to 256 simultaneous logical streams. A larger set
+is refused with `UnsupportedFeatureException`; tolerant mode keeps this limit.
+Stream headers and their serial-number index also respect
+`DecodeOptions.maxAllocationBytes`. Tag reads remain best-effort when the Ogg
+headers cannot be read.
+
 | Mapping | Headers and tags | Audio |
 |---|---|---|
 | Vorbis | read | decodes, with seeking |

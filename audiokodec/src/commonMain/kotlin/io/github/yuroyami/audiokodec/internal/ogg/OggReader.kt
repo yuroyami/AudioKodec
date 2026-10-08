@@ -3,6 +3,7 @@ package io.github.yuroyami.audiokodec.internal.ogg
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.TruncatedStreamException
+import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 
 /**
@@ -206,6 +207,8 @@ internal class OggReader(
      */
     fun readStreamHeads(): List<OggPage> {
         val heads = ArrayList<OggPage>()
+        val serials = HashSet<Int>()
+        var retainedBytes = 0L
         var at = 0L
         while (true) {
             val page = try {
@@ -218,16 +221,23 @@ internal class OggReader(
                 }
             } ?: break
             if (!page.isFirst) break
-            if (heads.any { it.serialNumber == page.serialNumber }) {
+            if (page.serialNumber in serials) {
                 throw CorruptStreamException(
                     "two beginning-of-stream pages use serial number ${page.serialNumber}",
                     page.offset,
                 )
             }
+            if (heads.size == MAX_STREAM_HEADS) {
+                throw UnsupportedFeatureException("Ogg files with more than $MAX_STREAM_HEADS simultaneous logical streams")
+            }
+            // Retain the page, payload, lacing and both lookup collections.
+            // The fixed allowance includes the serial index's entry overhead.
+            retainedBytes += 96L + page.payload.size + page.segments.size * 4L
             options.checkAllocation(
-                (heads.size.toLong() + 1L) * 32L,
+                retainedBytes,
                 "remembering Ogg logical stream headers",
             )
+            serials.add(page.serialNumber)
             heads.add(page)
             at = checkedOffset(page.offset, page.byteLength)
         }
@@ -594,5 +604,9 @@ internal class OggReader(
             value = (value shl 8) or (bytes[at + i].toLong() and 0xFF)
         }
         return value
+    }
+
+    private companion object {
+        const val MAX_STREAM_HEADS = 256
     }
 }

@@ -384,7 +384,7 @@ and `42ni` is 24-bit.
 
 | Container | Codings |
 |---|---|
-| Ogg | Vorbis, Opus and FLAC. Speex has its headers, length and tags read, and its audio is not decoded yet. Tags can be rewritten; audio encoding is not implemented |
+| Ogg | Vorbis, Opus and FLAC, with up to 256 simultaneous logical streams. Speex has its headers, length and tags read, and its audio is not decoded yet. Tags can be rewritten; audio encoding is not implemented |
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
