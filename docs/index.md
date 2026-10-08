@@ -1022,7 +1022,13 @@ bound individual buffers and collections, rather than total process memory.
 ## Reading and writing files
 
 The core never touches the filesystem, which is what lets it build for every
-Kotlin target. `audiokodec-io` adds the bridge:
+Kotlin target. `audiokodec-io` adds the bridge, including JavaScript browser
+and Node variants. `Buffer`, `RawSource` and `RawSink` work in both hosts.
+Path and filesystem helpers require a host filesystem; browsers do not expose
+one through kotlinx-io. For browser input, put downloaded or user-selected
+bytes into a `Buffer` and call `readAudioSource()`.
+
+On a host with a filesystem:
 
 ```kotlin
 val info = Path("song.wav").readAudioSource().use { AudioKodec.probe(it) }

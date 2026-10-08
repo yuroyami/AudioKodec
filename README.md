@@ -449,8 +449,10 @@ allocation is attempted rather than after it fails.
 `js` (browser and Node), `wasmJs` (browser and Node), `wasmWasi` (Node). There
 is no `macosX64`, following Kotlin's deprecation of Intel-Apple targets.
 
-`audiokodec-io` builds for the same set without `js`, which is what kotlinx-io
-publishes.
+`audiokodec-io` builds for the same targets, including JavaScript. The
+`RawSource`/`RawSink` and `Buffer` bridges work in browsers and Node. Path and
+filesystem operations require a host filesystem, such as Node's local files;
+they are unavailable in a browser.
 
 ## Reading and writing files
 

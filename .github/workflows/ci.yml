@@ -55,6 +55,8 @@ jobs:
           :audiokodec:jsNodeTest
           :audiokodec:wasmJsNodeTest
           :audiokodec:wasmWasiNodeTest
+          :audiokodec-io:jsNodeTest
+          :audiokodec-io:jsBrowserTest
           :audiokodec-io:wasmJsNodeTest
           :audiokodec-io:wasmWasiNodeTest
           --stacktrace
@@ -67,8 +69,8 @@ jobs:
 
       - name: Check distribution attribution
         run: |
-          ./gradlew :audiokodec:jvmJar :audiokodec:jvmSourcesJar :audiokodec:jsJar :audiokodec:wasmJsJar :audiokodec:wasmWasiJar :audiokodec:linuxX64Klib :audiokodec:jsNodeProductionLibraryDistribution :audiokodec-io:jvmJar :audiokodec-io:wasmJsJar :audiokodec-io:wasmWasiJar :audiokodec-io:linuxX64Klib generateDistributionPoms --stacktrace
-          python3 .github/scripts/check-distribution-notices.py --package audiokodec/build/dist/js/productionLibrary
+          ./gradlew :audiokodec:jvmJar :audiokodec:jvmSourcesJar :audiokodec:jsJar :audiokodec:wasmJsJar :audiokodec:wasmWasiJar :audiokodec:linuxX64Klib :audiokodec:jsNodeProductionLibraryDistribution :audiokodec-io:jvmJar :audiokodec-io:jsJar :audiokodec-io:jsNodeProductionLibraryDistribution :audiokodec-io:wasmJsJar :audiokodec-io:wasmWasiJar :audiokodec-io:linuxX64Klib generateDistributionPoms --stacktrace
+          python3 .github/scripts/check-distribution-notices.py --package audiokodec/build/dist/js/productionLibrary --package audiokodec-io/build/dist/js/productionLibrary
 
       - name: Upload test reports
         if: failure()

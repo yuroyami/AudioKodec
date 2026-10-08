@@ -20,6 +20,11 @@ external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),
 wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
+The I/O bridge also publishes JavaScript. Its Node suite includes file
+operations, while the Chromium suite exercises only the browser-safe buffer
+and raw stream bridge. The browser task excludes `AudioFileTest` because
+kotlinx-io's local filesystem is unavailable in that host.
+
 All published archives carry the root `LICENSE` and `NOTICE` under `META-INF`,
 including source archives, native/JS/Wasm KLIBs and Android AARs. JS library
 distributions carry both files at their root; Apple frameworks carry them in

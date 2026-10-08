@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 
@@ -54,6 +55,21 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmWasi {
         nodejs()
+    }
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    js {
+        browser {
+            testTask {
+                useKarma { useChromeHeadless() }
+                filter.excludeTestsMatching("*AudioFileTest*")
+            }
+        }
+        nodejs {
+            testTask {
+                useMocha { timeout = "600s" }
+            }
+        }
+        binaries.library()
     }
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
