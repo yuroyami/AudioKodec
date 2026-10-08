@@ -5,6 +5,7 @@ import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
+import io.github.yuroyami.audiokodec.internal.tag.Id3v2Reader
 
 /**
  * Finds the frames in an MPEG audio file and works out its shape.
@@ -209,6 +210,17 @@ internal class MpegStream(
                 val got = reader.readSome(bytes, 0, bytes.size)
                 // A partial header cannot identify another audio frame.
                 if (got < bytes.size || isTrailingTag(reader, at, bytes)) break
+                val tagEnd = try {
+                    embeddedTagEnd(reader, at, bytes, to)
+                } catch (failure: TruncatedStreamException) {
+                    if (!reader.options.tolerant || count == 0L) throw failure
+                    break
+                }
+                if (tagEnd != null) {
+                    at = tagEnd
+                    resynchronising = true
+                    continue
+                }
                 if (bytes.all { it == 0.toByte() }) {
                     // Padding can be longer than the damaged-gap search limit.
                     // Keep confirming any frame found on its far side.
@@ -322,13 +334,23 @@ internal class MpegStream(
             for (i in 0 until CONFIRMATIONS) {
                 if (at > to || current.frameBytes.toLong() > to - at) return false
                 if (!framePayloadExists(reader, at, current.frameBytes)) return false
-                val next = at + current.frameBytes
+                var next = at + current.frameBytes
                 // Running off the end is not a failure. A file whose last frame
                 // is its first is short, not wrong.
                 if (next > to || to - next < 4) return true
-                reader.seek(next)
-                if (reader.readSome(probe, 0, 4) < 4) return true
-                if (isTrailingTag(reader, next, probe)) return true
+                while (true) {
+                    reader.seek(next)
+                    if (reader.readSome(probe, 0, 4) < 4) return true
+                    if (isTrailingTag(reader, next, probe)) return true
+                    val tagEnd = try {
+                        embeddedTagEnd(reader, next, probe, to)
+                    } catch (failure: TruncatedStreamException) {
+                        if (!reader.options.tolerant) throw failure
+                        return true
+                    } ?: break
+                    next = tagEnd
+                    if (next > to || to - next < 4) return true
+                }
                 if (probe.all { it == 0.toByte() } && zeroPaddingToEnd(reader, next, to)) return true
                 val following = MpegFrameHeader.parse(probe, 0) ?: return false
                 if (!following.matches(current)) return false
@@ -336,6 +358,20 @@ internal class MpegStream(
                 current = following
             }
             return true
+        }
+
+        /** Skip recognised metadata by size, without allocating or searching its body. */
+        fun embeddedTagEnd(reader: SourceReader, at: Long, prefix: ByteArray, to: Long): Long? {
+            if (!matches(prefix, 0, "ID3")) return null
+            val header = ByteArray(Id3v2Reader.HEADER_SIZE)
+            reader.seek(at)
+            if (reader.readSome(header, 0, header.size) < header.size) return null
+            val size = Id3v2Reader.blockSizeAt(header, 0)
+            if (size < 0) return null
+            if (at > to || size.toLong() > to - at || !framePayloadExists(reader, at, size)) {
+                throw TruncatedStreamException("an embedded ID3v2 block declares $size bytes past end of input", at)
+            }
+            return at + size
         }
 
         /** Trailer signatures recognised at an expected frame boundary, even without a source size. */

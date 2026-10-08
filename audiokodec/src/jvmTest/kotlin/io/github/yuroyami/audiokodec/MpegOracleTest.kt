@@ -25,6 +25,43 @@ class MpegOracleTest {
     private val lame: String? by lazy { findOnPath("lame") }
 
     @Test
+    fun largeEmbeddedTagsKeepTheReferenceAudioBeforeAndAfterTheJoin() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val wav = temp("embedded-tag-source.wav")
+        wav.writeBytes(AudioKodec.encode(sweep(32_000, 2, 44_100), AudioFormat(44_100, 2), EncodeTarget.wav(16)))
+        for (layer in listOf(2, 3)) {
+            val encoded = temp("embedded-tag-source.mp$layer")
+            val command = mutableListOf(ffmpeg, "-y", "-v", "quiet", "-i", wav.absolutePath,
+                "-c:a", if (layer == 2) "mp2" else "libmp3lame", "-b:a", "128k")
+            if (layer == 3) command += listOf("-write_xing", "0", "-id3v2_version", "0")
+            command += encoded.absolutePath
+            run(command, "encoding Layer $layer")
+            val link = encoded.readBytes()
+            val plain = temp("embedded-tag-plain.mp$layer").also { it.writeBytes(link + link) }
+            val reference = decodeWithFfmpeg(ffmpeg, plain, 44_100, 2, "mp${layer}float")
+            val baseline = AudioKodec.decode(plain.readBytes())
+            val bound = if (layer == 2) 1e-5f else 1e-4f
+            // The float synthesis comparisons use the established per-layer
+            // maximum error bounds, with every reference sample compared.
+            TestSignals.assertClose(reference, baseline.samples, bound, "Layer $layer")
+            for (version in 3..4) {
+                val tagged = temp("embedded-tag-v$version.mp$layer").also {
+                    it.writeBytes(link + MpegEmbeddedTagFixtures.tag(131_072, version, footer = version == 4) + link)
+                }
+                assertEquals(baseline.frames.toLong(), AudioKodec.probe(tagged.readBytes()).durationFrames)
+                TestSignals.assertExact(baseline.samples, AudioKodec.decode(tagged.readBytes()).samples,
+                    "Layer $layer, ID3v2.$version")
+                val afterTag = decodeWithFfmpeg(ffmpeg, tagged, 44_100, 2, "mp${layer}float")
+                // FFmpeg can drop one frame at an ID3 join. Its surviving tail
+                // still independently confirms that the second link is read.
+                assertTrue(afterTag.size >= reference.size - 1_152 * 2)
+                TestSignals.assertClose(reference.takeLast(2_048).toFloatArray(),
+                    afterTag.takeLast(2_048).toFloatArray(), bound, "Layer $layer: audio after the tag")
+            }
+        }
+    }
+
+    @Test
     fun strictTrailerHandlingKeepsTheAudioVerifiedByFfmpeg() {
         val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
         for (case in MpegTolerantFrameFixtures.cases().take(3)) {

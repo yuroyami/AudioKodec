@@ -147,6 +147,16 @@ internal class Layer12Decoder(
             reader.seek(at)
             val headerBytes = reader.readSome(frameBytes, 0, 4)
             if (headerBytes < 4 || MpegStream.isTrailingTag(reader, at, frameBytes)) return null
+            val tagEnd = try {
+                MpegStream.embeddedTagEnd(reader, at, frameBytes, stream.audioEnd)
+            } catch (failure: io.github.yuroyami.audiokodec.TruncatedStreamException) {
+                if (!options.tolerant || !decodedAny) throw failure
+                return null
+            }
+            if (tagEnd != null) {
+                at = tagEnd
+                continue
+            }
             val header = MpegFrameHeader.parse(frameBytes, 0)
             if (header == null || !header.matches(header0)) {
                 at++

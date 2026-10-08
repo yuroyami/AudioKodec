@@ -403,6 +403,14 @@ trailers end the frame scan even when the source cannot report its size.
 Playback stops before reading beyond a stored duration. A complete frame
 header whose declared payload is cut short still raises `TruncatedStreamException`.
 
+Embedded ID3v2.2, v2.3 and v2.4 tags between frames are skipped by their declared
+size, including a v2.4 footer. Their bodies are neither allocated nor searched
+for audio, so a large cover image does not consume the 64 KiB limit for scanning
+unrecognised bytes. A recognised tag extending past the input raises
+`TruncatedStreamException` in strict mode; tolerant mode retains the complete
+audio prefix. Stored `Xing` and `VBRI` frame counts remain authoritative, so
+joining separately indexed files does not extend the reported duration.
+
 Files using the free format, whose frames state no length at all, are named and
 refused rather than measured by guesswork.
 
