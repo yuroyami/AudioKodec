@@ -7,6 +7,7 @@ import io.github.yuroyami.audiokodec.AudioInfo
 import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
+import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.UnsupportedFormatException
 import io.github.yuroyami.audiokodec.internal.bits.BitReaderMsb
@@ -115,7 +116,17 @@ internal class Mp3Decoder(
                 return null
             }
 
-            val produced = decodeFrame(header)
+            val produced = try {
+                decodeFrame(header)
+            } catch (failure: TruncatedStreamException) {
+                if (!options.tolerant || !decodedAny) throw failure
+                finished = true
+                return null
+            } catch (failure: CorruptStreamException) {
+                if (!options.tolerant || !decodedAny) throw failure
+                finished = true
+                return null
+            }
             // Priming counts frames read, not frames that came to anything.
             // The first frame after a seek reaches back into a pool that is
             // still empty and produces nothing, and counting only the ones that

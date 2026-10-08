@@ -25,6 +25,31 @@ class MpegOracleTest {
     private val lame: String? by lazy { findOnPath("lame") }
 
     @Test
+    fun tolerantRecoveryKeepsThePrefixVerifiedByFfmpeg() {
+        val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
+        for (case in MpegTolerantFrameFixtures.cases()) {
+            val control = ByteArray(case.good.size * 12).also { bytes ->
+                repeat(12) { case.good.copyInto(bytes, it * case.good.size) }
+            }
+            val file = temp("tolerant_${case.name}.mp3").also { it.writeBytes(control) }
+            val codec = when (case.name) {
+                "layer1" -> "mp1float"
+                "layer2" -> "mp2float"
+                else -> "mp3float"
+            }
+            val reference = decodeWithFfmpeg(ffmpeg, file, 44_100, case.channels, codec)
+            assertEquals(12 * case.frames * case.channels, reference.size, case.name)
+            val damaged = case.prefix() + case.damaged + case.good
+            val recovered = AudioKodec.decode(damaged, DecodeOptions(tolerant = true))
+            assertEquals(3 * case.frames, recovered.frames, case.name)
+            val worst = recovered.samples.indices.maxOf { abs(reference[it] - recovered.samples[it]) }
+            // The same bound as the Layer III granule oracle allows differences
+            // in floating-point synthesis order. Layers I and II are silent here.
+            assertTrue(worst < 1e-5f, "${case.name}: worst prefix sample difference $worst")
+        }
+    }
+
+    @Test
     fun anEmptyFinalGranuleAtTheExactDataBoundaryMatchesFfmpeg() {
         val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
         for (padded in listOf(false, true)) {

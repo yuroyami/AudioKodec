@@ -7,6 +7,7 @@ import io.github.yuroyami.audiokodec.AudioInfo
 import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
+import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.bits.BitReaderMsb
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
@@ -85,7 +86,17 @@ internal class Layer12Decoder(
                 return null
             }
 
-            val produced = decodeFrame(header)
+            val produced = try {
+                decodeFrame(header)
+            } catch (failure: TruncatedStreamException) {
+                if (!options.tolerant || !decodedAny) throw failure
+                finished = true
+                return null
+            } catch (failure: CorruptStreamException) {
+                if (!options.tolerant || !decodedAny) throw failure
+                finished = true
+                return null
+            }
             if (priming > 0) {
                 priming--
                 continue

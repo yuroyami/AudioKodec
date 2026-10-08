@@ -931,6 +931,10 @@ output, including inconsistent frame numbering or a frame extending beyond
 the declared sample total. Float and integer reads retain the same complete
 prefix. Damage before any valid output still throws.
 
+MPEG Layers I, II and III also stop tolerant playback after the last complete
+frame when decoding encounters damaged frame contents. Later frames are not
+spliced across that boundary, and a damaged first frame still throws.
+
 `DecodeOptions.maxAllocationBytes` caps what any single allocation may be, and
 defaults to one gibibyte. The check happens before the allocation, not after
 it fails.

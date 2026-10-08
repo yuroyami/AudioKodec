@@ -28,6 +28,9 @@ passing one. Within them:
 - Layer III frames whose empty final granule starts exactly at the end of
   their main data retain every sample, checked against a padded control and
   ffmpeg's float decoder. Missing granule data is rejected before synthesis.
+- Tolerant MPEG decoding retains complete output before damaged frame
+  contents in every layer, with the retained prefix checked against ffmpeg.
+  Strict decoding and damage before any output retain their typed failures.
 - QuickTime PCM without an `ftyp` atom is identified and decoded bit-exactly
   against ffmpeg, with the movie header before or after the audio. Common
   tests cover leading padding, bounded atom detection and malformed sizes.
