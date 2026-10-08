@@ -80,9 +80,10 @@ internal class Mp3Synthesis(private val channels: Int) {
         if (!sideInfo.isShort) {
             val bands = Mp3Tables.longBands(header.sampleRate)
             for (band in 0 until 22) {
-                // Only 21 positions are transmitted, so the top band has none
-                // and takes the same path as an illegal one.
-                val position = if (band < 21) right.longScalefactors[band] else ILLEGAL
+                // Only 21 positions are transmitted. The uncoded highest
+                // band inherits the preceding position.
+                val inherited = band.coerceAtMost(20)
+                val position = right.longScalefactors[inherited]
                 stereoBand(
                     left, right, bands[band], bands[band + 1].coerceAtMost(576),
                     intensity = bands[band] >= zeroStart,
@@ -111,7 +112,8 @@ internal class Mp3Synthesis(private val channels: Int) {
             val width = shortBands[band + 1] - shortBands[band]
             for (window in 0 until 3) {
                 val from = base + window * width
-                val position = if (band < 12) right.shortScalefactors[band][window] else ILLEGAL
+                val inherited = band.coerceAtMost(11)
+                val position = right.shortScalefactors[inherited][window]
                 stereoBand(
                     left, right, from, (from + width).coerceAtMost(576),
                     // The band as a whole is what is tested, but each window
@@ -362,9 +364,6 @@ internal class Mp3Synthesis(private val channels: Int) {
     }
 
     private companion object {
-
-        /** A position that names no gain, so the band falls back to mid-side. */
-        const val ILLEGAL = -1
 
         /**
          * MPEG-2's intensity ladder, a quarter power of two per step.

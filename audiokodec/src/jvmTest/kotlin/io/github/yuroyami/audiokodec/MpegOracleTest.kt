@@ -26,6 +26,55 @@ class MpegOracleTest {
     private val lame: String? by lazy { findOnPath("lame") }
 
     @Test
+    fun illegalTransmittedIntensityPositionsMatchFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (rate in listOf(44_100, 48_000, 32_000)) {
+            for (shape in Mp3IntensityFixtures.Shape.entries) {
+                for (midSide in listOf(false, true)) {
+                    val label = "$rate $shape midSide=$midSide"
+                    val bytes = Mp3IntensityFixtures.file(rate, shape, position = 7,
+                        midSide = midSide, leftLine = Mp3IntensityFixtures.penultimateLine(rate, shape))
+                    val file = temp("illegal_intensity_${rate}_${shape}_$midSide.mp3")
+                        .also { it.writeBytes(bytes) }
+                    val reference = decodeWithFfmpeg(ffmpeg, file, rate, 2, "mp3float")
+                    assertEquals(12 * 1_152 * 2, reference.size, label)
+                    // The established MP3 bound allows only synthesis rounding.
+                    TestSignals.assertClose(reference, AudioKodec.decode(bytes).samples, 1e-4f, label)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun theHighestIntensityBandAndItsIllegalPositionMatchFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val mismatches = mutableListOf<String>()
+        for (rate in listOf(44_100, 48_000, 32_000, 22_050, 24_000, 16_000, 11_025, 12_000, 8_000)) {
+            for (shape in Mp3IntensityFixtures.Shape.entries) {
+                for (position in if (rate >= 32_000) listOf(3, 4, 7) else listOf(1, 2, 3)) {
+                    for (midSide in listOf(false, true)) {
+                        for (scale in if (rate >= 32_000) listOf(0) else listOf(0, 1)) {
+                            val label = "$rate $shape position=$position midSide=$midSide scale=$scale"
+                            val bytes = Mp3IntensityFixtures.file(rate, shape, position, midSide, scale)
+                            val file = temp("intensity_${rate}_${shape}_${position}_${midSide}_$scale.mp3")
+                                .also { it.writeBytes(bytes) }
+                            val reference = decodeWithFfmpeg(ffmpeg, file, rate, 2, "mp3float")
+                            val ours = AudioKodec.decode(bytes).samples
+                            assertEquals(12 * (if (rate >= 32_000) 1_152 else 576) * 2, reference.size, label)
+                            assertEquals(reference.size, ours.size, label)
+                            // The existing maximum MP3 sample allowance permits
+                            // floating-point synthesis orders to differ.
+                            val worst = reference.indices.maxOf { abs(reference[it] - ours[it]) }
+                            if (worst > 1e-4f) mismatches += "$label: maximum sample difference $worst"
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(mismatches.isEmpty(), mismatches.joinToString("\n"))
+    }
+
+    @Test
     fun everyShortCoefficientInsideTheEightKhzLongScalefactorRegionMatchesFfmpeg() {
         val ffmpeg = ffmpeg ?: return skip()
         for (line in 36 until 72) {

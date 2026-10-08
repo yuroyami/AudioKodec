@@ -131,6 +131,10 @@ subject to runner availability, including account billing. Within the suites:
   They check the mixed-block Huffman boundary and the short windows inside the
   wider long-scalefactor region at 8 kHz. Common tests also check duration,
   exact seek output and equivalent mixed and pure short-block signals.
+- MP3 intensity stereo's uncoded highest bands agree with FFmpeg across all
+  nine rates in long, short and mixed blocks, with both stereo modes and both
+  MPEG-2 gain ladders. Separate MPEG-1 controls check that illegal positions
+  continue to disable intensity stereo.
 - Vorbis codebooks are built bit by bit to check the rules every real file
   happens to satisfy: an incomplete tree, an overfull one, a single-entry book
   read with either bit, a book ending on a 32-bit codeword, and a book

@@ -384,6 +384,22 @@ and mixed Huffman table walk disagree with those executable controls; its code
 is not used as the authority. NLayer was also checked, without translation.
 No copyleft implementation source is read.
 
+## MPEG Layer III, intensity stereo
+
+The uncoded highest long and short bands inherit the preceding intensity
+position. An inherited MPEG-1 position of 7 continues to disable intensity.
+
+The MPEG side information and published Huffman codewords generate 270 highest
+band comparisons and 18 MPEG-1 illegal coded-position controls against FFmpeg's public
+`mp3float` decoder, covering all nine rates, long, short and mixed blocks,
+mid-side enabled and disabled, and both MPEG-2 gain ladders. The 44.1 kHz long
+case places its coefficient at line 500, reproducing issue #78. The original
+ISO/IEC 11172-3 and 13818-3 stereo arrangement remains the model; no source is
+translated. A local call to libmpg123's public float output API also checks the
+MPEG-2 highest-band value when the preceding two-bit position is 3. It
+agrees with FFmpeg to below 1e-6; minimp3's propagation of its illegal marker
+to the uncoded band is not followed.
+
 ## Opus
 
 Specifications: RFC 6716 (the codec) and RFC 7845 (Ogg encapsulation). Both are
