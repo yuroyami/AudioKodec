@@ -48,12 +48,15 @@ audio and Ogg.
 - Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
   to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames
-  that smooth a change of codec, concealment of lost packets and recovery from
-  the redundant copy the next packet carries, and every channel mapping,
+  that smooth a change of codec, and every channel mapping,
   surround in AudioKodec's channel order and ambisonics with or without a
   demixing matrix. Pre-skip, end trim and the header's output gain are
   applied, and seeking runs 80 ms ahead of its target. Identical to libopus,
   sample for sample, and passes the RFC 8251 conformance vectors.
+  The codec core also supports concealment of lost packets and recovery from
+  the redundant copy the next packet carries.
+- Tolerant Ogg playback preserves the complete prefix before a damaged page,
+  missing page or broken continuation, with its duration and seek range.
 - Vorbis, decoded: floor type 1, residue types 0, 1 and 2, channel coupling,
   block switching, and up to eight channels reordered into AudioKodec's channel
   order. Checked against libvorbis sample for sample at every quality level.

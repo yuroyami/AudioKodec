@@ -173,9 +173,11 @@ identified and its headers, length and tags are read; its audio does not
 decode yet, and `open` says so by name rather than failing obscurely.
 
 Opus decodes the whole format: the SILK speech codec, the CELT music codec, the
-hybrid of the two, the joins between them, concealment of lost packets, and
-every channel mapping, from mono through 7.1 surround to ambisonics. The
-pre-skip and end trim are applied, so the samples come out where they went in
+hybrid of the two, the joins between them, and every channel mapping, from
+mono through 7.1 surround to ambisonics. Its codec core supports lost-packet
+concealment and recovery from redundant packet data. Ogg playback in tolerant
+mode stops at the first damaged page or packet boundary and reports the
+complete prefix's length. The pre-skip and end trim are applied, so the samples come out where they went in
 and one file follows another without a gap. Every layer is checked against
 libopus, sample for sample.
 

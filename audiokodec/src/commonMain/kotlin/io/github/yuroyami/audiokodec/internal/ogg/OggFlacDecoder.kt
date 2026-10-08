@@ -64,7 +64,7 @@ internal class OggFlacDecoder(
         private set
 
     private var packets: OggReader.PacketReader =
-        ogg.packets(stream.serialNumber, parsed.audioStartOffset)
+        ogg.packets(stream.serialNumber, parsed.audioStartOffset, parsed.streamEndOffset)
 
     /** Frames to drop from the front of the next packet after a seek. */
     private var pendingSkip: Long = 0
@@ -159,6 +159,7 @@ internal class OggFlacDecoder(
             val packet = packets.next()
             if (packet == null) {
                 exhausted = true
+                if (!decodedAny) (packets.failure ?: parsed.terminalFailure)?.let { throw it }
                 if (total != null && positionFrames < total &&
                     (!options.tolerant || !decodedAny)
                 ) {
@@ -214,7 +215,7 @@ internal class OggFlacDecoder(
         exhausted = false
 
         if (target == 0L) {
-            packets = ogg.packets(stream.serialNumber, parsed.audioStartOffset)
+            packets = ogg.packets(stream.serialNumber, parsed.audioStartOffset, parsed.streamEndOffset)
             pendingSkip = 0L
             positionFrames = 0
             return 0
@@ -228,7 +229,7 @@ internal class OggFlacDecoder(
             target = target,
             options = options,
         )
-        packets = ogg.packets(stream.serialNumber, landing.pageOffset)
+        packets = ogg.packets(stream.serialNumber, landing.pageOffset, parsed.streamEndOffset)
         pendingSkip = (target - landing.startFrame).coerceAtLeast(0L)
         positionFrames = target
         return target

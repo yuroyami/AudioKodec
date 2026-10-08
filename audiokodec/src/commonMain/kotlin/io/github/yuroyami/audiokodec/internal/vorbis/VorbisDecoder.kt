@@ -79,7 +79,7 @@ internal class VorbisDecoder(
 
     private val ogg = OggReader(reader, options)
     private var packets: OggReader.PacketReader =
-        ogg.packets(stream.serialNumber, parsed.audioStartOffset)
+        ogg.packets(stream.serialNumber, parsed.audioStartOffset, parsed.streamEndOffset)
 
     private val bits = VorbisBitReader(ByteArray(0), 0)
     private val shortMdct = InverseMdct(shortBlock)
@@ -246,6 +246,7 @@ internal class VorbisDecoder(
             val packet = packets.next()
             if (packet == null) {
                 exhausted = true
+                if (!decodedAny) (packets.failure ?: parsed.terminalFailure)?.let { throw it }
                 if (total != null && positionFrames < total &&
                     (!options.tolerant || !decodedAny)
                 ) {
@@ -525,13 +526,13 @@ internal class VorbisDecoder(
         // from, so it is reached by decoding from the beginning and counting.
         // That is also the only place the front trim applies.
         if (landing == null || landing.pageStart <= parsed.audioStartOffset) {
-            packets = ogg.packets(stream.serialNumber, parsed.audioStartOffset)
+            packets = ogg.packets(stream.serialNumber, parsed.audioStartOffset, parsed.streamEndOffset)
             pendingDiscard = frontTrim() + target
             positionFrames = target
             return target
         }
 
-        packets = ogg.packets(stream.serialNumber, landing.pageStart)
+        packets = ogg.packets(stream.serialNumber, landing.pageStart, parsed.streamEndOffset)
         pendingDiscard = 0
         awaitingAnchor = true
         positionFrames = target

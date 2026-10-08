@@ -1022,6 +1022,12 @@ MPEG Layers I, II and III also stop tolerant playback after the last complete
 frame when decoding encounters damaged frame contents. Later frames are not
 spliced across that boundary, and a damaged first frame still throws.
 
+Ogg Vorbis, Opus and FLAC stop at the first damaged page, missing page or
+inconsistent packet continuation. Duration and seeking cover the intact
+prefix, and no later packets are moved earlier on the timeline. Damage before
+any usable audio still throws. The Opus codec core's concealment and redundant
+packet recovery are tested directly; Ogg playback follows this prefix policy.
+
 `DecodeOptions.maxAllocationBytes` caps what any single allocation may be, and
 defaults to one gibibyte. The check happens before the allocation, not after
 it fails.

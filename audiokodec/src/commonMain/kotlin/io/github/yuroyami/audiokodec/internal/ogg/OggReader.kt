@@ -1,5 +1,6 @@
 package io.github.yuroyami.audiokodec.internal.ogg
 
+import io.github.yuroyami.audiokodec.AudioKodecException
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.TruncatedStreamException
@@ -244,6 +245,9 @@ internal class OggReader(
         return heads
     }
 
+    /** Last usable page and the reason a tolerant walk stopped early. */
+    class StreamEnd(val page: OggPage?, val failure: AudioKodecException? = null)
+
     /**
      * Finds the end page of the logical stream that begins at [from].
      *
@@ -252,41 +256,49 @@ internal class OggReader(
      * keeps the duration of the first stream from accidentally including a
      * later recording.
      */
-    fun findStreamEndPage(serial: Int, from: Long): OggPage? {
+    fun findStreamEnd(serial: Int, from: Long): StreamEnd {
         var at = from.coerceAtLeast(0L)
         var last: OggPage? = null
         var lastSequence = 0
         var selectedPageSeen = false
+        var packetOpen = false
         val size = reader.size
+        fun stop(failure: AudioKodecException): StreamEnd {
+            if (!options.tolerant) throw failure
+            return StreamEnd(last, failure)
+        }
         while (size < 0 || at < size) {
             val page = try {
                 pageAt(at)
             } catch (e: CorruptStreamException) {
-                if (!options.tolerant) throw e
-                findPageFrom(checkedOffset(at, 4))
+                return stop(e)
             } ?: break
             at = checkedOffset(page.offset, page.byteLength)
             if (page.serialNumber != serial) continue
             if (selectedPageSeen) {
                 if (page.isFirst) {
-                    if (!options.tolerant) {
-                        throw CorruptStreamException(
-                            "a second Ogg logical stream begins before the first one reaches EOS",
-                            page.offset,
-                        )
-                    }
-                    return last
+                    return stop(CorruptStreamException(
+                        "a second Ogg logical stream begins before the first one reaches EOS",
+                        page.offset,
+                    ))
                 }
-                if (page.sequenceNumber != lastSequence + 1 && !options.tolerant) {
-                    throw CorruptStreamException(
+                if (page.sequenceNumber != lastSequence + 1) {
+                    return stop(CorruptStreamException(
                         "Ogg page sequence jumps from $lastSequence to ${page.sequenceNumber}",
                         page.offset,
-                    )
+                    ))
+                }
+                if (page.isContinued != packetOpen) {
+                    return stop(CorruptStreamException(
+                        "an Ogg page's continuation flag disagrees with the preceding packet boundary",
+                        page.offset,
+                    ))
                 }
             }
             selectedPageSeen = true
             lastSequence = page.sequenceNumber
             last = page
+            if (page.segments.isNotEmpty()) packetOpen = page.segments.last() == 255
             if (page.isLast) {
                 if (!page.endsAPacket && !options.tolerant) {
                     throw TruncatedStreamException(
@@ -294,20 +306,20 @@ internal class OggReader(
                         page.offset,
                     )
                 }
-                return page
+                return StreamEnd(page)
             }
         }
-        if (last != null && !options.tolerant) {
-            throw TruncatedStreamException(
+        if (last != null) {
+            return stop(TruncatedStreamException(
                 "the Ogg logical stream ends before an end-of-stream page",
                 at,
-            )
+            ))
         }
-        return last
+        return StreamEnd(null)
     }
 
     /** Reads packets out of the pages of one logical stream. */
-    fun packets(serial: Int, from: Long): PacketReader = PacketReader(serial, from)
+    fun packets(serial: Int, from: Long, until: Long = Long.MAX_VALUE): PacketReader = PacketReader(serial, from, until)
 
     /**
      * Reassembles the packets of one logical stream.
@@ -316,7 +328,7 @@ internal class OggReader(
      * spanning three pages arrives whole. It also reports where each packet
      * ended, which is what a seek needs in order to resume cleanly.
      */
-    inner class PacketReader(private val serial: Int, from: Long) {
+    inner class PacketReader(private val serial: Int, from: Long, private val until: Long) {
 
         private var nextPageOffset = from
         private var pending: ByteArray = ByteArray(0)
@@ -338,6 +350,10 @@ internal class OggReader(
 
         /** True once the end-of-stream page has been consumed. */
         var atEnd: Boolean = false
+            private set
+
+        /** Damage that ended tolerant reading, without joining later packets across it. */
+        var failure: AudioKodecException? = null
             private set
 
         /** Reads the next packet, or returns null at the end of the stream. */
@@ -412,27 +428,21 @@ internal class OggReader(
         }
 
         private fun advancePage(): OggPage? {
+            if (atEnd) return null
             if (eosPageLoaded) {
                 atEnd = true
                 return null
             }
             val size = reader.size
             while (true) {
-                if (size in 1..nextPageOffset) {
+                if (nextPageOffset >= until || size in 1..nextPageOffset) {
                     atEnd = true
                     return null
                 }
                 val page = try {
                     pageAt(nextPageOffset)
                 } catch (e: CorruptStreamException) {
-                    if (!options.tolerant) throw e
-                    // A damaged page is skipped by looking for the next one,
-                    // which is what the format's resynchronisation is for.
-                    val recovered = findPageFrom(checkedOffset(nextPageOffset, 4)) ?: run {
-                        atEnd = true
-                        return null
-                    }
-                    recovered
+                    return stop(e)
                 } ?: run {
                     atEnd = true
                     return null
@@ -447,35 +457,23 @@ internal class OggReader(
 
                 val wasSeen = selectedPageSeen
                 if (wasSeen && page.isFirst) {
-                    if (!options.tolerant) {
-                        throw CorruptStreamException(
-                            "a second beginning-of-stream page appears before this logical stream ends",
-                            page.offset,
-                        )
-                    }
-                    atEnd = true
-                    return null
+                    return stop(CorruptStreamException(
+                        "a second beginning-of-stream page appears before this logical stream ends",
+                        page.offset,
+                    ))
                 }
                 if (page.isFirst && page.isContinued) {
-                    if (!options.tolerant) {
-                        throw CorruptStreamException(
-                            "an Ogg beginning-of-stream page is marked as a continuation",
-                            page.offset,
-                        )
-                    }
+                    return stop(CorruptStreamException(
+                        "an Ogg beginning-of-stream page is marked as a continuation",
+                        page.offset,
+                    ))
                 }
 
-                var lostSequence = false
                 if (wasSeen && page.sequenceNumber != lastSequence + 1) {
-                    if (!options.tolerant) {
-                        throw CorruptStreamException(
-                            "Ogg page sequence jumps from $lastSequence to ${page.sequenceNumber}",
-                            page.offset,
-                        )
-                    }
-                    lostSequence = true
-                    clearPending()
-                    discardingContinuation = false
+                    return stop(CorruptStreamException(
+                        "Ogg page sequence jumps from $lastSequence to ${page.sequenceNumber}",
+                        page.offset,
+                    ))
                 }
                 selectedPageSeen = true
                 lastSequence = page.sequenceNumber
@@ -483,23 +481,19 @@ internal class OggReader(
                 val needsContinuation = pendingLength > 0 || discardingContinuation
                 var discardFirstPacket = false
                 if (needsContinuation && !page.isContinued) {
-                    if (!options.tolerant) {
-                        throw CorruptStreamException(
-                            "an Ogg packet continues past a page whose successor is not marked continued",
-                            page.offset,
-                        )
-                    }
-                    clearPending()
-                    discardingContinuation = false
+                    return stop(CorruptStreamException(
+                        "an Ogg packet continues past a page whose successor is not marked continued",
+                        page.offset,
+                    ))
                 } else if (!needsContinuation && page.isContinued) {
-                    if (wasSeen && !lostSequence && !options.tolerant) {
-                        throw CorruptStreamException(
+                    if (wasSeen) {
+                        return stop(CorruptStreamException(
                             "an Ogg page is marked continued but no packet is open",
                             page.offset,
-                        )
+                        ))
                     }
-                    // Starting at an arbitrary seek page, or recovering after a
-                    // missing page, means the leading fragment cannot be used.
+                    // A seek may start inside a packet. Its leading fragment
+                    // cannot be used, but subsequent complete packets can.
                     discardFirstPacket = true
                     discardingContinuation = true
                 }
@@ -514,6 +508,15 @@ internal class OggReader(
                 }
                 return page
             }
+        }
+
+        private fun stop(error: AudioKodecException): OggPage? {
+            if (!options.tolerant) throw error
+            failure = error
+            atEnd = true
+            clearPending()
+            discardingContinuation = false
+            return null
         }
 
         private fun discardLeadingContinuation(page: OggPage) {

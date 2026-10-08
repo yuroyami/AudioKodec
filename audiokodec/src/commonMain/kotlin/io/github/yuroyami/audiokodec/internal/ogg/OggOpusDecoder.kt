@@ -92,7 +92,7 @@ internal class OggOpusDecoder(
     private val granuleBase = parsed.startGranule + stream.preSkip
 
     private val ogg = OggReader(reader, options)
-    private var packets: OggReader.PacketReader = ogg.packets(stream.serialNumber, parsed.audioStartOffset)
+    private var packets: OggReader.PacketReader = ogg.packets(stream.serialNumber, parsed.audioStartOffset, parsed.streamEndOffset)
 
     private val decoded = run {
         options.checkAllocation(
@@ -119,6 +119,7 @@ internal class OggOpusDecoder(
             val packet = packets.next()
             if (packet == null) {
                 exhausted = true
+                if (!decodedAny) (packets.failure ?: parsed.terminalFailure)?.let { throw it }
                 if (total != null && positionFrames < total && (!options.tolerant || !decodedAny)) {
                     throw TruncatedStreamException(
                         "the stream declares $total frames and ends after $positionFrames",
@@ -204,11 +205,11 @@ internal class OggOpusDecoder(
             )
         }
         if (landing == null || landing.pageOffset <= parsed.audioStartOffset) {
-            packets = ogg.packets(stream.serialNumber, parsed.audioStartOffset)
+            packets = ogg.packets(stream.serialNumber, parsed.audioStartOffset, parsed.streamEndOffset)
             pendingDiscard = stream.preSkip + target
             return target
         }
-        packets = ogg.packets(stream.serialNumber, landing.pageOffset)
+        packets = ogg.packets(stream.serialNumber, landing.pageOffset, parsed.streamEndOffset)
         pendingDiscard = target + granuleBase - landing.startFrame
         return target
     }

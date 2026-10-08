@@ -35,6 +35,57 @@ class OggOracleTest {
     private val flac: String? by lazy { findOnPath("flac") }
 
     @Test
+    fun damagedReferencePagesCannotSpliceLaterAudioIntoThePrefix() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (encoder in listOf("libopus", "libvorbis", "flac")) {
+            val file = temp("damaged_page_$encoder.ogg")
+            run(listOf(ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i",
+                "aevalsrc=sin(2*PI*(400*t+200*t*t)):s=48000:d=4", "-c:a", encoder,
+                "-page_duration", "250000", "-f", "ogg", file.absolutePath), encoder)
+            val bytes = file.readBytes()
+            val baseline = AudioKodec.decode(bytes).samples
+            val raw = temp("damaged_page_$encoder.f32")
+            run(listOf(ffmpeg, "-v", "error", "-y", "-i", file.absolutePath,
+                "-f", "f32le", raw.absolutePath), encoder)
+            val floats = ByteBuffer.wrap(raw.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+            val reference = FloatArray(floats.remaining() / 4) { floats.float }
+            val pages = OggDamageFixtures.pages(bytes)
+            val badIndex = pages.size / 2
+            val previous = OggDamageFixtures.granule(bytes, pages[badIndex - 1]) -
+                if (encoder == "libopus") 312 else 0
+            assertTrue(previous in 48_000..144_000, encoder)
+            for (kind in OggDamageFixtures.kinds) {
+                val damaged = OggDamageFixtures.damage(bytes, badIndex, kind)
+                assertFailsWith<AudioKodecException> { AudioKodec.decode(damaged) }
+                for (knownSize in listOf(false, true)) {
+                    val prefix = AudioKodec.decode(OggDamageFixtures.source(damaged, knownSize), DecodeOptions(tolerant = true))
+                    assertEquals(previous, prefix.frames.toLong(), "$encoder, $kind")
+                    assertEquals(previous, prefix.info.durationFrames, "$encoder, $kind")
+                    TestSignals.assertExact(baseline.copyOf(prefix.samples.size), prefix.samples, "$encoder, $kind")
+                    // Vorbis/Opus floating reconstruction agrees within 1e-4;
+                    // FLAC is lossless and must match the external PCM exactly.
+                    if (encoder == "flac") TestSignals.assertExact(reference.copyOf(prefix.samples.size), prefix.samples, encoder)
+                    else TestSignals.assertClose(reference.copyOf(prefix.samples.size), prefix.samples, 1e-4f, encoder)
+                    if (encoder == "flac") {
+                        AudioKodec.open(OggDamageFixtures.source(damaged, knownSize), DecodeOptions(tolerant = true)).use { decoder ->
+                            val integers = decoder as IntPcmAccess
+                            val scale = (1L shl (integers.bitDepth - 1)).toDouble()
+                            var count = 0
+                            while (true) {
+                                val block = integers.nextIntFrame() ?: break
+                                assertEquals(count.toLong(), block.positionFrames)
+                                repeat(block.sampleCount) { assertEquals((reference[count + it] * scale).toInt(), block.samples[it]) }
+                                count += block.frameCount
+                            }
+                            assertEquals(previous, count.toLong())
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun aSharedFinalHeaderPageCannotDeleteReferenceEncodedOpusPacketsDuringATagEdit() {
         val ffmpeg = ffmpeg ?: return skip()
         val original = temp("shared_header_original.opus")

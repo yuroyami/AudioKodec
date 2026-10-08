@@ -124,6 +124,8 @@ internal object OggAnalyser {
         val headerPacketCount: Int,
         /** Whether the final header packet ends its page, leaving no audio to discard. */
         val headersEndAtPageBoundary: Boolean,
+        /** Failure at the end of a salvaged prefix, retained for an empty decode. */
+        val terminalFailure: AudioKodecException?,
     )
 
     private class Headers(
@@ -147,7 +149,8 @@ internal object OggAnalyser {
 
         // The last page of the stream states where it ends, which is the only
         // place an Ogg file records its length.
-        val last = ogg.findStreamEndPage(audio.serialNumber, audio.firstPageOffset)
+        val end = ogg.findStreamEnd(audio.serialNumber, audio.firstPageOffset)
+        val last = end.page
         val granule = last?.granulePosition ?: -1L
         val streamEnd = if (last != null) {
             if (last.offset > Long.MAX_VALUE - last.byteLength) {
@@ -176,6 +179,7 @@ internal object OggAnalyser {
             startGranule = startGranule,
             headerPacketCount = headers.packets.size,
             headersEndAtPageBoundary = headers.endsPage,
+            terminalFailure = end.failure,
         )
     }
 
