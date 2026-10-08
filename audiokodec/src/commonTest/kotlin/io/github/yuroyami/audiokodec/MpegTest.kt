@@ -43,6 +43,24 @@ class MpegTest {
     }
 
     @Test
+    fun negativeSeekTargetsAreRejectedWithoutChangingPlaybackInEveryLayer() {
+        for (layer in 1..3) {
+            val source = CountingSource(silentFrames(layer))
+            AudioKodec.open(source).use { decoder ->
+                assertNotNull(decoder.nextFrame())
+                for (target in longArrayOf(-1, Long.MIN_VALUE)) {
+                    val before = decoder.positionFrames
+                    source.transferred = 0
+                    assertFailsWith<IllegalArgumentException>("Layer $layer, target $target") { decoder.seek(target) }
+                    assertEquals(before, decoder.positionFrames, "a rejected seek must preserve playback")
+                    assertEquals(0L, source.transferred, "a rejected seek must not read the source")
+                    assertEquals(before, assertNotNull(decoder.nextFrame()).positionFrames)
+                }
+            }
+        }
+    }
+
+    @Test
     fun slowSeekingOffIsHonouredByEveryLayer() {
         for (layer in 1..3) {
             val source = CountingSource(silentFrames(layer))

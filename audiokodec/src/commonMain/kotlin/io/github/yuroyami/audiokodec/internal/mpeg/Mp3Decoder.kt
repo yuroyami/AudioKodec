@@ -336,9 +336,9 @@ internal class Mp3Decoder(
 
     override fun seek(frameIndex: Long): Long {
         checkOpen()
+        require(frameIndex >= 0) { "frameIndex must not be negative, was $frameIndex" }
         val total = durationFrames
         val target = when {
-            frameIndex < 0L -> 0L
             total != null && frameIndex > total -> total
             else -> frameIndex
         }

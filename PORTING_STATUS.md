@@ -1,10 +1,15 @@
 # AudioKodec format status
 
-Updated 2026-07-28. This file lists the support level for every format and
+Updated 2026-10-08. This file lists the support level for every format and
 feature, and what comes next. For install instructions, targets and limits,
 read the [README](README.md).
 
 ## Test and target summary
+
+Decoder seek targets must be non-negative. Invalid targets are rejected before
+reading or changing playback state. Known durations clamp requests past their
+end; unknown durations retain the requested logical position until the next
+read determines whether audio is available.
 
 The common and JVM suites include the optional `audiokodec-io` bridge and
 external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),

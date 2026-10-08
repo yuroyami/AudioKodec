@@ -52,9 +52,14 @@ public interface AudioDecoder : AutoCloseable {
      * a point at or before the target and discards decoded samples up to it,
      * so the next [nextFrame] starts exactly at the frame you asked for.
      *
-     * Returns the position actually reached, which differs from [frameIndex]
-     * only when the request was past the end of the stream, where the result
-     * is clamped to the end.
+     * Returns the position used by the next read. When [durationFrames] is
+     * known, a request past that duration is clamped to it. When the duration
+     * is unknown, the requested position is retained without a separate scan
+     * solely to measure the end; [nextFrame] returns null if that position is
+     * past the available audio.
+     *
+     * Throws [IllegalArgumentException] for a negative target, before changing
+     * playback state or reading the source.
      *
      * Throws [UnsupportedFeatureException] when the stream has no seek table
      * and [DecodeOptions.allowSlowSeek] is off.

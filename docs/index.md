@@ -107,6 +107,12 @@ AudioKodec.open(source).use { decoder ->
 }
 ```
 
+All decoders reject negative seek targets with `IllegalArgumentException`.
+A seek past a known duration clamps to that duration. An unknown-duration
+stream retains the requested seek position; a following read returns null
+if the position is past the available audio. Seeking does not require a
+separate scan solely to discover an unknown end.
+
 To read it as a `Flow`:
 
 ```kotlin
