@@ -126,6 +126,11 @@ subject to runner availability, including account billing. Within the suites:
 - MPEG audio frame headers, durations and data offsets agree with `ffprobe`
   across five sample rates, three bitrates and both channel counts, and a LAME
   variable bitrate file reports the length that went into the encoder.
+- Hand-built MP3 comparisons with FFmpeg cover all nine sample rates, the four
+  switched block shapes and normal-block controls, with varied scalefactors.
+  They check the mixed-block Huffman boundary and the short windows inside the
+  wider long-scalefactor region at 8 kHz. Common tests also check duration,
+  exact seek output and equivalent mixed and pure short-block signals.
 - Vorbis codebooks are built bit by bit to check the rules every real file
   happens to satisfy: an incomplete tree, an overfull one, a single-entry book
   read with either bit, a book ending on a 32-bit codeword, and a book

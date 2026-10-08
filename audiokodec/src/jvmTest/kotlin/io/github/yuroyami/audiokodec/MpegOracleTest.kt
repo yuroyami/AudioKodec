@@ -26,6 +26,52 @@ class MpegOracleTest {
     private val lame: String? by lazy { findOnPath("lame") }
 
     @Test
+    fun everyShortCoefficientInsideTheEightKhzLongScalefactorRegionMatchesFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (line in 36 until 72) {
+            for (scaled in listOf(false, true)) {
+                val bytes = Mp3SwitchedBlockFixtures.file(8_000,
+                    Mp3SwitchedBlockFixtures.Shape.MIXED, true, listOf(line), scaled)
+                val file = temp("geometry_${line}_$scaled.mp3").also { it.writeBytes(bytes) }
+                val reference = decodeWithFfmpeg(ffmpeg, file, 8_000, 1, "mp3float")
+                assertEquals(12 * 576, reference.size)
+                // The same maximum sample allowance as the full MP3 oracle
+                // permits the last bits of floating-point synthesis to differ.
+                TestSignals.assertClose(reference, AudioKodec.decode(bytes).samples, 1e-4f,
+                    "8 kHz mixed line $line scaled=$scaled")
+            }
+        }
+    }
+
+    @Test
+    fun switchedWindowHuffmanBoundariesAndMixedGeometryMatchFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val mismatches = mutableListOf<String>()
+        for (rate in listOf(44_100, 48_000, 32_000, 22_050, 24_000, 16_000, 11_025, 12_000, 8_000)) {
+            for (shape in Mp3SwitchedBlockFixtures.Shape.entries) {
+                for (sameTable in listOf(false, true)) {
+                    for (scaled in listOf(false, true)) {
+                        val label = "$rate $shape sameTable=$sameTable scaled=$scaled"
+                        val bytes = Mp3SwitchedBlockFixtures.file(rate, shape, sameTable, scaled = scaled)
+                        val file = temp("switched_${rate}_${shape}_${sameTable}_$scaled.mp3")
+                            .also { it.writeBytes(bytes) }
+                        val reference = decodeWithFfmpeg(ffmpeg, file, rate, 1, "mp3float")
+                        val decoded = AudioKodec.decode(bytes)
+                        assertEquals(12 * (if (rate >= 32_000) 1_152 else 576), reference.size, label)
+                        // This is the existing MP3 maximum per-sample allowance
+                        // for differences in floating-point synthesis order.
+                        assertEquals(reference.size, decoded.samples.size, label)
+                        assertTrue(decoded.samples.all { it.isFinite() }, label)
+                        val worst = reference.indices.maxOf { abs(reference[it] - decoded.samples[it]) }
+                        if (worst > 1e-4f) mismatches += "$label: maximum sample difference $worst"
+                    }
+                }
+            }
+        }
+        assertTrue(mismatches.isEmpty(), mismatches.joinToString("\n"))
+    }
+
+    @Test
     fun leadingJunkKeepsAudioFromReferenceEncodersReadable() {
         val ffmpeg = ffmpeg ?: return skip()
         val wav = temp("leading-junk-source.wav")

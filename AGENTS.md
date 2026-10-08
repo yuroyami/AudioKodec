@@ -29,9 +29,12 @@ next person does not pay for them twice.
   must have rather than the digits themselves, which is the only check that
   scales.
 - The boundary between the Huffman regions of a granule that switched windows
-  is not always 36. That value is right for MPEG-1 and wrong for MPEG-2, where
-  a start or stop block needs 54 and only a short block needs 36. Getting it
-  wrong shows up nowhere except on the few frames either side of a transient.
+  is not always 36. That value is right for MPEG-1; MPEG-2 uses 54 for a start
+  or stop block and 36 for a short block, including mixed blocks. MPEG-2.5 at
+  8 kHz uses 108 and 72 respectively. A mixed block still transforms only two
+  subbands as long ones: its wider long-scalefactor region also carries short
+  windows in frequency order, which need repacking for our transform layout.
+  Getting it wrong shows up on the few frames either side of a transient.
   See `internal/mpeg/Mp3Granule.kt` around line 300.
 
 ## Working rules for agents

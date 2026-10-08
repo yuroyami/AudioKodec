@@ -223,9 +223,21 @@ internal class Mp3Synthesis(private val channels: Int) {
     fun reorder(granule: Mp3Granule, sideInfo: Mp3SideInfo.Granule, header: MpegFrameHeader) {
         if (!sideInfo.isShort) return
         val bands = Mp3Tables.shortBands(header.sampleRate)
-        val startBand = if (sideInfo.isMixed) 3 else 0
+        val startBand = if (sideInfo.isMixed) Mp3Tables.MIXED_SHORT_START else 0
 
         granule.spectrum.copyInto(scratch)
+        if (sideInfo.isMixed) {
+            // At 8 kHz, long scalefactors cover 72 lines while only the first
+            // 36 use long transforms. The intervening short values are already
+            // in frequency order with three windows interleaved. Convert them
+            // to our six-values-per-window transform layout too.
+            for (line in Mp3Tables.MIXED_LONG_SUBBANDS * 6 until bands[startBand]) {
+                for (window in 0 until 3) {
+                    val target = (line / 6) * 18 + window * 6 + line % 6
+                    granule.spectrum[target] = scratch[line * 3 + window]
+                }
+            }
+        }
         var source = bands[startBand] * 3
         for (band in startBand until 13) {
             for (window in 0 until 3) {
@@ -249,9 +261,8 @@ internal class Mp3Synthesis(private val channels: Int) {
      */
     fun reduceAlias(granule: Mp3Granule, sideInfo: Mp3SideInfo.Granule) {
         if (sideInfo.isShort && !sideInfo.isMixed) return
-        // A mixed block is long in its lowest two subbands only, so only the
-        // boundary between those two is aliased.
-        val boundaries = if (sideInfo.isMixed) 1 else 31
+        // Only the boundary inside the two long transform subbands is aliased.
+        val boundaries = if (sideInfo.isMixed) Mp3Tables.MIXED_LONG_SUBBANDS - 1 else 31
         val spectrum = granule.spectrum
         for (boundary in 0 until boundaries) {
             val centre = 18 * (boundary + 1)
@@ -283,7 +294,8 @@ internal class Mp3Synthesis(private val channels: Int) {
         val previous = overlap[channel]
         for (subband in 0 until 32) {
             val offset = subband * 18
-            val short = sideInfo.isShort && !(sideInfo.isMixed && subband < 2)
+            val short = sideInfo.isShort &&
+                !(sideInfo.isMixed && subband < Mp3Tables.MIXED_LONG_SUBBANDS)
             if (short) {
                 shortTransform(granule.spectrum, offset, block)
             } else {

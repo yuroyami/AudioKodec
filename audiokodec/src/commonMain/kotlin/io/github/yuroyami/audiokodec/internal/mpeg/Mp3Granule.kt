@@ -243,7 +243,7 @@ internal class Mp3Granule {
         var region1Start: Int
         var region2Start: Int
         if (granule.windowSwitching) {
-            region1Start = switchedRegion1(granule, header, longBands, shortBands)
+            region1Start = switchedRegion1(granule, longBands, shortBands)
             region2Start = 576
         } else {
             region1Start = longBands[(granule.region0Count + 1).coerceAtMost(22)]
@@ -295,40 +295,18 @@ internal class Mp3Granule {
     /**
      * Where region 1 begins in a granule that switched windows.
      *
-     * The rule is not a fixed sample number, though it is usually written as
-     * one. Region 0 covers `region0_count + 1` scalefactor bands of whatever
-     * layout the granule itself uses, and for short blocks a band counts once
-     * per window, so three of them make one band. MPEG-1 gives 36 for all three
-     * of the shapes below, which is why the constant is so often written in;
-     * MPEG-2 does not, and using 36 there puts the wrong Huffman table on every
-     * block that starts or ends a run of short ones.
+     * A short block, including a mixed one, switches tables after the first
+     * three short scalefactor bands across all three windows. The mixed flag
+     * changes the transform at low frequencies, not this Huffman boundary.
+     * Start and stop blocks use eight long bands instead. These boundaries
+     * are 36 and 54 for MPEG-2, and 72 and 108 at MPEG-2.5's 8 kHz.
      */
     private fun switchedRegion1(
         granule: Mp3SideInfo.Granule,
-        header: MpegFrameHeader,
         longBands: IntArray,
         shortBands: IntArray,
     ): Int {
-        val units = granule.region0Count + 1
-        // A start or stop block is still a long block and uses the long bands.
-        if (!granule.isShort) return longBands[units.coerceAtMost(22)]
-        if (!granule.isMixed) return shortBands[(units / 3).coerceAtMost(13)] * 3
-
-        // A mixed block is long until the short bands take over, so its bands
-        // are counted through both tables in turn.
-        val longCount = Mp3Tables.mixedLongBands(header.sampleRate)
-        if (units <= longCount) return longBands[units]
-        var lines = longBands[longCount]
-        var left = units - longCount
-        var band = Mp3Tables.MIXED_SHORT_START
-        while (left > 0 && band < 13) {
-            val width = shortBands[band + 1] - shortBands[band]
-            val take = if (left < 3) left else 3
-            lines += take * width
-            left -= take
-            band++
-        }
-        return lines.coerceAtMost(576)
+        return if (granule.isShort) shortBands[3] * 3 else longBands[granule.region0Count + 1]
     }
 
     /**

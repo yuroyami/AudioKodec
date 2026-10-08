@@ -71,14 +71,15 @@ internal object Mp3Tables {
     fun shortBands(sampleRate: Int): IntArray = SHORT_BANDS[rowOf(sampleRate)]
 
     /**
-     * The short band a mixed block's short half begins at.
+     * The first short band whose scalefactors are coded per window in a mixed block.
      *
-     * A mixed block is long at the bottom and short above it, and the two halves
-     * meet at the same place in every layout the format defines.
+     * The lower lines use long scalefactors, including short transform values
+     * between lines 36 and 71 at 8 kHz. This is a scalefactor boundary, not the
+     * boundary between long and short transforms.
      */
     const val MIXED_SHORT_START: Int = 3
 
-    /** Spectral lines a mixed block's long half covers. */
+    /** Spectral lines coded with long scalefactors in a mixed block. */
     fun mixedLongLines(sampleRate: Int): Int = shortBands(sampleRate)[MIXED_SHORT_START] * 3
 
     /**
@@ -95,8 +96,12 @@ internal object Mp3Tables {
         return bands.size - 1
     }
 
-    /** Subbands a mixed block transforms as long ones. */
-    fun mixedLongSubbands(sampleRate: Int): Int = mixedLongLines(sampleRate) / 18
+    /**
+     * Only the first two subbands use long transforms. At 8 kHz the long
+     * scalefactor region extends further, to 72 lines, but lines 36 to 71
+     * already carry the three short windows in frequency order.
+     */
+    const val MIXED_LONG_SUBBANDS: Int = 2
 
     /**
      * Extra attenuation applied to the upper bands when a granule sets its
