@@ -25,6 +25,23 @@ class MpegOracleTest {
     private val lame: String? by lazy { findOnPath("lame") }
 
     @Test
+    fun anEmptyFinalGranuleAtTheExactDataBoundaryMatchesFfmpeg() {
+        val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
+        for (padded in listOf(false, true)) {
+            val bytes = Mp3GranuleBoundaryFixtures.file(padded)
+            val file = temp("empty_final_granule_$padded.mp3").also { it.writeBytes(bytes) }
+            val reference = decodeWithFfmpeg(ffmpeg, file, 44_100, 2, "mp3float")
+            assertEquals(12 * 1152 * 2, reference.size)
+            val decoded = AudioKodec.decode(bytes)
+            assertEquals(reference.size, decoded.samples.size)
+            val worst = reference.indices.maxOf { abs(reference[it] - decoded.samples[it]) }
+            // Different floating-point synthesis orders account for the last
+            // few bits, as in the existing Layer III oracle comparisons.
+            assertTrue(worst < 1e-5f, "padded=$padded: worst sample difference $worst")
+        }
+    }
+
+    @Test
     fun mpegHeadersAgreeWithFfprobe() {
         val ffmpeg = ffmpeg ?: return skip()
         val ffprobe = ffprobe ?: return skip()

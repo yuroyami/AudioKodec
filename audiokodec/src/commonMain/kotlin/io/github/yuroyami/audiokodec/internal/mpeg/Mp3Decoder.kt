@@ -274,6 +274,16 @@ internal class Mp3Decoder(
         }
 
         val bits = BitReaderMsb(mainData, 0, assembled)
+        // Validate the whole frame before advancing either channel's overlap
+        // or filterbank. An empty granule may start exactly at the end of the
+        // main data; only a granule which actually needs missing bits is bad.
+        val requiredBits = sideInfo.granules.sumOf { granule -> granule.sumOf { it.part2And3Length } }
+        if (requiredBits > bits.bitLength) {
+            throw CorruptStreamException(
+                "the MPEG frame needs $requiredBits main data bits but only ${bits.bitLength} are available",
+                at - header.frameBytes,
+            )
+        }
         val granuleCount = sideInfo.granules.size
         val samplesPerFrame = header.samplesPerFrame
         val needed = samplesPerFrame * channels
@@ -284,7 +294,6 @@ internal class Mp3Decoder(
                 val granule = granules[ch]
                 val info = sideInfo.granules[g][ch]
                 val start = bits.bitPosition
-                if (start >= bits.bitLength) return 0
 
                 if (header.version == 1) {
                     granule.readScalefactorsVersion1(bits, info, sideInfo.scfsi[ch], g)

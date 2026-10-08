@@ -25,6 +25,9 @@ passing one. Within them:
   ID3v2.4 and including text outside ISO-8859-1.
 - Tagging an MP3 is checked to leave the decoded audio identical sample for
   sample, by decoding the file with ffmpeg before and after.
+- Layer III frames whose empty final granule starts exactly at the end of
+  their main data retain every sample, checked against a padded control and
+  ffmpeg's float decoder. Missing granule data is rejected before synthesis.
 - FLAC files written by the reference encoder decode **bit-exactly** at 8, 16
   and 24 bits, 1, 2 and 6 channels, and every compression level from 0 to 8.
 - FLAC files AudioKodec writes pass `flac --test`, which verifies every frame
