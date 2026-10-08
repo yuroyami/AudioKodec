@@ -66,9 +66,9 @@ internal interface PacketCodec {
     val maxFramesPerPacket: Int
 
     /**
-     * Frames to decode ahead of a seek target and throw away, so that state
-     * carried from packet to packet has settled by the target. Zero for a
-     * codec whose packets stand alone.
+     * Frames to decode before the recording's start or a seek target and
+     * throw away, so that state carried between packets has settled by the
+     * target. Zero for a codec whose packets stand alone.
      */
     val preRollFrames: Long
 
@@ -122,7 +122,7 @@ internal open class PacketStreamDecoder(
     final override var positionFrames: Long = 0L
         private set
 
-    private var nextPacket = if (index.count == 0) 0 else index.packetAt(trimStartFrames)
+    private var nextPacket = packetFor(trimStartFrames)
 
     /** Decoded frames still to throw away: the trimmed start at first, a seek's run-up after one. */
     private var pendingSkip: Long = if (index.count == 0) 0 else trimStartFrames - index.starts[nextPacket]
@@ -247,11 +247,14 @@ internal open class PacketStreamDecoder(
         positionFrames = target
         if (index.count == 0) return target
         val coded = trimStartFrames + target
-        val runUp = (coded - codec.preRollFrames).coerceAtLeast(0L)
-        nextPacket = index.packetAt(runUp)
+        nextPacket = packetFor(coded)
         pendingSkip = coded - index.starts[nextPacket]
         return target
     }
+
+    /** Opening an edit and seeking to its start need the same packet state. */
+    private fun packetFor(coded: Long): Int = if (index.count == 0) 0 else
+        index.packetAt((coded - codec.preRollFrames).coerceAtLeast(0L))
 
     override fun close() {
         if (closed) return

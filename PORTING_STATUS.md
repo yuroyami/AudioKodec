@@ -360,6 +360,12 @@ mappings and refuses unsupported mappings by codec name. `SnifferTest` checks
 the declared container set; that set alone does not verify every coding or
 documentation claim.
 
+Opening an MP4 Opus edit uses the same 80 ms packet run-up as seeking. Its
+discarded output does not change playable positions or duration. Stateful
+packet regressions cover initial float and integer output, and FFmpeg-generated
+mono and stereo Opus edits check the opening samples and edit alignment. Opus
+run-up approximates continuous decoder state; seeking is not claimed bit-exact.
+
 **File output through kotlinx-io.** `Path.asAudioSink` opens on the first valid non-empty write, so unused sinks and encodes rejected before output preserve an existing file. `Path.writeAudioAtomically` writes a temporary file, closes it and replaces the destination through the platform atomic move. Shared filesystem tests cover successful replacement, rejected layouts, unknown lengths, partial-write failures and cleanup. The parent must exist; atomicity follows the filesystem, with the WASI guarantee unverifiable.
 
 ## Known differences

@@ -374,6 +374,11 @@ repeats parts of it is refused, and in tolerant mode only its first part is
 played. A file without an edit list plays all of its media, except Opus,
 whose pre-skip is dropped either way.
 
+Opening an Opus edit decodes up to 80 ms of preceding packets, as seeking does,
+and discards their output before reporting playable frame zero. This run-up
+restores packet state; it approximates a continuous decode rather than promising
+bit-exact Opus seeking. Independent codecs start at the first audible packet.
+
 Chapters come from a QuickTime chapter track, with start and end times, or
 failing that from Nero's `chpl` list, which states only starts: the last
 chapter's end is reported as -1.

@@ -10,6 +10,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -199,6 +200,67 @@ class Mp4OracleTest {
         assertEquals(stream.getValue("duration_ts").toInt(), decoded.frames, "the length ffprobe reports for the edit")
         for (i in 0 until decoded.frames * 2) {
             assertEquals(whole.samples[2_000 + i], decoded.samples[i], "sample $i after the edit")
+        }
+    }
+
+    @Test
+    fun openingAnOpusEditHasTheSameRunUpAsSeekingToZero() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (channels in listOf(1, 2)) {
+            val rate = 48_000
+            val input = temp("opus_run_up_$channels.wav")
+            val samples = FloatArray(rate * 3 * channels) { i ->
+                (0.125 * kotlin.math.sin(2 * Math.PI * (997 + 73 * (i % channels)) * (i / channels) / rate)).toFloat()
+            }
+            input.writeBytes(AudioKodec.encode(samples, AudioFormat(rate, channels), EncodeTarget.wav(16)))
+            val original = temp("opus_run_up_$channels.mp4")
+            run(listOf(ffmpeg, "-y", "-v", "error", "-i", input.path, "-c:a", "libopus", "-b:a", "96k", original.path))
+            val edited = original.readBytes()
+            val elst = indexOfType(edited, "elst")
+            assertTrue(elst > 0)
+            assertEquals(0, edited[elst + 4].toInt())
+            val start = ByteBuffer.wrap(edited, elst + 16, 4).order(ByteOrder.BIG_ENDIAN).int
+            writeU32(edited, elst + 12, 2_000)
+            writeU32(edited, elst + 16, start + rate)
+            val file = temp("opus_run_up_edit_$channels.mp4").also { it.writeBytes(edited) }
+            fun reference(source: File): FloatArray {
+                val output = temp(source.name + ".f32")
+                run(listOf(ffmpeg, "-y", "-v", "error", "-i", source.path, "-f", "f32le", output.path))
+                val buffer = ByteBuffer.wrap(output.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+                return FloatArray(buffer.remaining()).also { buffer.get(it) }
+            }
+            val whole = reference(original)
+            val expected = reference(file)
+            // FFmpeg retains coded end padding, as in the other MP4 Opus
+            // comparisons. Its complete edit still equals its full PCM slice.
+            assertTrue(expected.size >= rate * 2 * channels)
+            TestSignals.assertExact(whole.copyOfRange(rate * channels, whole.size), expected,
+                "FFmpeg's edit is an exact slice of its full decode")
+            assertEquals(rate * 2L, AudioKodec.probe(edited).durationFrames)
+            AudioKodec.open(edited).use { decoder ->
+                val first = assertNotNull(decoder.nextFrame())
+                assertEquals(0L, first.positionFrames)
+                assertEquals(0L, decoder.seek(0))
+                val sought = assertNotNull(decoder.nextFrame())
+                assertEquals(first.frameCount, sought.frameCount)
+                TestSignals.assertExact(first.samples, sought.samples, "opening and seeking use identical packet state")
+                val squareError = first.samples.indices.sumOf { i ->
+                    val error = (first.samples[i] - expected[i]).toDouble()
+                    error * error
+                }
+                // Opus's recommended 80 ms run-up approximates the full-stream
+                // state. The 0.01 RMS bound on this 0.125-amplitude tone allows
+                // initial settling; opening versus seek(0) above independently
+                // catches omitted run-up without claiming exact seeking.
+                val rms = kotlin.math.sqrt(squareError / first.samples.size)
+                assertTrue(rms < 0.01, "$channels channels: initial RMS difference $rms")
+            }
+            val decoded = AudioKodec.decode(edited)
+            assertEquals(rate * 2, decoded.frames)
+            // Use the existing seek comparison's 150 ms settling window and
+            // 1e-3 maximum sample difference for the rest of this edit.
+            val worst = (7_200 * channels until decoded.samples.size).maxOf { abs(decoded.samples[it] - expected[it]) }
+            assertTrue(worst <= 1e-3f, "$channels channels: settled difference $worst")
         }
     }
 
