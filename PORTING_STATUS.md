@@ -28,6 +28,9 @@ passing one. Within them:
 - Layer III frames whose empty final granule starts exactly at the end of
   their main data retain every sample, checked against a padded control and
   ffmpeg's float decoder. Missing granule data is rejected before synthesis.
+- QuickTime PCM without an `ftyp` atom is identified and decoded bit-exactly
+  against ffmpeg, with the movie header before or after the audio. Common
+  tests cover leading padding, bounded atom detection and malformed sizes.
 - FLAC files written by the reference encoder decode **bit-exactly** at 8, 16
   and 24 bits, 1, 2 and 6 channels, and every compression level from 0 to 8.
 - FLAC files AudioKodec writes pass `flac --test`, which verifies every frame

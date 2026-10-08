@@ -310,6 +310,11 @@ and QuickTime `.mov`. The audio track's packets are found from its sample
 tables wherever the `moov` box sits, before the audio or after it, and in
 fragmented files from each fragment's own table.
 
+QuickTime files do not need an `ftyp` brand atom. Detection recognises `moov`
+and `mdat`, and can skip leading `free`, `skip`, `wide` and `uuid` atoms. It
+checks at most 128 atom headers. For byte-array `sniff`, the identifying header
+must fit in the supplied window; `probe` and `open` can jump over larger padding.
+
 | Coding | Audio |
 |---|---|
 | Opus | decodes, with seeking |

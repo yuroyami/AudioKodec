@@ -49,9 +49,10 @@ public object AudioKodec {
      * formats AudioKodec cannot decode as well as those it can, so check
      * [AudioContainer.isDecodable] before assuming a decoder exists. As little
      * as 16 bytes is often enough. [SNIFF_HEADER_BYTES] is a recommended initial
-     * window, not a guarantee: leading ID3 metadata and the following signature
-     * must fit. ID3 alone never identifies MPEG audio. Supply more bytes or use
-     * [probe] when the result is null.
+     * window, not a guarantee: leading ID3 metadata or QuickTime padding and
+     * the following signature must fit. ID3 alone never identifies MPEG audio.
+     * QuickTime detection examines at most 128 leading atoms. Supply more bytes
+     * or use [probe], which can jump past padding, when the result is null.
      */
     public fun sniff(header: ByteArray): AudioContainer? = Sniffer.sniff(header)
 
@@ -620,6 +621,7 @@ public object AudioKodec {
             throw TruncatedStreamException("the source is empty", 0)
         }
         val container = Sniffer.sniff(if (got == header.size) header else header.copyOf(got))
+            ?: if (Sniffer.isMp4(view)) AudioContainer.MP4 else null
         if (container == null) {
             if (offset > 0) return DetectedContainer(AudioContainer.MPEG_AUDIO, root)
             throw UnsupportedFormatException(

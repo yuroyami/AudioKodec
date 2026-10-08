@@ -24,6 +24,36 @@ import kotlin.test.assertTrue
 class Mp4Test {
 
     @Test
+    fun unbrandedQuickTimeFilesReachTheDecoderWithEitherMoviePosition() {
+        for (moovFirst in listOf(false, true)) {
+            val file = build(32, 2, 16, moovFirst = moovFirst)
+            ascii("free").copyInto(file, 4)
+            assertEquals(AudioContainer.MP4, AudioKodec.sniff(file))
+            assertEquals(32L, AudioKodec.probe(file).durationFrames)
+            assertSamples(file, 2, 0, 32, "unbranded QuickTime")
+        }
+    }
+
+    @Test
+    fun sourceDetectionJumpsPastLeadingPaddingWithoutReadingItsWholePayload() {
+        val prefix = box("free", ByteArray(70_000))
+        val file = build(32, 1, 16, leadingBoxes = prefix)
+        assertEquals(AudioContainer.MP4, AudioKodec.sniff(file))
+        assertEquals(null, AudioKodec.sniff(file.copyOf(64)))
+        var transferred = 0
+        val inner = file.asAudioSource()
+        val source = object : AudioSource {
+            override val size: Long get() = inner.size
+            override fun readAt(position: Long, into: ByteArray, offset: Int, count: Int): Int =
+                inner.readAt(position, into, offset, count).also { if (it > 0) transferred += it }
+            override fun close() = Unit
+        }
+        assertEquals(32L, AudioKodec.probe(source, DecodeOptions(maxAllocationBytes = 4096)).durationFrames)
+        assertTrue(transferred < 16_384, "probing transferred $transferred bytes of leading padding")
+        assertSamples(file, 1, 0, 32, "QuickTime after padding")
+    }
+
+    @Test
     fun pcmReadPacketBoundariesDoNotMakeTheBitrateVariable() {
         for (channels in 1..2) {
             val files = listOf(
@@ -598,10 +628,11 @@ class Mp4Test {
         editVersion: Int = 0,
         timeRuns: List<Pair<Int, Int>>? = null,
         sampleSizes: IntArray? = null,
+        leadingBoxes: ByteArray = ByteArray(0),
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
         require(!singlePacket || chunkCount == 1)
-        val ftyp = box("ftyp", ascii("qt  "), u32(0), ascii("qt  "))
+        val ftyp = leadingBoxes + box("ftyp", ascii("qt  "), u32(0), ascii("qt  "))
         fun payload(): Pair<ByteArray, IntArray> {
             val out = ArrayList<ByteArray>()
             val starts = IntArray(chunkCount)

@@ -33,6 +33,29 @@ class Mp4OracleTest {
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
     private val ffprobe: String? by lazy { findOnPath("ffprobe") }
 
+    @Test
+    fun unbrandedQuickTimePcmMatchesFfprobeAndFfmpeg() {
+        val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
+        val ffprobe = ffprobe ?: return org.junit.Assume.assumeTrue("ffprobe is required", false)
+        for (fastStart in listOf(false, true)) {
+            val options = listOf("-c:a", "pcm_s16le") + if (fastStart) listOf("-movflags", "+faststart") else emptyList()
+            val file = encode(ffmpeg, "unbranded_$fastStart.mov", 2, options, seconds = 0.5)
+            val bytes = file.readBytes()
+            assertEquals("ftyp", bytes.decodeToString(4, 8))
+            "free".encodeToByteArray().copyInto(bytes, 4)
+            file.writeBytes(bytes)
+            val stream = streamOf(ffprobe, file)
+            assertEquals(AudioContainer.MP4, AudioKodec.sniff(bytes))
+            assertEquals(stream.getValue("duration_ts").toLong(), AudioKodec.probe(bytes).durationFrames)
+            val decoded = AudioKodec.decode(bytes)
+            val reference = temp("unbranded_$fastStart.f32")
+            run(listOf(ffmpeg, "-y", "-v", "error", "-i", file.path, "-f", "f32le", reference.path))
+            val samples = ByteBuffer.wrap(reference.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+            assertEquals(decoded.samples.size, samples.remaining())
+            for (i in decoded.samples.indices) assertEquals(samples[i], decoded.samples[i], "sample $i")
+        }
+    }
+
     private class Case(val name: String, val codec: AudioCodec, val options: List<String>, val channels: Int = 2)
 
     private val cases = listOf(

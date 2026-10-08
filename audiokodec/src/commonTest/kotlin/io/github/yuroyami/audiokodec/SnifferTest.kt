@@ -1,5 +1,7 @@
 package io.github.yuroyami.audiokodec
 
+import io.github.yuroyami.audiokodec.internal.Sniffer
+import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -61,6 +63,66 @@ class SnifferTest {
         "ftypM4A ".forEachIndexed { i, c -> header[4 + i] = c.code.toByte() }
         assertEquals(AudioContainer.MP4, AudioKodec.sniff(header))
     }
+
+    @Test
+    fun quickTimeAtomsAreRecognisedWithoutAnInitialBrandBox() {
+        val movie = mp4Atom("moov", 8)
+        val media = mp4Atom("mdat", 40)
+        val brand = mp4Atom("ftyp", 24) + "qt  ".encodeToByteArray() + ByteArray(4)
+        val extendedBrand = mp4Atom("ftyp", 1) + byteArrayOf(0, 0, 0, 0, 0, 0, 0, 24) + brand.copyOfRange(8, 16)
+        val uuid = mp4Atom("uuid", 24) + ByteArray(16)
+        for (candidate in listOf(movie, media, brand, extendedBrand)) {
+            for (prefix in listOf(ByteArray(0), mp4Atom("free", 8), mp4Atom("wide", 8) + mp4Atom("skip", 8), uuid)) {
+                assertQuickTimeDetection(prefix + candidate, recognised = true)
+            }
+        }
+        val extendedFree = mp4Atom("free", 1) + byteArrayOf(0, 0, 0, 0, 0, 0, 0, 16)
+        assertQuickTimeDetection(extendedFree + movie, recognised = true)
+        assertQuickTimeDetection(mp4Atom("mdat", 0), recognised = true)
+    }
+
+    @Test
+    fun malformedAndIncompleteQuickTimeHeadersAreInconclusive() {
+        val movie = mp4Atom("moov", 8)
+        val candidates = listOf(
+            mp4Atom("free", 0) + movie,
+            mp4Atom("free", 7) + movie,
+            mp4Atom("free", 100) + movie,
+            mp4Atom("free", 1),
+            mp4Atom("free", 1) + ByteArray(8),
+            mp4Atom("free", 1) + ByteArray(8) { 0xFF.toByte() } + movie,
+            mp4Atom("ftyp", 8) + "qt  ".encodeToByteArray(),
+            mp4Atom("ftyp", 24),
+            mp4Atom("moov", 7),
+            mp4Atom("mdat", 1) + ByteArray(7),
+            mp4Atom("uuid", 8) + movie,
+            mp4Atom("nope", 8) + movie,
+        )
+        for (candidate in candidates) assertQuickTimeDetection(candidate, recognised = false)
+        for (length in 0 until movie.size) assertQuickTimeDetection(movie.copyOf(length), recognised = false)
+        val padding = mp4Atom("free", 8)
+        val deep = ByteArray(8 * 129) + movie
+        repeat(129) { padding.copyInto(deep, it * 8) }
+        assertQuickTimeDetection(deep, recognised = false)
+    }
+
+    private fun assertQuickTimeDetection(bytes: ByteArray, recognised: Boolean) {
+        assertEquals(if (recognised) AudioContainer.MP4 else null, AudioKodec.sniff(bytes))
+        for (knownSize in listOf(false, true)) {
+            val inner = bytes.asAudioSource()
+            val source = object : AudioSource {
+                override val size: Long get() = if (knownSize) inner.size else -1L
+                override fun readAt(position: Long, into: ByteArray, offset: Int, count: Int): Int =
+                    inner.readAt(position, into, offset, minOf(count, 3))
+                override fun close() = Unit
+            }
+            assertEquals(recognised, Sniffer.isMp4(SourceReader(source, DecodeOptions.DEFAULT)))
+        }
+    }
+
+    private fun mp4Atom(type: String, size: Int): ByteArray =
+        byteArrayOf((size ushr 24).toByte(), (size ushr 16).toByte(), (size ushr 8).toByte(), size.toByte()) +
+            type.encodeToByteArray()
 
     @Test
     fun mpegAudioAndAacAreToldApartByTheirLayerBits() {

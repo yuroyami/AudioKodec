@@ -2,12 +2,14 @@ package io.github.yuroyami.audiokodec.internal
 
 import io.github.yuroyami.audiokodec.AudioContainer
 import io.github.yuroyami.audiokodec.internal.container.Wave64Reader
+import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.io.fourCcOf
+import io.github.yuroyami.audiokodec.internal.mp4.Mp4Box
 
 /**
  * Names a format from the first bytes of a file.
  *
- * The sniffer never throws and never reads past what it was given. It names
+ * Byte-array sniffing never throws or reads past what it was given. It names
  * more formats than AudioKodec can decode, which is the point: a caller that
  * gets [AudioContainer.MATROSKA] back knows to send the file somewhere else,
  * where a caller that got null would have to guess.
@@ -16,6 +18,7 @@ internal object Sniffer {
 
     /** Recommended initial window; leading metadata can require more bytes. */
     const val RECOMMENDED_HEADER_BYTES: Int = 64 * 1024
+    private const val MAX_MP4_BOXES = 128
 
     /**
      * ID3v2 blocks sit in front of MP3, FLAC, AIFF and WAV files alike, and a
@@ -102,8 +105,9 @@ internal object Sniffer {
         // Musepack before SV8 used a three-character identifier.
         if (b0 == 'M'.code && b1 == 'P'.code && b2 == '+'.code) return AudioContainer.MUSEPACK
 
-        // ISO base media, which puts its brand at offset four.
-        if (available >= 12 && fourCcOf(header, offset + 4) == "ftyp") return AudioContainer.MP4
+        // QuickTime predates the brand box, and both families allow leading
+        // padding. Walk validated atom headers rather than searching payloads.
+        if (isMp4(header, offset)) return AudioContainer.MP4
 
         // Matroska and WebM share the EBML header.
         if (b0 == 0x1A && b1 == 0x45 && b2 == 0xDF && b3 == 0xA3) return AudioContainer.MATROSKA
@@ -157,6 +161,68 @@ internal object Sniffer {
         }
 
         return null
+    }
+
+    private fun isMp4(header: ByteArray, offset: Int): Boolean {
+        var at = offset
+        repeat(MAX_MP4_BOXES) {
+            val available = header.size - at
+            val next = mp4Step(header, at, available)
+            if (next == 0L) return true
+            if (next < 0 || next > available) return false
+            at += next.toInt()
+        }
+        return false
+    }
+
+    /** Source-based detection can jump over padding larger than a sniff window. */
+    fun isMp4(reader: SourceReader): Boolean {
+        // Include a major brand and minor version after an extended header.
+        val header = ByteArray(24)
+        val size = reader.size
+        var at = 0L
+        repeat(MAX_MP4_BOXES) {
+            if (size >= 0 && at > size - 8) return false
+            reader.seek(at)
+            val available = reader.readSome(header, 0, header.size)
+            val next = mp4Step(header, 0, available)
+            if (next == 0L) return true
+            if (next < 0 || next > Long.MAX_VALUE - reader.baseOffset - at) return false
+            if (size >= 0 && next > size - at) return false
+            at += next
+        }
+        return false
+    }
+
+    /** Zero identifies MP4, a positive size skips padding, and -1 is inconclusive. */
+    private fun mp4Step(bytes: ByteArray, at: Int, available: Int): Long {
+        if (available < 8) return -1
+        val type = fourCcOf(bytes, at + 4)
+        when (type) {
+            "ftyp", "moov", "mdat", "free", "skip", "wide", "uuid" -> Unit
+            else -> return -1
+        }
+        val small = Mp4Box.readU32(bytes, at)
+        val headerBytes: Int
+        val size: Long
+        if (small == 1L) {
+            if (available < 16) return -1
+            headerBytes = 16
+            size = Mp4Box.readU64(bytes, at + 8)
+            // This also refuses unsigned sizes outside the supported Long range.
+            if (size < headerBytes) return -1
+        } else {
+            headerBytes = 8
+            size = small
+            if (size != 0L && size < headerBytes) return -1
+        }
+        return when (type) {
+            "ftyp" -> if (available >= headerBytes + 8 && (size == 0L || size >= headerBytes + 8)) 0 else -1
+            "moov", "mdat" -> 0
+            "uuid" -> if (size >= headerBytes + 16) size else -1
+            // A zero-sized padding box runs to EOF, so there is no next atom.
+            else -> if (size > 0) size else -1
+        }
     }
 
     private fun matches(header: ByteArray, offset: Int, text: String): Boolean {
