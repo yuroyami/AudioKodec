@@ -486,7 +486,7 @@ public object AudioKodec {
         return AudioInfo(
             container = AudioContainer.OGG,
             codec = stream.codec,
-            format = AudioFormat(stream.sampleRate, stream.channels),
+            format = stream.format,
             durationFrames = duration,
             // Only the lossless mapping has a stored bit depth to report.
             bitDepth = if (stream.codec == AudioCodec.FLAC) {

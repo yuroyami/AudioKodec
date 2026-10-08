@@ -56,8 +56,7 @@ internal class VorbisDecoder(
     private val longBlock = identification.longBlock
     private val shortBlock = identification.shortBlock
 
-    override val format: AudioFormat =
-        AudioFormat(identification.sampleRate, layoutFor(channels))
+    override val format: AudioFormat = stream.format
 
     override val durationFrames: Long? = parsed.durationFrames
 

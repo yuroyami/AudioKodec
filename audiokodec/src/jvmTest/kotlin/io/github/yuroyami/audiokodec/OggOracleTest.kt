@@ -28,6 +28,49 @@ class OggOracleTest {
     private val flac: String? by lazy { findOnPath("flac") }
 
     @Test
+    fun referenceEncodersAgreeOnEverySurroundMappingLayout() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val flac = flac ?: return skip()
+        for (channels in 1..8) {
+            val layout = if (channels == 7) {
+                ChannelLayout.of(
+                    AudioChannel.FRONT_LEFT, AudioChannel.FRONT_RIGHT, AudioChannel.FRONT_CENTER,
+                    AudioChannel.LOW_FREQUENCY, AudioChannel.BACK_CENTER,
+                    AudioChannel.SIDE_LEFT, AudioChannel.SIDE_RIGHT,
+                )
+            } else {
+                ChannelLayout.canonical(channels)
+            }
+            val original = TestSignals.quantise(TestSignals.sine(4_096, channels), 16)
+            val wav = temp("layout_$channels.wav")
+            wav.writeBytes(AudioKodec.encode(original, AudioFormat(44_100, layout), EncodeTarget.wav(16)))
+            for (encoder in listOf("libvorbis", "libopus", "flac")) {
+                val what = "$encoder with $channels channels"
+                val ogg = temp("layout_${encoder}_$channels.ogg")
+                if (encoder == "flac") {
+                    run(listOf(flac, "--silent", "--force", "--ogg", "-o", ogg.absolutePath, wav.absolutePath), what)
+                } else {
+                    run(listOf(
+                        ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", wav.absolutePath,
+                        "-c:a", encoder, ogg.absolutePath,
+                    ), what)
+                }
+                val bytes = ogg.readBytes()
+                val expected = AudioFormat(if (encoder == "libopus") 48_000 else 44_100, layout)
+                assertEquals(expected, AudioKodec.probe(bytes).format, "$what: probe")
+                AudioKodec.open(bytes).use { decoder ->
+                    assertEquals(expected, decoder.format, "$what: open")
+                    assertEquals(expected, decoder.info.format, "$what: info")
+                    assertEquals(expected, assertNotNull(decoder.nextFrame()).format, "$what: frame")
+                }
+                val decoded = AudioKodec.decode(bytes)
+                assertEquals(expected, decoded.format, "$what: decode")
+                if (encoder == "flac") TestSignals.assertExact(original, decoded.samples, what)
+            }
+        }
+    }
+
+    @Test
     fun oggFlacDecodesBitExactly() {
         val flac = flac ?: return skip()
         for (depth in intArrayOf(8, 16, 24)) {

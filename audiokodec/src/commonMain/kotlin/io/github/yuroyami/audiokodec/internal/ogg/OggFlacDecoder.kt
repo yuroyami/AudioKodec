@@ -12,7 +12,6 @@ import io.github.yuroyami.audiokodec.IntAudioFrame
 import io.github.yuroyami.audiokodec.IntPcmAccess
 import io.github.yuroyami.audiokodec.Pcm
 import io.github.yuroyami.audiokodec.TruncatedStreamException
-import io.github.yuroyami.audiokodec.internal.flac.FlacDecoder
 import io.github.yuroyami.audiokodec.internal.flac.FlacFrameReader
 import io.github.yuroyami.audiokodec.internal.flac.FlacMetadata
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
@@ -42,8 +41,7 @@ internal class OggFlacDecoder(
     private val frames = FlacFrameReader(reader, streamInfo, options)
     private val ogg = OggReader(reader, options)
 
-    override val format: AudioFormat =
-        AudioFormat(streamInfo.sampleRate, FlacDecoder.layoutFor(streamInfo.channels))
+    override val format: AudioFormat = stream.format
 
     override val bitDepth: Int = streamInfo.bitsPerSample
 

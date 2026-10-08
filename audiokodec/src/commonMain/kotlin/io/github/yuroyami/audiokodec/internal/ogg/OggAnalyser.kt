@@ -1,16 +1,20 @@
 package io.github.yuroyami.audiokodec.internal.ogg
 
 import io.github.yuroyami.audiokodec.AudioCodec
+import io.github.yuroyami.audiokodec.AudioFormat
 import io.github.yuroyami.audiokodec.AudioKodecException
+import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.UnsupportedFormatException
+import io.github.yuroyami.audiokodec.internal.flac.FlacDecoder
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.opus.OpusMultistreamDecoder
 import io.github.yuroyami.audiokodec.internal.opus.OpusPacket
 import io.github.yuroyami.audiokodec.internal.tag.FlacPicture
 import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
+import io.github.yuroyami.audiokodec.internal.vorbis.VorbisDecoder
 import io.github.yuroyami.audiokodec.tag.RawTagBlock
 import io.github.yuroyami.audiokodec.tag.RawTagEntry
 import io.github.yuroyami.audiokodec.tag.TagFormat
@@ -54,6 +58,23 @@ internal object OggAnalyser {
         /** The identification packet, kept for the decoders that need it. */
         val identification: ByteArray,
     ) {
+        /** The mapping's speaker layout, shared by probing and decoding. */
+        val format: AudioFormat get() = AudioFormat(
+            sampleRate,
+            when (codec) {
+                AudioCodec.OPUS -> when (identification[18].toInt() and 0xFF) {
+                    0 -> if (channels == 1) ChannelLayout.MONO else ChannelLayout.STEREO
+                    1 -> VorbisDecoder.layoutFor(channels)
+                    // Ambisonics names sound-field components, and family 255
+                    // leaves channel meaning to the application.
+                    else -> ChannelLayout.unknown(channels)
+                }
+                AudioCodec.VORBIS -> VorbisDecoder.layoutFor(channels)
+                AudioCodec.FLAC -> FlacDecoder.layoutFor(channels)
+                else -> ChannelLayout.canonical(channels)
+            },
+        )
+
         /**
          * The rate the codec's granule positions are counted in.
          *

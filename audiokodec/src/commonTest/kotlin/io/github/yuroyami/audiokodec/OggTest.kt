@@ -789,7 +789,7 @@ class OggTest {
 }
 
 /** Assembles Ogg pages with correct lacing and checksums. */
-private class OggBuilder {
+internal class OggBuilder {
 
     private val pages = ArrayList<ByteArray>()
 

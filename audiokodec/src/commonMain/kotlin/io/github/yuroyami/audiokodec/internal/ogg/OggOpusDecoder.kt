@@ -6,7 +6,6 @@ import io.github.yuroyami.audiokodec.AudioDecoder
 import io.github.yuroyami.audiokodec.AudioFormat
 import io.github.yuroyami.audiokodec.AudioFrame
 import io.github.yuroyami.audiokodec.AudioInfo
-import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.TruncatedStreamException
@@ -69,17 +68,7 @@ internal class OggOpusDecoder(
      */
     private val channelOrder = if (family == 1) VorbisDecoder.orderFor(channels) else IntArray(channels) { it }
 
-    override val format: AudioFormat = AudioFormat(
-        SAMPLE_RATE,
-        when (family) {
-            0 -> if (channels == 1) ChannelLayout.MONO else ChannelLayout.STEREO
-            1 -> VorbisDecoder.layoutFor(channels)
-            // Ambisonic channels are components of a sound field, not
-            // speakers, and family 255 leaves their meaning to the
-            // application.
-            else -> ChannelLayout.unknown(channels)
-        },
-    )
+    override val format: AudioFormat = stream.format
 
     override val durationFrames: Long? = parsed.durationFrames
 
