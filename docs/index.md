@@ -524,13 +524,19 @@ merges them so that the richer format wins:
 | APEv2 | the above |
 | APEv1 | APEv2 |
 | RIFF `INFO`, AIFF text chunks | the above |
-| Broadcast Wave `bext` | the above |
 | Lyrics3v2 | the above |
 | ID3v1 | everything |
 
 A field that only the losing block states is still taken from it, so nothing
-is dropped for being in the wrong place. Everything stays available exactly as
-it was stored:
+is dropped for being in the wrong place.
+
+Broadcast Wave's fixed fields are available in `TagBundle.raw`. Select
+`TagFormat.BWF_BEXT` to write them explicitly in WAV, RF64 or BW64, with fixed
+ASCII widths, an unsigned time reference and retained extension bytes.
+See [Broadcast Wave metadata](broadcast-wave.md) for adding, editing and removing
+the chunk. Ordinary edits preserve it byte-for-byte.
+
+Everything stays available exactly as it was stored:
 
 ```kotlin
 println(tags.raw.formats.map { it.displayName }) // [ID3v2.4, ID3v1]

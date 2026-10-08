@@ -11,7 +11,7 @@
   "macOSBuild": null,
   "opusfileLibrarySha256": "cbb2d87dc3a07096fb942b6baf9d78be10bad59702cabc87d708d0c18bb560aa",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
-  "qualifiedAt": "2026-10-08T21:42:03.066627+00:00",
+  "qualifiedAt": "2026-10-08T22:04:08.334129+00:00",
   "referenceBuildRecipeSha256": "a5bff48e71460bb01746ac8a2451089f64c510dea9b78fc20d4f6cd7f3279670",
   "referenceBuilds": {
     "alac": {
@@ -24,7 +24,7 @@
     }
   },
   "skipped": 5,
-  "testCount": 958,
+  "testCount": 968,
   "tools": [
     {
       "path": "ffmpeg",
@@ -57,13 +57,12 @@
       "versionArgv": []
     },
     {
-      "path": "python",
-      "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
-      "version": "Python 3.12.14\nMutagen 1.47.0",
+      "path": "exiftool",
+      "sha256": "aad164d81c96fe255fcc617532613b3288ba6ea2d607c58142ffbdfe408a02c4",
+      "version": "13.25",
       "versionArgv": [
-        "python",
-        "-c",
-        "import platform\nprint('Python ' + platform.python_version())\ntry:\n    import mutagen\n    print('Mutagen ' + mutagen.version_string)\nexcept ImportError:\n    print('Mutagen unavailable')"
+        "exiftool",
+        "-ver"
       ]
     },
     {
@@ -73,6 +72,16 @@
       "versionArgv": [
         "ffprobe",
         "-version"
+      ]
+    },
+    {
+      "path": "python",
+      "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+      "version": "Python 3.12.14\nMutagen 1.47.0",
+      "versionArgv": [
+        "python",
+        "-c",
+        "import platform\nprint('Python ' + platform.python_version())\ntry:\n    import mutagen\n    print('Mutagen ' + mutagen.version_string)\nexcept ImportError:\n    print('Mutagen unavailable')"
       ]
     },
     {
@@ -110,15 +119,6 @@
         "python3",
         "-c",
         "import platform\nprint('Python ' + platform.python_version())\ntry:\n    import mutagen\n    print('Mutagen ' + mutagen.version_string)\nexcept ImportError:\n    print('Mutagen unavailable')"
-      ]
-    },
-    {
-      "path": "exiftool",
-      "sha256": "aad164d81c96fe255fcc617532613b3288ba6ea2d607c58142ffbdfe408a02c4",
-      "version": "13.25",
-      "versionArgv": [
-        "exiftool",
-        "-ver"
       ]
     },
     {

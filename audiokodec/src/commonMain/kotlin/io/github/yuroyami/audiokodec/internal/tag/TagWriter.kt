@@ -104,7 +104,11 @@ internal object TagWriter {
             options.formats == null || options.formats.any { isId3v2(it) }
         }
         if (nativeFormat != null && !willWriteId3 && options.formats?.isEmpty() != true) {
-            NativeTextCapabilities.requireComplete(tags, nativeFormat, riffCodePage)
+            if (TagFormat.BWF_BEXT in options.formats.orEmpty() && nativeFormat !in options.formats.orEmpty()) {
+                BextTagWriter.requireNoModelledFields(tags)
+            } else {
+                NativeTextCapabilities.requireComplete(tags, nativeFormat, riffCodePage)
+            }
         }
         val artworkTags = if (willWriteId3) {
             Id3v2Writer.normaliseArtwork(tags, requestedId3Version(options))
@@ -152,6 +156,9 @@ internal object TagWriter {
         val preparedInfo = if (nativeFormat == TagFormat.RIFF_INFO &&
             (options.formats == null || TagFormat.RIFF_INFO in options.formats)
         ) buildRiffInfo(artworkTags, id3 != null, riffCodePage) else null
+        val preparedBext = if (nativeFormat == TagFormat.RIFF_INFO && TagFormat.BWF_BEXT in options.formats.orEmpty()) {
+            BextTagWriter.build(artworkTags, reader.options)
+        } else null
         val prefixId3 = if (externalId3) Id3v2Writer.withPadding(id3!!, options.padding) else null
         if (prefixId3 != null) sink.write(prefixId3)
         // FLAC and Ogg writers use -1 to mean "copy to EOF". Chunked
@@ -165,12 +172,12 @@ internal object TagWriter {
             AudioContainer.WAV ->
                 writeRiff(
                     reader, sink, options, rf64 = false, sourceEnd = containerEnd,
-                    preparedId3 = id3, addId3Chunk = addId3Chunk, preparedInfo = preparedInfo,
+                    preparedId3 = id3, addId3Chunk = addId3Chunk, preparedInfo = preparedInfo, preparedBext = preparedBext,
                 )
             AudioContainer.RF64 ->
                 writeRiff(
                     reader, sink, options, rf64 = true, sourceEnd = containerEnd,
-                    preparedId3 = id3, addId3Chunk = addId3Chunk, preparedInfo = preparedInfo,
+                    preparedId3 = id3, addId3Chunk = addId3Chunk, preparedInfo = preparedInfo, preparedBext = preparedBext,
                 )
             AudioContainer.AIFF ->
                 writeAiff(
@@ -440,6 +447,7 @@ internal object TagWriter {
         preparedId3: ByteArray?,
         addId3Chunk: Boolean,
         preparedInfo: ByteArray?,
+        preparedBext: ByteArray?,
     ) {
         val size = sourceEnd
         reader.seek(0)
@@ -532,6 +540,7 @@ internal object TagWriter {
             }
 
             val drop = when (id) {
+                "bext" -> TagFormat.BWF_BEXT in options.formats.orEmpty()
                 "id3 ", "ID3 " -> {
                     hadId3Chunk = true
                     true
@@ -576,6 +585,7 @@ internal object TagWriter {
             body = checkedAdd(body, range.last + 1 - range.first, "RIFF rewrite")
         }
         if (info != null) body = checkedAdd(body, info.size.toLong(), "RIFF rewrite")
+        if (preparedBext != null) body = checkedAdd(body, preparedBext.size.toLong(), "RIFF rewrite")
         if (id3 != null) {
             body = checkedAdd(
                 body,
@@ -606,6 +616,7 @@ internal object TagWriter {
                 writer.writeI64Le(entry.size)
             }
         }
+        preparedBext?.let { sink.write(it) }
         for (range in kept) {
             copy(reader, sink, range.first, range.last + 1)
         }
@@ -939,7 +950,7 @@ internal object TagWriter {
         if (requested == null) return
         val allowed = when (container) {
             AudioContainer.WAV, AudioContainer.RF64 ->
-                setOf(TagFormat.RIFF_INFO, TagFormat.ID3V2_3, TagFormat.ID3V2_4)
+                setOf(TagFormat.RIFF_INFO, TagFormat.BWF_BEXT, TagFormat.ID3V2_3, TagFormat.ID3V2_4)
             AudioContainer.AIFF ->
                 setOf(TagFormat.AIFF_TEXT, TagFormat.ID3V2_3, TagFormat.ID3V2_4)
             AudioContainer.FLAC, AudioContainer.OGG ->

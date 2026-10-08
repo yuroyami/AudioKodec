@@ -492,8 +492,8 @@ internal object TagLocator {
      * Reads the Broadcast Wave chunk, whose fields are fixed-length text.
      *
      * The chunk is 602 bytes plus however much coding history follows it. Only
-     * the fields with somewhere to go in the merged view are named here; the
-     * rest stay in the raw block.
+     * the text and numeric fields are named here. The 264-byte extension
+     * retains the time reference, version, UMID, loudness and reserved bytes.
      */
     private fun readBext(
         reader: SourceReader,
@@ -509,7 +509,7 @@ internal object TagLocator {
 
         fun text(key: String, offset: Int, size: Int) {
             if (offset + size > body.size) return
-            val value = TagText.decodeLatin1(body, offset, size, reader.options).trim()
+            val value = TagText.decodeLatin1(body, offset, size, reader.options)
             if (value.isNotEmpty()) entries.add(RawTagEntry(key, text = value))
         }
 
@@ -518,6 +518,14 @@ internal object TagLocator {
         text("OriginatorReference", 288, 32)
         text("OriginationDate", 320, 10)
         text("OriginationTime", 330, 8)
+        var timeReference = 0UL
+        for (index in 0..7) timeReference = timeReference or
+            ((body[338 + index].toULong() and 255UL) shl (8 * index))
+        entries.add(RawTagEntry("TimeReference", text = timeReference.toString()))
+        val version = (body[346].toInt() and 255) or ((body[347].toInt() and 255) shl 8)
+        entries.add(RawTagEntry("Version", text = version.toString()))
+        reader.options.checkAllocation(264, "retaining a Broadcast Wave extension")
+        entries.add(RawTagEntry("Extension", binary = body.copyOfRange(338, 602)))
         if (body.size > 602) {
             text("CodingHistory", 602, body.size - 602)
         }

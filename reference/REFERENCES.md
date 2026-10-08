@@ -27,6 +27,7 @@ can hold checkouts without them ever reaching the repository.
 | RIFF WAVE | Microsoft Multimedia Programming Interface and Data Specification 1.0 |
 | WAVE_FORMAT_EXTENSIBLE | Microsoft multichannel WAVE documentation, `KSDATAFORMAT_SUBTYPE` GUIDs |
 | RF64 and BW64 | EBU Tech 3306 (RF64), EBU Tech 3285 (Broadcast Wave Format) |
+| Broadcast Wave writing | [EBU Tech 3285 version 2.0, May 2011](https://tech.ebu.ch/docs/tech/tech3285.pdf), sections 2.3 and 2.4: fixed ASCII fields, little-endian time reference, versioned extension and unknown-loudness sentinel. Implemented from the specification; FFmpeg and ExifTool are executable oracles only |
 | Wave64 | Sony Pictures Digital Wave64 specification |
 | AIFF | [Apple Audio Interchange File Format 1.3](https://blog.zamzar.com/wp-content/uploads/2014/10/aiffspecs.pdf), including the text chunk cardinalities on pages 23 and 24 |
 | AIFF-C | Apple AIFF-C specification, including the compression type registry; [Inside Macintosh: Common Chunks](https://dev.os9.ca/techpubs/mac/Sound/Sound-82.html) for the compressed sample width field. Writer conventions are checked with `afconvert` and ffmpeg |

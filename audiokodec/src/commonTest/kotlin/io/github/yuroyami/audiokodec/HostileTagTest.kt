@@ -16,6 +16,26 @@ import kotlin.test.assertTrue
  */
 class HostileTagTest {
 
+    @Test
+    fun broadcastWaveChunksKeepTypedFailuresUnderTruncationAndMutation() {
+        val original = AudioKodec.writeTags(BextFixtures.audio(), BextFixtures.tags(), BextFixtures.options)
+        for (length in 0..original.size) {
+            expectOnlyKiteFailures("Broadcast Wave truncated to $length bytes") {
+                val cut = original.copyOf(length)
+                AudioKodec.writeTags(cut, AudioKodec.readTags(cut), BextFixtures.options)
+            }
+        }
+        val block = AudioKodec.readTags(original).raw.blocksOf(io.github.yuroyami.audiokodec.tag.TagFormat.BWF_BEXT).single()
+        for (at in block.offset.toInt() until (block.offset + block.size).toInt()) {
+            for (bit in 0..7) {
+                expectOnlyKiteFailures("Broadcast Wave byte $at, bit $bit") {
+                    val mutated = original.copyOf().also { it[at] = (it[at].toInt() xor (1 shl bit)).toByte() }
+                    AudioKodec.writeTags(mutated, AudioKodec.readTags(mutated), BextFixtures.options)
+                }
+            }
+        }
+    }
+
     private val good: ByteArray = run {
         val audio = ByteArray(3_000) { ((it * 29 + 7) and 0xFF).toByte() }
         audio[0] = 0xFF.toByte()

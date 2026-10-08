@@ -198,7 +198,7 @@ them.
 | **WAV (RIFF)** | ✅ | ✅ | Chunk walk with odd-size padding, `fmt `, `data`, `fact` |
 | | ✅ | ✅ | WAVE_FORMAT_EXTENSIBLE, including the channel mask and the subformat GUID |
 | | ✅ | ✅ | Written as extensible above two channels and for custom representable mono/stereo layouts, so the speaker layout survives; layouts a target cannot represent are rejected before output |
-| | ✅ | ✅ | `LIST INFO`, `bext` and an `id3 ` chunk are read; `LIST INFO` is written |
+| | ✅ | ✅ | `LIST INFO`, `bext` and an `id3 ` chunk are read and written; Broadcast Wave output is explicit |
 | **RF64 and BW64** | ✅ | ✅ | `ds64` RIFF/data sizes, sample count and additional oversized-chunk entries. Indexed FIFO size lookup is shared by probing, tag reading and rewriting, with index storage charged to the allocation guard. A 36-byte slot is always reserved after `WAVE`, so a file that passes 4 GiB is upgraded in place; existing table entries survive tag edits in their original order |
 | **Wave64** | ✅ | ❌ | GUID chunk identifiers, 64-bit sizes, 8-byte padding |
 | **AIFF** | ✅ | ✅ | `COMM`, `SSND` with its offset and block size, 80-bit extended sample rate |
@@ -251,7 +251,7 @@ inspected and edited.
 | **APEv2** | ✅ | ✅ | Header and footer, multi-value text items, binary items, cover art. Found at either end of a file |
 | **APEv1** | ✅ | upgraded | Footer only. Writing produces a v2 block |
 | **RIFF INFO** | ✅ | ✅ | UTF-8 `LIST INFO` inside WAV/RF64; supported CSET declarations retain their encoding |
-| **Broadcast Wave `bext`** | ✅ | ❌ | Description, originator, reference, date, time and coding history |
+| **Broadcast Wave `bext`** | ✅ | ✅ | Explicit `BWF_BEXT` output; fixed ASCII widths, unsigned 64-bit time reference, CRLF coding history, retained version/UMID/loudness extension. FFmpeg and ExifTool read-back and unchanged PCM comparisons |
 | **AIFF text chunks** | ✅ | ✅ | ASCII `NAME`, `AUTH`, `(c) `, `ANNO`; compatible UTF-8/Latin-1 reads; Unicode output uses ID3 |
 | **ID3v2 in a RIFF or AIFF chunk** | ✅ | ✅ | An `id3 ` or `ID3 ` chunk, selected explicitly or added by default when native text cannot retain the requested metadata |
 | **Lyrics3v2** | ✅ | ❌ | Read for its content and, more importantly, for its length: a reader that does not know it is there gets every other trailing offset wrong |
@@ -571,8 +571,7 @@ MP4 and ALAC, #6, are under way: the container reads and ALAC decodes. The tags
 inside an MP4, its gapless trim and the ALAC encoder remain, and the first of
 those closes the last tag gap.
 
-Four small leftovers, all refused today rather than done wrong: writing the
-Broadcast Wave `bext` chunk (#43), writing tags into an Ogg file that
+Three small leftovers, all refused today rather than done wrong: writing tags into an Ogg file that
 interleaves several logical streams (#44), Vorbis floor type 0 (#45), and free
 format MPEG audio (#46).
 

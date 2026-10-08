@@ -58,8 +58,11 @@ public class TagWriteOptions(
      * and APE chapter output, requires an existing or selected ID3 carrier.
      * A non-null set selects every writable format to keep. For example, use
      * `setOf(RIFF_INFO, ID3V2_4)` to put both kinds in a WAV file, or an empty
-     * set to remove its writable tag chunks. Read-only blocks such as `bext`
-     * and Lyrics3 are preserved.
+     * set to remove its native text and ID3 chunks. Broadcast Wave is opt-in:
+     * include [TagFormat.BWF_BEXT] to add or rewrite its raw fields, or remove
+     * it when the bundle supplies no BWF block. Other selections preserve an
+     * existing `bext` chunk byte-for-byte. Fixed text is ASCII and truncated
+     * to its field width; coding history uses CRLF endings. Lyrics3 is preserved.
      *
      * When the set names ID3v2.3 or ID3v2.4, that choice takes precedence over
      * [id3Version].
