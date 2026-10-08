@@ -1,6 +1,7 @@
 package io.github.yuroyami.audiokodec.internal.flac
 
 import io.github.yuroyami.audiokodec.CorruptStreamException
+import io.github.yuroyami.audiokodec.AudioKodecException
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
@@ -43,6 +44,8 @@ internal class FlacFrameReader(
     /** Timing fields from a CRC-8-checked header, without decoding samples. */
     class Position(val blockSize: Int, val frameNumber: Long, val sampleNumber: Long)
 
+    class LocatedHeader(val byteOffset: Long, val position: Position)
+
     private val headerBuffer = ByteArray(16)
 
     fun headerAt(at: Long): Position? {
@@ -50,6 +53,29 @@ internal class FlacFrameReader(
         val available = reader.readSome(headerBuffer, 0, headerBuffer.size)
         if (available == 0) return null
         return packetHeader(headerBuffer, available, at)
+    }
+
+    /** Finds a sync and matching header CRC without decoding its subframes. */
+    fun findHeaderFrom(from: Long, until: Long): LocatedHeader? {
+        var at = from
+        while (at < until) {
+            reader.seek(at)
+            val first = reader.readByteOrEof()
+            if (first < 0) return null
+            if (first == 255 && at < Long.MAX_VALUE && reader.readByteOrEof() and 0xFE == 0xF8) {
+                val header = try {
+                    headerAt(at)
+                } catch (_: AudioKodecException) {
+                    // A false sync can name an invalid or guarded stream
+                    // shape. No samples are allocated while reading headers.
+                    null
+                }
+                if (header != null) return LocatedHeader(at, header)
+            }
+            if (at == Long.MAX_VALUE) return null
+            at++
+        }
+        return null
     }
 
     fun packetHeader(bytes: ByteArray, length: Int, at: Long): Position {

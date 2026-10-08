@@ -22,9 +22,10 @@ import io.github.yuroyami.audiokodec.internal.io.SourceReader
  *
  * FLAC frames vary in size, so a position cannot be turned into a byte offset
  * by multiplying. Seeking therefore uses the seek table when the file has one
- * and a binary search over frame headers when it does not, which is why
- * [FlacFrameReader] verifies both checksums: a false sync word has to be
- * rejected rather than decoded.
+ * and a binary search over frame headers when the source size is known.
+ * Header CRC-8 checks reject false syncs, and the selected frame's CRC-16 and
+ * sample range are verified before the landing is used. Unknown-size sources
+ * retain a forward frame walk.
  */
 internal class FlacDecoder(
     private val reader: SourceReader,
@@ -77,6 +78,9 @@ internal class FlacDecoder(
 
     /** Frames to drop from the front of the next decoded block after a seek. */
     private var pendingSkip: Long = 0
+
+    /** The verified landing frame, consumed once after a seek. */
+    private var pendingFrame: FlacFrameReader.Frame? = null
 
     /** Coded sample position expected from the next frame header. */
     private var nextCodedPosition: Long = codedOrigin
@@ -202,7 +206,7 @@ internal class FlacDecoder(
 
     /** Decodes and validates a whole frame before advancing either coded position. */
     private fun readFrame(): FlacFrameReader.Frame? {
-        val frame = frames.decodeAt(nextFrameOffset) ?: return null
+        val frame = pendingFrame?.also { pendingFrame = null } ?: frames.decodeAt(nextFrameOffset) ?: return null
         val statedStart = firstSampleOf(frame)
         if (statedStart != nextCodedPosition) {
             throw CorruptStreamException(
@@ -245,7 +249,14 @@ internal class FlacDecoder(
         // Checking the MD5 only means anything over a whole stream, so a seek
         // abandons it rather than reporting a failure the seek caused.
         md5 = null
+        pendingFrame = null
         exhausted = false
+
+        if (total != null && target == total) {
+            positionFrames = target
+            exhausted = true
+            return target
+        }
 
         if (target == 0L) {
             nextFrameOffset = parsed.audioOffset
@@ -269,10 +280,9 @@ internal class FlacDecoder(
     /**
      * Finds a frame that starts at or before [target].
      *
-     * The seek table is used when it has a useful point. Otherwise the frames
-     * are scanned, which is what the format leaves a reader to do, and
-     * [DecodeOptions.allowSlowSeek] is the caller's control over whether that
-     * is acceptable.
+     * A useful seek-table point is preferred. Otherwise known-size sources
+     * use header bisection and unknown-size sources use a verified frame walk.
+     * [DecodeOptions.allowSlowSeek] controls these unindexed paths.
      */
     private fun findFrameAtOrBefore(target: Long): Landing {
         var best = Landing(parsed.audioOffset, codedOrigin)
@@ -309,15 +319,62 @@ internal class FlacDecoder(
                 "this file has no seek point near frame $target, and slow seeking is off",
             )
         }
-        return scanForward(best, target)
+        return if (reader.size > best.byteOffset) bisectHeaders(best, target) else scanForward(best, target)
+    }
+
+    /** Searches coded positions in byte space, then verifies the actual target frame. */
+    private fun bisectHeaders(from: Landing, target: Long): Landing {
+        var low = from.byteOffset
+        var high = reader.size
+        var candidate = from
+        val lastSample = durationFrames?.let { codedOrigin + it }
+        while (low < high) {
+            val mid = low + (high - low) / 2
+            var header = frames.findHeaderFrom(mid, high)
+            var start = header?.let { firstSampleOf(it.position.sampleNumber, it.position.frameNumber) }
+            // Plausible syncs inside audio can still carry a valid CRC-8.
+            // Ignore positions outside the established coded range.
+            while (header != null && start != null &&
+                (start < candidate.firstSample || (lastSample != null && start >= lastSample))
+            ) {
+                header = frames.findHeaderFrom(header.byteOffset + 1, high)
+                start = header?.let { firstSampleOf(it.position.sampleNumber, it.position.frameNumber) }
+            }
+            if (header == null || start == null || start > target) {
+                high = mid
+                continue
+            }
+            candidate = Landing(header.byteOffset, start)
+            if (target - start < header.position.blockSize) break
+            low = header.byteOffset + 1
+        }
+
+        val frame = try {
+            frames.decodeAt(candidate.byteOffset)
+        } catch (_: CorruptStreamException) {
+            null
+        } catch (_: TruncatedStreamException) {
+            null
+        }
+        if (frame != null && firstSampleOf(frame) == candidate.firstSample &&
+            target - candidate.firstSample in 0 until frame.blockSize.toLong()
+        ) {
+            pendingFrame = frame
+            return candidate
+        }
+
+        // A crafted header can send the search into a real frame's payload,
+        // or put its upper boundary before the target. The fully verified
+        // walk from the original anchor resolves that ambiguity safely.
+        return scanForward(from, target)
     }
 
     /**
      * Walks frames forward from [from] until the one holding [target].
      *
-     * Every frame states where it starts, so this reads headers rather than
-     * decoding audio. A fixed-size stream states a frame number instead of a
-     * sample number, which is multiplied out by the block size.
+     * Used for unknown-size sources and ambiguous header searches. Frames
+     * are fully decoded and verified in this fallback. Fixed-size frame
+     * numbers use STREAMINFO's regular block size, including the short tail.
      */
     private fun scanForward(from: Landing, target: Long): Landing {
         var offset = from.byteOffset
@@ -347,7 +404,11 @@ internal class FlacDecoder(
             }
             if (start > target) break
             landing = Landing(offset, start)
-            if (start > Long.MAX_VALUE - frame.blockSize || start + frame.blockSize > target) break
+            if (start > Long.MAX_VALUE - frame.blockSize) break
+            if (start + frame.blockSize > target) {
+                pendingFrame = frame
+                break
+            }
             if (frame.byteLength <= 0 || offset > Long.MAX_VALUE - frame.byteLength) {
                 throw CorruptStreamException("a FLAC frame offset does not advance", offset)
             }
@@ -456,6 +517,7 @@ internal class FlacDecoder(
         floatBuffer = null
         intBuffer = null
         md5 = null
+        pendingFrame = null
         reader.source.close()
     }
 

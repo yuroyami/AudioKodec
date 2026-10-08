@@ -30,6 +30,25 @@ class FlacOracleTest {
     private val flac: String? by lazy { findOnPath("flac") }
 
     @Test
+    fun headerBisectionKeepsReferenceAudioAndAvoidsReadingItsWholePrefix() {
+        val flac = flac ?: return skip()
+        val samples = FlacBinarySeekFixtures.noise()
+        val wav = temp("binary-seek.wav")
+        wav.writeBytes(AudioKodec.encode(samples, AudioFormat(44_100, 1), EncodeTarget.wav(16)))
+        val encoded = temp("binary-seek.flac")
+        run(listOf(flac, "--silent", "--force", "--no-seektable", "-o", encoded.path, wav.path))
+        assertEquals(true, AudioKodec.verifyFlacMd5(encoded.readBytes()))
+        FlacBinarySeekFixtures.assertCheapSeeks(encoded.readBytes(), samples)
+        val ffmpeg = findOnPath("ffmpeg") ?: return skip()
+        val (embedded, expected) = FlacBinarySeekFixtures.embeddedHeaders()
+        val file = temp("embedded-frame-headers.flac").also { it.writeBytes(embedded) }
+        val raw = temp("embedded-frame-headers.f32")
+        run(listOf(ffmpeg, "-v", "error", "-y", "-i", file.path, "-f", "f32le", raw.path))
+        val buffer = ByteBuffer.wrap(raw.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+        TestSignals.assertExact(expected, FloatArray(buffer.remaining() / 4) { buffer.float })
+    }
+
+    @Test
     fun aReferenceStreamCopyCutDecodesAndSeeksFromItsOwnOrigin() {
         val ffmpeg = findOnPath("ffmpeg") ?: return skip()
         val original = temp("stream-copy-original.flac")

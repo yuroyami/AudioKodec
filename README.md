@@ -163,9 +163,10 @@ Use `DecodeOptions(tolerant = true)` to read a FLAC stream-copy cut whose
 frame numbers retain a nonzero origin. Positions and seeks start at zero;
 duration covers the remaining valid frames. Its original MD5 is unavailable.
 
-Seeking works with or without a seek table. Without one the frames are scanned,
-and both checksums in every frame are verified, so a false sync word is rejected
-rather than decoded as audio.
+Seeking works with or without a seek table. For a source of known size, an
+unindexed seek bisects CRC-8-checked frame headers and verifies the target
+frame's CRC-16 before playback. Unknown-size sources and ambiguous embedded
+headers use a verified forward frame walk. A seek to the known end reads no audio.
 
 ## Ogg
 

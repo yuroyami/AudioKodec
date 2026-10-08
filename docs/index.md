@@ -246,12 +246,17 @@ verification returns `null` because the stored hash describes absent audio.
 ### Seeking
 
 FLAC frames vary in size, so a position cannot be turned into a byte offset by
-multiplying. AudioKodec uses the seek table when the file has one and scans frame
-headers when it does not. Both checksums in every frame are verified during that
-scan, so a byte sequence that happens to look like a frame sync is rejected
-rather than decoded as audio.
+multiplying. AudioKodec uses a useful seek-table point when available. Otherwise,
+a source of known size is bisected using frame-header CRC-8 and coded positions.
+Only the target frame is decoded, with its CRC-16 and sample range verified
+before playback. That decoded frame is retained for the next read. A seek to
+the known end returns immediately without reading audio.
 
-Set `DecodeOptions(allowSlowSeek = false)` to make a seek that would need a scan
+Unknown-size sources use a forward walk that fully verifies each preceding
+frame. The same walk resolves ambiguous CRC-8-valid headers embedded in sample
+data, so a false sync cannot change the samples returned at a requested position.
+
+Set `DecodeOptions(allowSlowSeek = false)` to make an unindexed seek
 throw instead of taking its time.
 
 ### Editing a FLAC file's tags
