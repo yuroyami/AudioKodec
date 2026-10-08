@@ -8,7 +8,6 @@ import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.tag.FlacPicture
-import io.github.yuroyami.audiokodec.internal.tag.TagText
 import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
 import io.github.yuroyami.audiokodec.tag.TagBundle
 
@@ -122,14 +121,14 @@ internal object OggTagWriter {
         commentIndex: Int,
         chaptersPreservedElsewhere: Boolean,
     ): ByteArray {
-        val vendor = existingVendor(codec, headers, commentIndex) ?: VorbisComment.DEFAULT_VENDOR
+        val vendor = existingVendor(codec, headers, commentIndex)
         val body = VorbisComment.build(
             tags,
-            vendor,
             // Ogg FLAC has native PICTURE metadata packets. The other Ogg
             // mappings carry pictures as base64 comments.
             includePictures = codec != AudioCodec.FLAC,
             chaptersPreservedElsewhere = chaptersPreservedElsewhere,
+            preservedVendor = vendor,
         )
         val suffix = existingCommentSuffix(codec, headers, commentIndex)
         return when (codec) {
@@ -194,7 +193,7 @@ internal object OggTagWriter {
         codec: AudioCodec,
         headers: List<ByteArray>,
         commentIndex: Int,
-    ): String? {
+    ): ByteArray? {
         val packet = headers.getOrNull(commentIndex) ?: return null
         val from = when (codec) {
             AudioCodec.VORBIS -> 7
@@ -209,7 +208,7 @@ internal object OggTagWriter {
             ((packet[from + 3].toInt() and 0xFF) shl 24)
         val bodyStart = from + 4
         if (length < 0 || length > packet.size - bodyStart) return null
-        return TagText.decodeUtf8OrNull(packet, bodyStart, length)
+        return packet.copyOfRange(bodyStart, bodyStart + length)
     }
 
     /** Opaque bytes after the declared comment list, preserved across edits. */

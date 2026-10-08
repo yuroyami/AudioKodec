@@ -224,14 +224,22 @@ Unknown Vorbis comment rewrites append raw entries directly, with work
 proportional to count and text bytes. They retain order, repetitions, key
 spelling and empty values. The separate vendor header is marked internally;
 real `VENDOR` comments remain user comments, and FLAC/Ogg rewrites preserve the
-source header vendor. Only the six modelled ReplayGain/R128 names are excluded
-from raw emission, so unmodelled loudness names survive. Common tests cover
+source header vendor. Readable modelled ReplayGain/R128 entries are rebuilt,
+while unmodelled loudness names survive. Common tests cover
 repeated edits, caller-created entries, gain removal, colliding hashes and
 unchanged audio. Mutagen and `metaflac` check native FLAC in both directions;
 the JVM probe records 8,000 to 64,000-entry rewrite timings without a latency
 threshold.
 
-ID3, APE and Vorbis share one exclusion rule for the six modelled loudness
+Invalid UTF-8 in a Vorbis comment or vendor header does not stop strict or
+tolerant audio decoding. Readable fields are recovered individually, and
+unreadable entries retain their stored bytes in the raw view. Unrelated edits
+preserve them; explicit field edits replace or remove unreadable comments.
+Original-byte retention and field-name decoding respect allocation limits.
+FFmpeg-generated Vorbis, Opus, Ogg FLAC and native FLAC files retain identical
+decoded samples across metadata mutations and repairs.
+
+Text entries in ID3, APE and Vorbis share one exclusion rule for the six modelled loudness
 names. Other names retain their original key or ID3 description. APE raw text
 retains leading, interior and trailing empty pieces, with each entry charged
 to the allocation guard. Invalid UTF-8 still rejects an APEv2 block.

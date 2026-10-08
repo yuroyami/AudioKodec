@@ -107,7 +107,8 @@ internal object OggTagReadFixtures {
             AudioCodec.FLAC -> TagStressFixtures.flacAudio(native)
             else -> ByteArray(32_000)
         }
-        repeat(audioPages) { page((it + 1) * 960L, if (it + 1 == audioPages) 4 else 0, audio) }
+        val framesPerPage = if (codec == AudioCodec.FLAC) 16L else 960L
+        repeat(audioPages) { page((it + 1) * framesPerPage, if (it + 1 == audioPages) 4 else 0, audio) }
         return File(sink.toByteArray(), audioStart, setupStart)
     }
 }

@@ -64,10 +64,11 @@ internal object FlacTagWriter {
         if (includeTags) {
             val vendor = parsed.tagBlocks.asSequence()
                 .flatMap { it.entries.asSequence() }
-                .firstOrNull { it.isVorbisVendorHeader }?.text ?: VorbisComment.DEFAULT_VENDOR
+                .firstOrNull { it.isVorbisVendorHeader }
             val comment = VorbisComment.build(
-                tags, vendor, includePictures = false,
+                tags, vendor?.text ?: VorbisComment.DEFAULT_VENDOR, includePictures = false,
                 chaptersPreservedElsewhere = chaptersPreservedElsewhere,
+                preservedVendor = vendor?.binary,
             )
             bodies.add(FlacMetadata.TYPE_VORBIS_COMMENT to checkedBody("Vorbis comment", comment))
             for (picture in tags.pictures) {

@@ -193,8 +193,9 @@ internal object TagAssembler {
         legacy: Boolean,
     ): List<TagPicture> {
         val pictures = ArrayList<TagPicture>()
-        val coverArtMime = block.entries.firstOrNull { it.key.equals("COVERARTMIME", true) }?.text
+        val coverArtMime = block.entries.firstOrNull { !it.isOpaqueVorbisComment && it.key.equals("COVERARTMIME", true) }?.text
         for (entry in block.entries) {
+            if (entry.isOpaqueVorbisComment) continue
             val key = entry.key.uppercase()
             if (!legacy && key == "METADATA_BLOCK_PICTURE") {
                 // A FLAC file carries the structure in a metadata block, so

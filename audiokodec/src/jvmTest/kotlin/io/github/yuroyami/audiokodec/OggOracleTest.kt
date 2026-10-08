@@ -4,13 +4,18 @@ import io.github.yuroyami.audiokodec.tag.TagField
 import io.github.yuroyami.audiokodec.tag.TagFormat
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.ogg.OggReader
+import io.github.yuroyami.audiokodec.internal.ogg.OggCrc
+import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -27,6 +32,82 @@ class OggOracleTest {
 
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
     private val flac: String? by lazy { findOnPath("flac") }
+
+    @Test
+    fun malformedCommentTextDoesNotChangeReferenceEncodedAudio() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (encoder in listOf("libvorbis", "libopus", "flac", "native_flac")) {
+            val file = temp("bad_utf8_$encoder.${if (encoder == "native_flac") "flac" else "ogg"}")
+            run(listOf(
+                ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                "sine=frequency=440:sample_rate=48000:duration=0.5", "-c:a",
+                if (encoder == "native_flac") "flac" else encoder,
+                "-metadata", "title=Seed", "-metadata", "artist=Readable", file.absolutePath,
+            ), encoder)
+            val original = file.readBytes()
+            val raw = temp("bad_utf8_$encoder.f32")
+            run(listOf(ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", file.absolutePath,
+                "-f", "f32le", raw.absolutePath), encoder)
+            val floats = ByteBuffer.wrap(raw.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+            val reference = FloatArray(floats.remaining() / 4) { floats.float }
+            val baseline = AudioKodec.decode(original).samples
+            assertEquals(24_000, baseline.size, "$encoder: the full half-second recording")
+            if (encoder.contains("flac")) TestSignals.assertExact(reference, baseline, encoder)
+            // Floating-point reconstruction in Vorbis and Opus can differ
+            // from FFmpeg. The existing codec oracle bound is 1e-4 here.
+            else {
+                // FFmpeg can omit the terminal Vorbis overlap. Compare every
+                // reference sample; the full output must remain identical
+                // across the metadata mutations and rewrites below.
+                assertTrue(reference.size <= baseline.size, encoder)
+                TestSignals.assertClose(reference, baseline.copyOf(reference.size), 1e-4f, encoder)
+            }
+            for (badVendor in listOf(false, true)) {
+                val bytes = invalidCommentText(original, badVendor)
+                for (tolerant in listOf(false, true)) {
+                    TestSignals.assertExact(baseline, AudioKodec.decode(bytes, DecodeOptions(tolerant = tolerant)).samples,
+                        "$encoder, badVendor=$badVendor, tolerant=$tolerant")
+                }
+                val tags = AudioKodec.readTags(bytes)
+                assertEquals("Readable", tags[TagField.ARTIST], encoder)
+                if (badVendor) assertEquals("Seed", tags[TagField.TITLE], encoder) else assertNull(tags[TagField.TITLE], encoder)
+                val repaired = AudioKodec.writeTags(bytes, tags.edit { set(TagField.TITLE, "Repaired") })
+                assertEquals("Repaired", AudioKodec.readTags(repaired)[TagField.TITLE], encoder)
+                TestSignals.assertExact(baseline, AudioKodec.decode(repaired).samples, encoder)
+            }
+        }
+    }
+
+    private fun invalidCommentText(original: ByteArray, vendor: Boolean): ByteArray {
+        val info = AudioKodec.probe(original)
+        val block = AudioKodec.readTags(original).raw.blocksOf(TagFormat.VORBIS_COMMENT).first()
+        val from = block.offset.toInt() + if (info.container != AudioContainer.OGG) 0 else when (info.codec) {
+            AudioCodec.VORBIS -> 7
+            AudioCodec.OPUS -> 8
+            else -> 4
+        }
+        val end = assertNotNull(VorbisComment.contentEnd(original, from, original.size))
+        val seed = "Seed".encodeToByteArray()
+        val at = if (vendor) from + 4 else (from..end - seed.size).first { start ->
+            seed.indices.all { original[start + it] == seed[it] }
+        } + seed.lastIndex
+        val bytes = original.copyOf().also { it[at] = 0xE9.toByte() }
+        if (info.container == AudioContainer.OGG) {
+            val reader = OggReader(SourceReader(original.asAudioSource(), DecodeOptions.DEFAULT), DecodeOptions.DEFAULT)
+            var offset = 0L
+            while (true) {
+                val page = assertNotNull(reader.pageAt(offset))
+                val next = offset + page.byteLength
+                if (at < next) {
+                    val crc = OggCrc.ofPage(bytes, offset.toInt(), next.toInt(), offset.toInt() + 22)
+                    repeat(4) { bytes[offset.toInt() + 22 + it] = (crc ushr (8 * it)).toByte() }
+                    break
+                }
+                offset = next
+            }
+        }
+        return bytes
+    }
 
     @Test
     fun referenceTagsRemainReadableWhenLaterAudioPagesAreDamaged() {

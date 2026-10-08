@@ -716,6 +716,16 @@ a user comment. Actual user comments named `VENDOR` remain intact, including
 caller-constructed entries with the same text as the header. FLAC and Ogg tag
 rewrites preserve the source header vendor, including an empty string.
 
+Invalid UTF-8 in one comment or the vendor header does not prevent audio
+decoding in either mode. Readable comments remain available. An unreadable
+comment has `text = null` in the raw view and its complete stored `KEY=value`
+bytes in `binary`; a readable ASCII key is retained, otherwise the key is
+`<invalid comment>`. An unreadable vendor stores just its vendor bytes there.
+Ordinary edits preserve those bytes. Explicit `TagEditor.set`, `add` or
+`remove` calls for a modelled field replace or remove its unreadable entries.
+`clear()` removes raw comments, while the source vendor header survives a
+rewrite. Structural lengths and allocation limits still apply.
+
 Modelled fields, pictures and the six recognised ReplayGain/R128 names are
 rebuilt from the edited bundle. Removing those values does not reintroduce
 their old raw entries. Unmodelled names sharing the loudness prefixes remain

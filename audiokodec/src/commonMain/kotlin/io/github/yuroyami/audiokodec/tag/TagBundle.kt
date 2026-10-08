@@ -2,6 +2,8 @@ package io.github.yuroyami.audiokodec.tag
 
 import io.github.yuroyami.audiokodec.internal.tag.Id3ChapterSource
 import io.github.yuroyami.audiokodec.internal.tag.Id3Dates
+import io.github.yuroyami.audiokodec.internal.tag.TagMapping
+import io.github.yuroyami.audiokodec.internal.tag.isModelledLoudnessName
 
 /**
  * A tag format, meaning the way a block of metadata is laid out.
@@ -241,7 +243,11 @@ public class RawTagEntry(
     public val key: String,
     /** The value as text, or null when it is binary. */
     public val text: String? = null,
-    /** The value as bytes, for entries that are not text. */
+    /**
+     * The value as bytes, for entries that are not text. An unreadable Vorbis
+     * comment retains its complete stored `KEY=value` bytes here; an
+     * unreadable vendor header retains just its vendor bytes.
+     */
     public val binary: ByteArray? = null,
     /**
      * Language code for the formats that carry one, such as ID3v2's comment
@@ -276,6 +282,15 @@ public class RawTagEntry(
 
     internal fun markVorbisVendorHeader(): RawTagEntry {
         isVorbisVendorHeader = true
+        return this
+    }
+
+    /** Unreadable UTF-8 is retained without pretending it is modelled text. */
+    internal var isOpaqueVorbisComment: Boolean = false
+        private set
+
+    internal fun markOpaqueVorbisComment(): RawTagEntry {
+        isOpaqueVorbisComment = true
         return this
     }
 
@@ -426,12 +441,14 @@ public class TagEditor internal constructor(private val original: TagBundle) {
 
     /** Replaces every value of [field] with [value]. */
     public fun set(field: TagField, value: String) {
+        discardOpaqueCommentsFor(field)
         if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         fields[field] = mutableListOf(value)
     }
 
     /** Replaces every value of [field] with [values]. */
     public fun set(field: TagField, values: List<String>) {
+        discardOpaqueCommentsFor(field)
         if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         if (values.isEmpty()) fields.remove(field) else fields[field] = values.toMutableList()
     }
@@ -443,12 +460,14 @@ public class TagEditor internal constructor(private val original: TagBundle) {
 
     /** Adds another value to [field], keeping the ones already there. */
     public fun add(field: TagField, value: String) {
+        discardOpaqueCommentsFor(field)
         if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         fields.getOrPut(field) { mutableListOf() }.add(value)
     }
 
     /** Removes [field] entirely. */
     public fun remove(field: TagField) {
+        discardOpaqueCommentsFor(field)
         if (field == TagField.DATE) raw = Id3Dates.withoutPrimaryEntries(raw)
         fields.remove(field)
     }
@@ -469,6 +488,9 @@ public class TagEditor internal constructor(private val original: TagBundle) {
 
     /** Removes every picture, or every picture of [type] when one is given. */
     public fun removePictures(type: PictureType? = null) {
+        if (type == null) discardOpaqueComments {
+            it.key.uppercase() in listOf("METADATA_BLOCK_PICTURE", "COVERART", "COVERARTMIME")
+        }
         if (type == null) pictures.clear() else pictures.removeAll { it.type == type }
     }
 
@@ -480,7 +502,27 @@ public class TagEditor internal constructor(private val original: TagBundle) {
 
     /** Sets the loudness information, or clears it with null. */
     public fun setReplayGain(value: ReplayGain?) {
+        discardOpaqueComments { isModelledLoudnessName(it.key) }
         replayGain = value
+    }
+
+    private fun discardOpaqueCommentsFor(field: TagField) = discardOpaqueComments { entry ->
+        TagMapping.fieldFor(TagFormat.VORBIS_COMMENT, entry) == field ||
+            TagMapping.numberAndTotalFor(TagFormat.VORBIS_COMMENT, entry.key)?.let {
+                field == it.first || field == it.second
+            } == true
+    }
+
+    private fun discardOpaqueComments(matches: (RawTagEntry) -> Boolean) {
+        if (raw.blocks.none { block -> block.format == TagFormat.VORBIS_COMMENT &&
+                block.entries.any { it.isOpaqueVorbisComment && matches(it) }
+            }) return
+        raw = RawTags(raw.blocks.map { block ->
+            if (block.format != TagFormat.VORBIS_COMMENT ||
+                block.entries.none { it.isOpaqueVorbisComment && matches(it) }
+            ) block else RawTagBlock(block.format, block.offset, block.size,
+                block.entries.filterNot { it.isOpaqueVorbisComment && matches(it) })
+        })
     }
 
     internal fun build(): TagBundle = TagBundle(

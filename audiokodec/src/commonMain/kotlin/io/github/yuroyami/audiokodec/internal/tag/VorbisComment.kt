@@ -53,7 +53,11 @@ internal object VorbisComment {
 
         val vendorLength = readLength()
         if (vendorLength < 0 || vendorLength > to - position) return null
-        val vendor = TagText.decodeUtf8OrNull(bytes, position, vendorLength, options) ?: return null
+        val vendor = TagText.decodeUtf8OrNull(bytes, position, vendorLength, options)
+        val vendorBytes = if (vendor == null) {
+            options.checkAllocation(vendorLength.toLong(), "retaining an unreadable Vorbis vendor")
+            bytes.copyOfRange(position, position + vendorLength)
+        } else null
         position += vendorLength
 
         if (position > to - 4) return null
@@ -72,15 +76,23 @@ internal object VorbisComment {
         // The header is separate from user comments, including comments
         // whose key is also VENDOR. Retain even an empty header string.
         rememberEntry()
-        entries.add(RawTagEntry("VENDOR", text = vendor).markVorbisVendorHeader())
+        entries.add(RawTagEntry("VENDOR", text = vendor, binary = vendorBytes).markVorbisVendorHeader())
         var read = 0
         while (read < count) {
             if (position > to - 4) return null
             val length = readLength()
             if (length < 0 || length > to - position) return null
-            val text = TagText.decodeUtf8OrNull(bytes, position, length, options) ?: return null
+            val start = position
+            val text = TagText.decodeUtf8OrNull(bytes, start, length, options)
             position += length
             read++
+            if (text == null) {
+                rememberEntry()
+                options.checkAllocation(length.toLong(), "retaining an unreadable Vorbis comment")
+                entries.add(RawTagEntry(opaqueKey(bytes, start, length, options),
+                    binary = bytes.copyOfRange(start, position)).markOpaqueVorbisComment())
+                continue
+            }
             val separator = text.indexOf('=')
             if (separator <= 0) continue
             if (!validFieldName(text, separator)) continue
@@ -90,6 +102,18 @@ internal object VorbisComment {
             entries.add(RawTagEntry(key, text = value))
         }
         return RawTagBlock(TagFormat.VORBIS_COMMENT, offset, size, entries)
+    }
+
+    /** Recover only a valid ASCII field name, without guessing the charset. */
+    private fun opaqueKey(bytes: ByteArray, from: Int, length: Int, options: DecodeOptions): String {
+        for (index in 0 until length) {
+            val code = bytes[from + index].toInt() and 0xFF
+            if (code == '='.code) {
+                return if (index > 0) TagText.decodeUtf8OrNull(bytes, from, index, options) ?: "<invalid comment>" else "<invalid comment>"
+            }
+            if (code !in 0x20..0x7D) break
+        }
+        return "<invalid comment>"
     }
 
     private fun validFieldName(text: String, end: Int): Boolean {
@@ -158,9 +182,11 @@ internal object VorbisComment {
         vendor: String = DEFAULT_VENDOR,
         includePictures: Boolean = true,
         chaptersPreservedElsewhere: Boolean = false,
+        preservedVendor: ByteArray? = null,
     ): ByteArray {
         requireRepresentable(tags, chaptersPreservedElsewhere)
-        val items = ArrayList<String>()
+        val items = ArrayList<ByteArray>()
+        fun addItem(value: String) { items.add(value.encodeToByteArray()) }
 
         for ((field, values) in tags.fields) {
             val key = TagMapping.vorbisKeyFor(field) ?: throw UnsupportedFeatureException(
@@ -168,38 +194,38 @@ internal object VorbisComment {
             )
             for (value in values) {
                 if (value.isEmpty()) continue
-                items.add("$key=$value")
+                addItem("$key=$value")
             }
         }
 
         tags.replayGain?.let { gain ->
             if (gain.isR128) {
                 gain.trackGainDb?.let {
-                    items.add("R128_TRACK_GAIN=${formatR128Gain("R128_TRACK_GAIN", it)}")
+                    addItem("R128_TRACK_GAIN=${formatR128Gain("R128_TRACK_GAIN", it)}")
                 }
                 gain.albumGainDb?.let {
-                    items.add("R128_ALBUM_GAIN=${formatR128Gain("R128_ALBUM_GAIN", it)}")
+                    addItem("R128_ALBUM_GAIN=${formatR128Gain("R128_ALBUM_GAIN", it)}")
                 }
                 // The Opus convention has no peak fields. A peak is a sample
                 // value rather than a level against a reference, so the
                 // ReplayGain field states it correctly alongside R128 gains.
-                gain.trackPeak?.let { items.add("REPLAYGAIN_TRACK_PEAK=$it") }
-                gain.albumPeak?.let { items.add("REPLAYGAIN_ALBUM_PEAK=$it") }
+                gain.trackPeak?.let { addItem("REPLAYGAIN_TRACK_PEAK=$it") }
+                gain.albumPeak?.let { addItem("REPLAYGAIN_ALBUM_PEAK=$it") }
             } else {
                 gain.trackGainDb?.let {
-                    items.add("REPLAYGAIN_TRACK_GAIN=${Id3v2Writer.formatDecibels(it)}")
+                    addItem("REPLAYGAIN_TRACK_GAIN=${Id3v2Writer.formatDecibels(it)}")
                 }
-                gain.trackPeak?.let { items.add("REPLAYGAIN_TRACK_PEAK=$it") }
+                gain.trackPeak?.let { addItem("REPLAYGAIN_TRACK_PEAK=$it") }
                 gain.albumGainDb?.let {
-                    items.add("REPLAYGAIN_ALBUM_GAIN=${Id3v2Writer.formatDecibels(it)}")
+                    addItem("REPLAYGAIN_ALBUM_GAIN=${Id3v2Writer.formatDecibels(it)}")
                 }
-                gain.albumPeak?.let { items.add("REPLAYGAIN_ALBUM_PEAK=$it") }
+                gain.albumPeak?.let { addItem("REPLAYGAIN_ALBUM_PEAK=$it") }
             }
         }
 
         if (includePictures) {
             for (picture in tags.pictures) {
-                items.add("METADATA_BLOCK_PICTURE=" + Base64.encode(FlacPicture.build(picture)))
+                addItem("METADATA_BLOCK_PICTURE=" + Base64.encode(FlacPicture.build(picture)))
             }
         }
 
@@ -208,6 +234,10 @@ internal object VorbisComment {
         for (block in tags.raw.blocksOf(io.github.yuroyami.audiokodec.tag.TagFormat.VORBIS_COMMENT)) {
             for (entry in block.entries) {
                 if (entry.isVorbisVendorHeader) continue
+                if (entry.isOpaqueVorbisComment) {
+                    entry.binary?.let { items.add(it) }
+                    continue
+                }
                 val key = entry.key.uppercase()
                 if (TagMapping.fieldFor(block.format, entry) != null) continue
                 if (!validFieldName(entry.key, entry.key.length)) continue
@@ -216,12 +246,14 @@ internal object VorbisComment {
                 val value = entry.text ?: continue
                 // Repeated comments are stored data, so no membership
                 // check belongs here. Appending retains order in linear work.
-                items.add("${entry.key}=$value")
+                addItem("${entry.key}=$value")
             }
         }
 
-        val vendorBytes = vendor.encodeToByteArray()
-        val itemBytes = items.map { it.encodeToByteArray() }
+        val vendorBytes = preservedVendor ?: tags.raw.blocksOf(TagFormat.VORBIS_COMMENT)
+            .asSequence().flatMap { it.entries.asSequence() }
+            .firstOrNull { it.isVorbisVendorHeader }?.binary ?: vendor.encodeToByteArray()
+        val itemBytes = items
         var size = 8L + vendorBytes.size
         for (item in itemBytes) {
             size += 4L + item.size
