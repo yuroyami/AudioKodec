@@ -35,6 +35,50 @@ class OggOracleTest {
     private val flac: String? by lazy { findOnPath("flac") }
 
     @Test
+    fun positiveVorbisAndFlacGranulesPreserveReferenceDurationAndSeeks() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for ((encoder, seconds, offset) in listOf(Triple("libvorbis", 20, 22_050L), Triple("flac", 3, 20_000L))) {
+            val file = temp("granule_origin_$encoder.ogg")
+            run(listOf(ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i",
+                "sine=frequency=997:sample_rate=44100:duration=$seconds", "-c:a", encoder,
+                "-f", "ogg", file.path), encoder)
+            val original = file.readBytes()
+            val shifted = OggGranuleFixtures.shift(original, offset)
+            val raised = temp("granule_raised_$encoder.ogg").also { it.writeBytes(shifted) }
+            val firstPcm = temp("granule_origin_$encoder.f32")
+            val raisedPcm = temp("granule_raised_$encoder.f32")
+            for ((input, output) in listOf(file to firstPcm, raised to raisedPcm)) {
+                run(listOf(ffmpeg, "-v", "error", "-y", "-i", input.path, "-f", "f32le", output.path), encoder)
+            }
+            assertContentEquals(firstPcm.readBytes(), raisedPcm.readBytes())
+            val baseline = AudioKodec.decode(original)
+            assertEquals(seconds * 44_100, baseline.frames)
+            val floats = ByteBuffer.wrap(firstPcm.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+            val reference = FloatArray(floats.remaining() / 4) { floats.float }
+            for (tolerant in listOf(false, true)) {
+                val options = DecodeOptions(tolerant = tolerant)
+                assertEquals(baseline.frames.toLong(), AudioKodec.probe(shifted, options).durationFrames)
+                val decoded = AudioKodec.decode(shifted, options)
+                TestSignals.assertExact(baseline.samples, decoded.samples, encoder)
+                assertTrue(reference.size <= decoded.samples.size)
+                if (encoder == "flac") TestSignals.assertExact(reference, decoded.samples, encoder)
+                else TestSignals.assertClose(reference, decoded.samples.copyOf(reference.size), 1e-4f, encoder)
+                AudioKodec.open(shifted, options).use { decoder ->
+                    for (target in listOf(0L, 1L, baseline.frames / 3L, baseline.frames / 2L, baseline.frames - 512L)) {
+                        assertEquals(target, decoder.seek(target))
+                        val block = assertNotNull(decoder.nextFrame())
+                        assertEquals(target, block.positionFrames)
+                        val wanted = baseline.samples.copyOfRange(target.toInt(), target.toInt() + block.frameCount)
+                        val actual = block.samples.copyOf(block.sampleCount)
+                        if (encoder == "flac") TestSignals.assertExact(wanted, actual, encoder)
+                        else TestSignals.assertClose(wanted, actual, 1e-4f, encoder)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun damagedReferencePagesCannotSpliceLaterAudioIntoThePrefix() {
         val ffmpeg = ffmpeg ?: return skip()
         for (encoder in listOf("libopus", "libvorbis", "flac")) {

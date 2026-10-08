@@ -295,12 +295,17 @@ println(info.codec.displayName)     // Opus
 println(info.durationSeconds)       // 213.5
 ```
 
-The length comes from the granule position on the last page, which is the only
-place an Ogg file records it. For Opus the pre-skip is subtracted, because those
-samples are an artefact of the encoder and are not part of the recording, and
-so is the start of a stream cut out of a longer one. Decoding drops the same
-samples: the pre-skip at the front and, at the back, whatever the last page's
-granule position says lies past the end of the recording.
+Length comes from the last granule minus the stream's start offset. Opus,
+Vorbis and FLAC derive that offset from the first usable audio page and the
+completed samples in its packets. Positions and seeks count from zero even
+when stored granules begin above zero. Opus also subtracts pre-skip, and Vorbis
+counts overlapping windows with no output from its priming packet. These
+length calculations read packet headers and modes without decoding samples.
+
+Vorbis start timing and end trim cannot be separated when the first usable
+granule also ends the stream. A positive origin in that layout is named and
+refused with `UnsupportedFeatureException` in either mode. Ordinary single-page
+Vorbis recordings retain their zero origin and end trimming.
 
 Opus always decodes at 48 kHz, whatever rate the header says the material was
 recorded at, and applies the header's output gain. Samples are floats and are

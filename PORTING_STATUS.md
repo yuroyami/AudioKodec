@@ -108,6 +108,10 @@ subject to runner availability, including account billing. Within the suites:
   its length. Opening resolves that duration; seeking and strict EOF agree.
 - Ogg FLAC files from the reference encoder decode **bit-exactly**, seek to the
   sample, and survive a tag rewrite that the reference decoder then accepts.
+- Positive granule origins in Ogg Vorbis and FLAC retain the correct duration,
+  end trim, samples and logical seek positions. Common fixtures and shifted
+  FFmpeg recordings cover both modes and source sizes. A positive Vorbis origin
+  sharing its only usable granule with end trim is named and refused.
 - The headers and comments of Ogg Vorbis, Ogg Opus and Ogg Speex files from
   ffmpeg are read, including the length of each.
 - Opus decodes **bit-exactly** against libopus 1.5.2 built without its SIMD

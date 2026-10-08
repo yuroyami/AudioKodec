@@ -144,7 +144,7 @@ class VorbisTest {
         }
     }
 
-    private fun file(): ByteArray = decodeBase64(FILE)
+    internal fun file(): ByteArray = decodeBase64(FILE)
 
     private fun decodeBase64(text: String): ByteArray {
         val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"

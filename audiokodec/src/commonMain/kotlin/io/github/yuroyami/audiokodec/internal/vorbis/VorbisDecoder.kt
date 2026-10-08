@@ -48,7 +48,7 @@ internal class VorbisDecoder(
     private val identification: VorbisIdentification =
         VorbisConfig.parseIdentification(headerPacket(0), options, stream.firstPageOffset)
 
-    private val config: VorbisConfig = VorbisConfig.parseSetup(
+    private val config: VorbisConfig = parsed.vorbisConfig ?: VorbisConfig.parseSetup(
         headerPacket(2), identification, options, stream.firstPageOffset,
     )
 
@@ -218,7 +218,7 @@ internal class VorbisDecoder(
             }
             if (page.isLast) return 0L
             if (page.endsAPacket && produced > 0) {
-                val trim = produced - page.granulePosition
+                val trim = produced - (page.granulePosition - parsed.startGranule)
                 return if (trim > 0) trim else 0L
             }
         }
@@ -276,7 +276,7 @@ internal class VorbisDecoder(
                 // fresh start always does, so this is checked before the count.
                 if (packet.granule < 0) continue
                 awaitingAnchor = false
-                val end = packet.granule
+                val end = packet.granule - parsed.startGranule
                 if (seekTarget >= end) {
                     pendingDiscard = seekTarget - end
                     continue
@@ -518,6 +518,7 @@ internal class VorbisDecoder(
                 to = parsed.streamEndOffset,
                 target = target,
                 options = options,
+                granuleOffset = parsed.startGranule,
                 requireFreshStart = true,
             )
         }

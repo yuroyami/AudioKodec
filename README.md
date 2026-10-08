@@ -178,6 +178,10 @@ Vorbis, Opus and FLAC inside Ogg all decode, seeking included. Speex is
 identified and its headers, length and tags are read; its audio does not
 decode yet, and `open` says so by name rather than failing obscurely.
 
+Positive stream origins are subtracted from length, and positions and seeks
+start at zero. A Vorbis stream whose only usable granule mixes a positive
+origin with end trim is refused with `UnsupportedFeatureException`.
+
 Opus decodes the whole format: the SILK speech codec, the CELT music codec, the
 hybrid of the two, the joins between them, and every channel mapping, from
 mono through 7.1 surround to ambisonics. Its codec core supports lost-packet

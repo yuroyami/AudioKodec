@@ -228,6 +228,7 @@ internal class OggFlacDecoder(
             to = parsed.streamEndOffset,
             target = target,
             options = options,
+            granuleOffset = parsed.startGranule,
         )
         packets = ogg.packets(stream.serialNumber, landing.pageOffset, parsed.streamEndOffset)
         pendingSkip = (target - landing.startFrame).coerceAtLeast(0L)
@@ -306,7 +307,7 @@ internal object OggSeek {
         to: Long,
         target: Long,
         options: DecodeOptions,
-        /** Subtracted from every granule position, which Opus needs. */
+        /** Subtracted from every granule position to compare logical positions. */
         granuleOffset: Long = 0L,
         /**
          * When true, only a page that no packet continues onto counts as a

@@ -6,15 +6,20 @@ import io.github.yuroyami.audiokodec.AudioKodecException
 import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
+import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.UnsupportedFormatException
 import io.github.yuroyami.audiokodec.internal.flac.FlacDecoder
+import io.github.yuroyami.audiokodec.internal.flac.FlacFrameReader
+import io.github.yuroyami.audiokodec.internal.flac.FlacMetadata
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.opus.OpusMultistreamDecoder
 import io.github.yuroyami.audiokodec.internal.opus.OpusPacket
 import io.github.yuroyami.audiokodec.internal.tag.FlacPicture
 import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
 import io.github.yuroyami.audiokodec.internal.vorbis.VorbisDecoder
+import io.github.yuroyami.audiokodec.internal.vorbis.VorbisBitReader
+import io.github.yuroyami.audiokodec.internal.vorbis.VorbisConfig
 import io.github.yuroyami.audiokodec.tag.RawTagBlock
 import io.github.yuroyami.audiokodec.tag.RawTagEntry
 import io.github.yuroyami.audiokodec.tag.TagFormat
@@ -108,10 +113,9 @@ internal object OggAnalyser {
          * The granule position of the stream's first sample, which is zero
          * unless the stream was cut out of a longer one.
          *
-         * Only Opus states it, by giving the first page that finishes a
-         * packet a granule position larger than the samples those packets
-         * hold; RFC 7845 section 4.5 defines it. The other mappings leave it
-         * to their decoders, which work it out from their own blocks.
+         * Derived from the first usable audio page's granule and completed
+         * packet lengths for Opus, Vorbis and FLAC. Vorbis priming contributes
+         * no PCM, and a page stating only end trim cannot establish an origin.
          */
         val startGranule: Long,
         /**
@@ -126,6 +130,8 @@ internal object OggAnalyser {
         val headersEndAtPageBoundary: Boolean,
         /** Failure at the end of a salvaged prefix, retained for an empty decode. */
         val terminalFailure: AudioKodecException?,
+        /** Setup already parsed to read Vorbis packet lengths, reused by playback. */
+        val vorbisConfig: VorbisConfig?,
     )
 
     private class Headers(
@@ -160,13 +166,18 @@ internal object OggAnalyser {
         } else {
             audioStart
         }
-        val startGranule = if (audio.codec == AudioCodec.OPUS) opusStartGranule(ogg, audio, audioStart, options) else 0L
+        val vorbisConfig = if (audio.codec == AudioCodec.VORBIS) readVorbisConfig(headers, options) else null
+        val startGranule = when (audio.codec) {
+            AudioCodec.OPUS -> opusStartGranule(ogg, audio, audioStart, options)
+            AudioCodec.VORBIS, AudioCodec.FLAC -> audioStartGranule(reader, ogg, headers, streamEnd, options, vorbisConfig)
+            else -> 0L
+        }
         val duration = when {
             // Header-only granules cannot state an audio length. Unknown lets
             // the decoder meet any later damage rather than declaring EOF.
             granule <= 0 -> null
             audio.codec == AudioCodec.OPUS -> (granule - startGranule - audio.preSkip).coerceAtLeast(0L)
-            else -> granule
+            else -> (granule - startGranule).coerceAtLeast(0L)
         }
         return Parsed(
             streams = headers.streams,
@@ -180,7 +191,84 @@ internal object OggAnalyser {
             headerPacketCount = headers.packets.size,
             headersEndAtPageBoundary = headers.endsPage,
             terminalFailure = end.failure,
+            vorbisConfig = vorbisConfig,
         )
+    }
+
+    /** Damaged or unsupported setup can still be probed; playback retains its typed failure. */
+    private fun readVorbisConfig(headers: Headers, options: DecodeOptions): VorbisConfig? = try {
+        val id = VorbisConfig.parseIdentification(headers.packets[0], options, headers.audio.firstPageOffset)
+        VorbisConfig.parseSetup(headers.packets[2], id, options, headers.audio.firstPageOffset)
+    } catch (_: CorruptStreamException) {
+        null
+    } catch (_: TruncatedStreamException) {
+        null
+    } catch (_: UnsupportedFeatureException) {
+        null
+    }
+
+    /** Mapping granules count completed samples, including a possible positive origin. */
+    private fun audioStartGranule(
+        reader: SourceReader,
+        ogg: OggReader,
+        headers: Headers,
+        until: Long,
+        options: DecodeOptions,
+        vorbis: VorbisConfig?,
+    ): Long {
+        val audio = headers.audio
+        if (audio.codec == AudioCodec.VORBIS && vorbis == null) return 0L
+        val flac = if (audio.codec == AudioCodec.FLAC) {
+            val info = FlacMetadata.parseStreamInfoBody(audio.identification, 17, options, audio.firstPageOffset)
+            FlacFrameReader(reader, info, options, headersOnly = true)
+        } else null
+        val packets = ogg.packets(audio.serialNumber, headers.endOffset, until)
+        val bits = VorbisBitReader(ByteArray(0), 0)
+        var previousBlock = 0
+        var samples = 0L
+        while (true) {
+            val packet = packets.next() ?: return 0L
+            if (packet.length == 0) continue
+            val produced = try {
+                if (flac != null) {
+                    if (packet.length < 2 || packet.bytes[0].toInt() and 255 != 255 ||
+                        packet.bytes[1].toInt() and 0xFC != 0xF8
+                    ) continue
+                    flac.packetHeader(packet.bytes, packet.length, packet.startOffset).blockSize
+                } else {
+                    val config = vorbis ?: return 0L
+                    bits.reset(packet.bytes, packet.length)
+                    if (bits.readBits(1) != 0) continue
+                    val mode = bits.readBits(config.modeBits)
+                    if (bits.endOfPacket || mode >= config.modes.size) return 0L
+                    val block = if (config.modes[mode].longBlock) config.identification.longBlock else config.identification.shortBlock
+                    val count = if (previousBlock > 0) (previousBlock + block) / 4 else 0
+                    previousBlock = block
+                    count
+                }
+            } catch (_: CorruptStreamException) {
+                return 0L
+            } catch (_: TruncatedStreamException) {
+                return 0L
+            }
+            if (samples > Long.MAX_VALUE - produced) {
+                throw CorruptStreamException("Ogg packet sample counts overflow 64 bits", packet.startOffset)
+            }
+            samples += produced
+            // A Vorbis priming packet can finish a page without producing PCM.
+            if (samples == 0L || packet.granule < 0) continue
+            val start = packet.granule - samples
+            if (flac == null && packet.isLast) {
+                if (start > 0) {
+                    throw UnsupportedFeatureException(
+                        "a positive Vorbis origin on a single audio page",
+                        "the first usable granule also ends the stream, so its start offset and end trim cannot be distinguished",
+                    )
+                }
+                return 0L
+            }
+            return start.coerceAtLeast(0L)
+        }
     }
 
     private fun readHeaders(reader: SourceReader, options: DecodeOptions, tagsOnly: Boolean): Headers {

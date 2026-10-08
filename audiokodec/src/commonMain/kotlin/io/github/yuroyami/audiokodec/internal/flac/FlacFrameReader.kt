@@ -25,6 +25,8 @@ internal class FlacFrameReader(
     private val reader: SourceReader,
     private val streamInfo: FlacMetadata.StreamInfo,
     private val options: DecodeOptions,
+    /** Metadata timing needs headers without reserving a decoder's PCM working space. */
+    headersOnly: Boolean = false,
 ) {
     /** One decoded frame. */
     class Frame(
@@ -86,8 +88,8 @@ internal class FlacFrameReader(
 
     private var buffer = allocateInitialBuffer()
 
-    /** Per-channel working space, reused across frames. */
-    private var channelBuffers: Array<IntArray> = allocateChannelBuffers(
+    /** Decoder allocation is guarded at open; metadata timing needs no PCM storage. */
+    private var channelBuffers: Array<IntArray> = if (headersOnly) emptyArray() else allocateChannelBuffers(
         streamInfo.channels,
         streamInfo.maximumBlockSize,
     )
