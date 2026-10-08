@@ -1,3 +1,9 @@
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.maven.tasks.GenerateMavenPom
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
+
 plugins {
     // Declared here with apply false so the publish plugin's shared build service
     // is loaded by one classloader for the whole build. Without this, applying it
@@ -13,6 +19,48 @@ plugins {
 allprojects {
     group = "io.github.yuroyami"
     version = "0.1.0"
+}
+
+// Attribution accompanies every Maven archive, including native/JS/Wasm KLIBs,
+// source archives and Android AARs. Keep the canonical texts in the repo root.
+subprojects {
+    val attribution = rootProject.files("LICENSE", "NOTICE")
+    tasks.withType<AbstractArchiveTask>().configureEach {
+        from(attribution) { into("META-INF") }
+    }
+    tasks.withType<Copy>().matching { it.name.endsWith("LibraryDistribution") }.configureEach {
+        from(attribution)
+    }
+    tasks.withType<KotlinNativeLink>().configureEach {
+        inputs.files(attribution).withPropertyName("distributionAttribution")
+        doLast {
+            for (directory in outputs.files.files.filter { it.isDirectory }) {
+                for (framework in directory.listFiles().orEmpty().filter { it.name.endsWith(".framework") }) {
+                    copy {
+                        from(attribution)
+                        into(framework.resolve("Resources"))
+                    }
+                }
+            }
+        }
+    }
+    plugins.withId("maven-publish") {
+        extensions.configure<PublishingExtension> {
+            publications.withType<MavenPublication>().configureEach {
+                pom.licenses {
+                    license {
+                        name.set("BSD 3-Clause License (translated libopus components)")
+                        url.set("https://opensource.org/license/bsd-3-clause")
+                        distribution.set("repo")
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.register("generateDistributionPoms") {
+    dependsOn(subprojects.map { it.tasks.withType<GenerateMavenPom>() })
 }
 
 dependencies {

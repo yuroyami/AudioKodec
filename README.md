@@ -480,8 +480,10 @@ output.
 
 Apache-2.0. See [LICENSE](LICENSE).
 
-Every format here was implemented from its published specification.
-[NOTICE](NOTICE) lists those specifications, and
+Most formats were implemented from their published specifications. The Opus
+decoder is translated from libopus under BSD-3-Clause, and the ALAC decoder
+from Apple's reference under Apache-2.0. [NOTICE](NOTICE) includes their
+attribution and licence terms, and distributions carry it with [LICENSE](LICENSE).
 [reference/REFERENCES.md](reference/REFERENCES.md) records what may and may
 not be used as the library grows.
 

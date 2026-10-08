@@ -65,6 +65,11 @@ jobs:
       - name: Public API check
         run: ./gradlew checkKotlinAbi --stacktrace
 
+      - name: Check distribution attribution
+        run: |
+          ./gradlew :audiokodec:jvmJar :audiokodec:jvmSourcesJar :audiokodec:jsJar :audiokodec:wasmJsJar :audiokodec:wasmWasiJar :audiokodec:linuxX64Klib :audiokodec:jsNodeProductionLibraryDistribution :audiokodec-io:jvmJar :audiokodec-io:wasmJsJar :audiokodec-io:wasmWasiJar :audiokodec-io:linuxX64Klib generateDistributionPoms --stacktrace
+          python3 .github/scripts/check-distribution-notices.py --package audiokodec/build/dist/js/productionLibrary
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
@@ -146,6 +151,11 @@ jobs:
           name: test-reports-apple
           path: '**/build/reports/tests/**'
 
+      - name: Check framework attribution
+        run: |
+          ./gradlew :audiokodec:linkReleaseFrameworkIosSimulatorArm64 :audiokodec-io:linkReleaseFrameworkIosSimulatorArm64 generateDistributionPoms --stacktrace
+          python3 .github/scripts/check-distribution-notices.py --framework audiokodec/build/bin/iosSimulatorArm64/releaseFramework/AudioKodec.framework --framework audiokodec-io/build/bin/iosSimulatorArm64/releaseFramework/AudioKodecIO.framework
+
   # The Android variants build through AGP, which neither job above exercises.
   android:
     name: Android library
@@ -165,6 +175,11 @@ jobs:
 
       - name: Assemble every target
         run: ./gradlew :audiokodec:assemble :audiokodec-io:assemble --stacktrace
+
+      - name: Check Android attribution
+        run: |
+          ./gradlew generateDistributionPoms --stacktrace
+          python3 .github/scripts/check-distribution-notices.py
 
   docs:
     name: API documentation

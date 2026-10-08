@@ -20,6 +20,14 @@ external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),
 wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
+All published archives carry the root `LICENSE` and `NOTICE` under `META-INF`,
+including source archives, native/JS/Wasm KLIBs and Android AARs. JS library
+distributions carry both files at their root; Apple frameworks carry them in
+`Resources`. The notice attributes the translated Opus and ALAC components and
+includes libopus's complete BSD-3-Clause terms. Every publication POM lists
+Apache-2.0 and the BSD-3-Clause component licence. CI checks the built files
+against the canonical texts with `check-distribution-notices.py`.
+
 The twenty findings from the original [code-quality audit](https://github.com/yuroyami/AudioKodec/issues/68),
 issues #48 through #67, have been remediated and closed. The local Linux JVM
 validation after the final fix passed 742 core tests and 14 I/O tests, with
