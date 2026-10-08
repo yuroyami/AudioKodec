@@ -32,6 +32,7 @@ internal class Mp3Synthesis(private val channels: Int) {
 
     private val scratch = DoubleArray(576)
     private val block = DoubleArray(36)
+    private val lastShortBand = IntArray(3)
 
     fun reset() {
         for (channel in 0 until channels) overlap[channel].fill(0.0)
@@ -74,7 +75,10 @@ internal class Mp3Synthesis(private val channels: Int) {
 
         // Where the right channel ran out is where intensity begins, and it is
         // rounded up: a band that straddles the point is not intensity coded.
-        val zeroStart = right.nonZero
+        var zeroStart = right.nonZero
+        // nonZero bounds the coded values, which may end with explicit zeros.
+        // Only actual right-channel coefficients can disable intensity.
+        while (zeroStart > 0 && right.spectrum[zeroStart - 1] == 0.0) zeroStart--
         val lsf = header.version != 1
 
         if (!sideInfo.isShort) {
@@ -95,6 +99,25 @@ internal class Mp3Synthesis(private val channels: Int) {
         }
 
         val shortBands = Mp3Tables.shortBands(header.sampleRate)
+        val first = if (sideInfo.isMixed) Mp3Tables.MIXED_SHORT_START else 0
+        lastShortBand.fill(first - 1)
+        // Find every boundary before stereo processing writes new right-channel
+        // values. In a mixed block, the long-scalefactor region remains coupled;
+        // the explicitly windowed bands above it make independent decisions.
+        for (band in first until 13) {
+            val base = shortBands[band] * 3
+            if (base >= zeroStart) break
+            val width = shortBands[band + 1] - shortBands[band]
+            for (window in 0 until 3) {
+                val from = base + window * width
+                for (line in from until (from + width).coerceAtMost(zeroStart)) {
+                    if (right.spectrum[line] != 0.0) {
+                        lastShortBand[window] = band
+                        break
+                    }
+                }
+            }
+        }
         if (sideInfo.isMixed) {
             val longBands = Mp3Tables.longBands(header.sampleRate)
             for (band in 0 until Mp3Tables.mixedLongBands(header.sampleRate)) {
@@ -106,7 +129,6 @@ internal class Mp3Synthesis(private val channels: Int) {
                 )
             }
         }
-        val first = if (sideInfo.isMixed) Mp3Tables.MIXED_SHORT_START else 0
         for (band in first until 13) {
             val base = shortBands[band] * 3
             val width = shortBands[band + 1] - shortBands[band]
@@ -116,9 +138,7 @@ internal class Mp3Synthesis(private val channels: Int) {
                 val position = right.shortScalefactors[inherited][window]
                 stereoBand(
                     left, right, from, (from + width).coerceAtMost(576),
-                    // The band as a whole is what is tested, but each window
-                    // carries its own position and can decline separately.
-                    intensity = base >= zeroStart,
+                    intensity = band > lastShortBand[window],
                     position = position, lsf = lsf, scale = right.intensityScale,
                     midSide = midSide,
                 )

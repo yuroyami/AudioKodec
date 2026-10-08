@@ -135,6 +135,10 @@ subject to runner availability, including account billing. Within the suites:
   nine rates in long, short and mixed blocks, with both stereo modes and both
   MPEG-2 gain ladders. Separate MPEG-1 controls check that illegal positions
   continue to disable intensity stereo.
+- MP3 short-window intensity decisions use separate right-channel spectral
+  boundaries. Pure and mixed blocks, mid-side combinations and both MPEG-2
+  gain ladders agree with FFmpeg at all nine rates. Explicitly coded zeros do
+  not disable intensity; changing window decisions preserve exact seek output.
 - Vorbis codebooks are built bit by bit to check the rules every real file
   happens to satisfy: an incomplete tree, an overfull one, a single-entry book
   read with either bit, a book ending on a 32-bit codeword, and a book

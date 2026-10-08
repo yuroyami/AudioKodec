@@ -400,6 +400,14 @@ MPEG-2 highest-band value when the preceding two-bit position is 3. It
 agrees with FFmpeg to below 1e-6; minimp3's propagation of its illegal marker
 to the uncoded band is not followed.
 
+Short blocks find the last nonzero right-channel band independently for each
+window, before stereo processing writes new right-channel values. The mixed
+block's long-scalefactor region retains its coupled boundary, including the
+8 kHz part that uses short transforms. Coded trailing zeros are not evidence
+of right-channel spectrum. Another 183 FFmpeg comparisons cover independent
+windows, mixed blocks, mid-side combinations, both MPEG-2 gain ladders, explicit
+right-channel zeros and highest bands next to real right-channel data.
+
 ## Opus
 
 Specifications: RFC 6716 (the codec) and RFC 7845 (Ogg encapsulation). Both are

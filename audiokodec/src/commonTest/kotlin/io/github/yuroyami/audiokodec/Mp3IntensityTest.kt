@@ -3,10 +3,69 @@ package io.github.yuroyami.audiokodec
 import io.github.yuroyami.audiokodec.internal.bits.BitWriterMsb
 import kotlin.math.abs
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class Mp3IntensityTest {
+    @Test
+    fun changingWindowDecisionsKeepAnExactSeekTail() {
+        for (shape in listOf(Mp3IntensityFixtures.Shape.SHORT, Mp3IntensityFixtures.Shape.MIXED)) {
+            val left = if (shape == Mp3IntensityFixtures.Shape.SHORT) 0 else 36
+            val bytes = Mp3IntensityFixtures.file(shape = shape, leftLine = left, rightLine = left + 8) +
+                Mp3IntensityFixtures.file(shape = shape, leftLine = left, rightLine = left) +
+                Mp3IntensityFixtures.file(shape = shape, leftLine = left, codedRightPairs = 288)
+            val decoded = AudioKodec.decode(bytes)
+            assertEquals(36 * 1_152, decoded.frames)
+            AudioKodec.open(bytes).use { decoder ->
+                for (target in listOf(5L * 1_152 + 13, 12L * 1_152 + 53, 24L * 1_152 + 7)) {
+                    assertEquals(target, decoder.seek(target))
+                    val frame = assertNotNull(decoder.nextFrame())
+                    assertContentEquals(decoded.samples.copyOfRange(target.toInt() * 2,
+                        (target.toInt() + frame.frameCount) * 2), frame.samples, "$shape target $target")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun eachShortWindowChoosesIntensityFromItsOwnRightSpectrum() {
+        for (shape in listOf(Mp3IntensityFixtures.Shape.SHORT, Mp3IntensityFixtures.Shape.MIXED)) {
+            val left = if (shape == Mp3IntensityFixtures.Shape.SHORT) 0 else 36
+            val right = left + 8
+            val unsplit = AudioKodec.decode(Mp3IntensityFixtures.file(shape = shape,
+                position = 7, leftLine = left, rightLine = right))
+            val split = AudioKodec.decode(Mp3IntensityFixtures.file(shape = shape,
+                position = 3, leftLine = left, rightLine = right))
+            assertEquals(12 * 1_152, split.frames)
+            assertEquals(unsplit.frames, split.frames)
+            assertTrue(unsplit.samples.any { abs(it) > 0.01f }, "$shape must exercise synthesis")
+            for (frame in 0 until split.frames) {
+                // The independent window with no right spectrum has a 50%
+                // split; only final Float rounding can change that ratio.
+                assertTrue(abs(unsplit.samples[frame * 2] * 0.5f - split.samples[frame * 2]) < 1e-6f,
+                    "$shape frame $frame")
+            }
+        }
+    }
+
+    @Test
+    fun explicitlyCodedRightZerosDoNotDisableIntensity() {
+        for (shape in Mp3IntensityFixtures.Shape.entries) {
+            val unsplit = AudioKodec.decode(Mp3IntensityFixtures.file(shape = shape,
+                position = 7, codedRightPairs = 288))
+            val split = AudioKodec.decode(Mp3IntensityFixtures.file(shape = shape,
+                position = 3, codedRightPairs = 288))
+            assertEquals(12 * 1_152, split.frames)
+            assertTrue(split.samples.any { abs(it) > 0.01f }, "$shape must exercise synthesis")
+            for (frame in 0 until split.frames) {
+                assertTrue(abs(unsplit.samples[frame * 2] * 0.5f - split.samples[frame * 2]) < 1e-6f,
+                    "$shape frame $frame")
+            }
+        }
+    }
+
     @Test
     fun theUncodedHighestBandInheritsTheEqualStereoSplit() {
         for (shape in Mp3IntensityFixtures.Shape.entries) {
@@ -67,6 +126,7 @@ internal object Mp3IntensityFixtures {
         intensityScale: Int = 0,
         leftLine: Int? = null,
         rightLine: Int? = null,
+        codedRightPairs: Int? = null,
     ): ByteArray {
         val index = rates.indexOf(rate)
         require(index >= 0)
@@ -80,9 +140,11 @@ internal object Mp3IntensityFixtures {
         }
         val left = leftLine ?: top
         val leftPairs = 288
-        val rightPairs = if (rightLine == null) 0 else rightLine / 2 + 1
+        val rightPairs = codedRightPairs ?: if (rightLine == null) 0 else rightLine / 2 + 1
+        require(rightPairs in 0..288)
+        require(rightLine == null || rightLine in 0 until rightPairs * 2)
         val leftBits = leftPairs + if (left % 2 == 0) 2 else 3
-        val rightBits = if (rightLine == null) 0 else rightPairs + if (rightLine % 2 == 0) 2 else 3
+        val rightBits = rightPairs + if (rightLine == null) 0 else if (rightLine % 2 == 0) 2 else 3
         val bands = when (shape) {
             Shape.LONG -> 21
             Shape.SHORT -> 36

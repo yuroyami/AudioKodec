@@ -32,7 +32,7 @@ internal class Mp3Granule {
     /** The 576 spectral values, requantised. */
     val spectrum = DoubleArray(576)
 
-    /** How many of [spectrum] are nonzero, which bounds the work after this. */
+    /** Coded spectral values, including trailing zeros; an upper bound for later work. */
     var nonZero = 0
         private set
 

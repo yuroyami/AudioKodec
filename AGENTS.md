@@ -36,6 +36,11 @@ next person does not pay for them twice.
   windows in frequency order, which need repacking for our transform layout.
   Getting it wrong shows up on the few frames either side of a transient.
   See `internal/mpeg/Mp3Granule.kt` around line 300.
+- MP3 intensity stereo needs a separate boundary for each short window. Find
+  all boundaries before stereo processing writes new right-channel values.
+  `Mp3Granule.nonZero` is a count of coded values, including zeros; it cannot
+  substitute for inspecting the actual spectrum. The mixed long-scalefactor
+  region still uses a coupled boundary, including at 8 kHz. See #79.
 
 ## Working rules for agents
 

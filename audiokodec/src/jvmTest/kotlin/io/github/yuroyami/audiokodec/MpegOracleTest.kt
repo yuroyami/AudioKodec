@@ -26,6 +26,62 @@ class MpegOracleTest {
     private val lame: String? by lazy { findOnPath("lame") }
 
     @Test
+    fun intensityWindowsAndActualRightSpectrumBoundariesMatchFfmpeg() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val mismatches = mutableListOf<String>()
+        fun compare(
+            rate: Int, shape: Mp3IntensityFixtures.Shape, position: Int, midSide: Boolean,
+            scale: Int, left: Int? = null, right: Int? = null, codedRightPairs: Int? = null,
+        ) {
+            val label = "${rate}_${shape}_${position}_${midSide}_${scale}_${left}_${right}_$codedRightPairs"
+            val bytes = Mp3IntensityFixtures.file(rate, shape, position, midSide, scale,
+                leftLine = left, rightLine = right, codedRightPairs = codedRightPairs)
+            val file = temp("intensity_windows_$label.mp3").also { it.writeBytes(bytes) }
+            val reference = decodeWithFfmpeg(ffmpeg, file, rate, 2, "mp3float")
+            val ours = AudioKodec.decode(bytes).samples
+            assertEquals(12 * (if (rate >= 32_000) 1_152 else 576) * 2, reference.size, label)
+            assertEquals(reference.size, ours.size, label)
+            assertTrue(ours.all { it.isFinite() }, label)
+            // The existing MP3 bound allows the last floating-point synthesis
+            // bits to differ while checking every interleaved sample.
+            val worst = reference.indices.maxOf { abs(reference[it] - ours[it]) }
+            if (worst > 1e-4f) mismatches += "$label: maximum sample difference $worst"
+        }
+        for (rate in listOf(44_100, 48_000, 32_000, 22_050, 24_000, 16_000, 11_025, 12_000, 8_000)) {
+            for (shape in listOf(Mp3IntensityFixtures.Shape.SHORT, Mp3IntensityFixtures.Shape.MIXED)) {
+                val left = if (shape == Mp3IntensityFixtures.Shape.SHORT) 0 else if (rate == 8_000) 72 else 36
+                val width = if (shape == Mp3IntensityFixtures.Shape.SHORT) {
+                    if (rate == 8_000) 8 else 4
+                } else {
+                    if (rate >= 32_000) 4 else if (rate == 8_000) 12 else 6
+                }
+                for (position in if (rate >= 32_000) listOf(3, 4) else listOf(1, 2)) {
+                    for (midSide in listOf(false, true)) {
+                        for (scale in if (rate >= 32_000) listOf(0) else listOf(0, 1)) {
+                            compare(rate, shape, position, midSide, scale, left, left + width * 2)
+                        }
+                    }
+                }
+            }
+        }
+        for (rate in listOf(44_100, 22_050, 8_000)) {
+            for (shape in Mp3IntensityFixtures.Shape.entries) {
+                for (midSide in listOf(false, true)) {
+                    for (scale in if (rate >= 32_000) listOf(0) else listOf(0, 1)) {
+                        compare(rate, shape, if (rate >= 32_000) 3 else 1, midSide, scale, codedRightPairs = 288)
+                        compare(rate, shape, if (rate >= 32_000) 4 else 2, midSide, scale,
+                            right = Mp3IntensityFixtures.penultimateLine(rate, shape))
+                    }
+                }
+            }
+        }
+        for (line in listOf(36, 48, 60)) {
+            compare(8_000, Mp3IntensityFixtures.Shape.MIXED, 1, false, 0, line, line + 2)
+        }
+        assertTrue(mismatches.isEmpty(), mismatches.joinToString("\n"))
+    }
+
+    @Test
     fun illegalTransmittedIntensityPositionsMatchFfmpeg() {
         val ffmpeg = ffmpeg ?: return skip()
         for (rate in listOf(44_100, 48_000, 32_000)) {
