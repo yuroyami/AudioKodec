@@ -55,6 +55,10 @@ subject to runner availability, including account billing. Within the suites:
   tests cover leading padding, bounded atom detection and malformed sizes.
 - FLAC files written by the reference encoder decode **bit-exactly** at 8, 16
   and 24 bits, 1, 2 and 6 channels, and every compression level from 0 to 8.
+- Unusable FLAC seek points discard the optional table, preserving decoding,
+  scanning seeks and tags in both modes. Common and reference-encoder tests
+  cover repeated, descending and invalid points, with valid placeholder
+  controls; structural size errors and allocation guards remain failures.
 - Tolerant FLAC decoding stops after the valid prefix when a later frame's
   number or declared range is inconsistent, for both float and integer reads.
   Strict decoding and damage before the first valid frame still fail.

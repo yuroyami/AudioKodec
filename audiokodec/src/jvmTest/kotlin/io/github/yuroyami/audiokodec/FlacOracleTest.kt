@@ -28,6 +28,25 @@ class FlacOracleTest {
     private val flac: String? by lazy { findOnPath("flac") }
 
     @Test
+    fun unusableSeekTablesKeepReferenceEncodedSamplesAndTags() {
+        val flac = flac ?: return skip()
+        val samples = TestSignals.quantise(TestSignals.sine(9_000, 1), 16)
+        val wav = temp("seek-table.wav")
+        wav.writeBytes(AudioKodec.encode(samples, AudioFormat(44_100, 1), EncodeTarget.wav(16)))
+        val encoded = temp("seek-table.flac")
+        run(listOf(flac, "--silent", "--force", "--no-padding", "--no-seektable",
+            "-T", "TITLE=Reference title", "-o", encoded.path, wav.path))
+        for (bytes in FlacSeekTableFixtures.invalidTables(encoded.readBytes())) {
+            for (tolerant in listOf(false, true)) {
+                val options = DecodeOptions(tolerant = tolerant)
+                TestSignals.assertExact(samples, AudioKodec.decode(bytes, options).samples)
+                assertEquals(true, AudioKodec.verifyFlacMd5(bytes, options))
+                assertEquals("Reference title", AudioKodec.readTags(bytes, options)[TagField.TITLE])
+            }
+        }
+    }
+
+    @Test
     fun tolerantContinuityFailureKeepsTheReferenceEncodedPrefix() {
         val flac = flac ?: return org.junit.Assume.assumeTrue("flac is required", false)
         val source = temp("continuity.wav")

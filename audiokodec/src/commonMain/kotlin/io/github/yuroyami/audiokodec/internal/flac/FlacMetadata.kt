@@ -73,9 +73,10 @@ internal object FlacMetadata {
      * Walks the chain from the start of the file.
      *
      * Throws when the magic number or the stream information block is missing,
-     * because a file without those is not a FLAC file. A later block that is
-     * malformed is skipped: its length field is what the chain walks on, and
-     * one unreadable cue sheet should not cost the whole file.
+     * because a file without those is not a FLAC file. Optional seek tables
+     * with unusable points are discarded so playback can scan the frames.
+     * Invalid metadata lengths and allocation requests still fail before
+     * reading or retaining their bodies.
      */
     fun parse(reader: SourceReader, options: DecodeOptions): Parsed {
         reader.seek(0)
@@ -86,6 +87,7 @@ internal object FlacMetadata {
 
         var streamInfo: StreamInfo? = null
         val seekPoints = ArrayList<SeekPoint>()
+        var usableSeekTable = true
         val tagBlocks = ArrayList<RawTagBlock>()
         val locations = ArrayList<BlockLocation>()
         val pictures = ArrayList<RawTagEntry>()
@@ -160,21 +162,19 @@ internal object FlacMetadata {
                         val frameSamples = reader.readU16Be()
                         // A placeholder point states the largest possible
                         // sample number and means "not yet filled in".
-                        if (firstSample != -1L) {
-                            if (firstSample < 0 || byteOffset < 0 || frameSamples == 0) {
-                                throw CorruptStreamException(
-                                    "a FLAC seek point has an invalid sample, offset or block size",
-                                    reader.position - 18,
-                                )
-                            }
+                        if (usableSeekTable && firstSample != -1L) {
                             val previous = seekPoints.lastOrNull()
-                            if (previous != null && firstSample <= previous.firstSample) {
-                                throw CorruptStreamException(
-                                    "FLAC seek points are not in increasing sample order",
-                                    reader.position - 18,
-                                )
+                            if (firstSample < 0 || byteOffset < 0 || frameSamples == 0 ||
+                                (previous != null && firstSample <= previous.firstSample)
+                            ) {
+                                // A partial table cannot be trusted either.
+                                // Discard it all, even in strict mode: the
+                                // optional index does not define the audio.
+                                usableSeekTable = false
+                                seekPoints.clear()
+                            } else {
+                                seekPoints.add(SeekPoint(firstSample, byteOffset, frameSamples))
                             }
-                            seekPoints.add(SeekPoint(firstSample, byteOffset, frameSamples))
                         }
                     }
                 }
