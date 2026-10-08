@@ -58,6 +58,10 @@ subject to runner availability, including account billing. Within the suites:
 - Tolerant FLAC decoding stops after the valid prefix when a later frame's
   number or declared range is inconsistent, for both float and integer reads.
   Strict decoding and damage before the first valid frame still fail.
+- Whole-file decoding treats a declared duration as a capped allocation hint.
+  WAV and FLAC regressions recover truncated audio in tolerant mode, report
+  truncation in strict mode, and still reject actual output beyond the limit,
+  with known and unknown source sizes.
 - FLAC files AudioKodec writes pass `flac --test`, which verifies every frame
   checksum and the stream MD5, and `flac --decode` returns the samples that
   went in.

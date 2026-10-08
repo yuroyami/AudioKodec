@@ -160,13 +160,22 @@ public object AudioKodec {
         open(source, decodeOptions).use {
             val channels = it.format.channels
             val expected = it.durationFrames
-            val expectedSamples = expected?.let {
-                checkedDecodedSampleCount(it, channels, options)
-            }
-            val initialSamples = if (expectedSamples != null) {
-                minOf(expectedSamples, 1 shl 20)
+            // Declared durations can outlive a truncated payload. They are
+            // capacity hints, not audio that already needs an allocation.
+            // Source bytes also cap only this first buffer: compressed audio
+            // can legitimately grow beyond that hint as samples are decoded.
+            val initialSampleLimit = minOf(
+                1L shl 20,
+                options.maxAllocationBytes / 4,
+                source.size.takeIf { size -> size >= 0 } ?: Long.MAX_VALUE,
+            )
+            val initialSamples = if (expected != null) {
+                if (expected < 0) {
+                    throw CorruptStreamException("a decoder reported a negative duration of $expected frames")
+                }
+                (minOf(expected, initialSampleLimit / channels) * channels).toInt()
             } else {
-                minOf(4096L, options.maxAllocationBytes / 4, Int.MAX_VALUE.toLong()).toInt()
+                minOf(4096L, initialSampleLimit).toInt()
             }
             var samples = FloatArray(initialSamples)
             var frames = 0L
