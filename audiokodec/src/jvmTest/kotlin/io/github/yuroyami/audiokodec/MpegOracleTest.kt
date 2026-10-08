@@ -2,6 +2,7 @@ package io.github.yuroyami.audiokodec
 
 import java.io.File
 import java.util.concurrent.TimeUnit
+import io.github.yuroyami.audiokodec.internal.mpeg.MpegFrameHeader
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,6 +24,36 @@ class MpegOracleTest {
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
     private val ffprobe: String? by lazy { findOnPath("ffprobe") }
     private val lame: String? by lazy { findOnPath("lame") }
+
+    @Test
+    fun leadingJunkKeepsAudioFromReferenceEncodersReadable() {
+        val ffmpeg = ffmpeg ?: return skip()
+        val wav = temp("leading-junk-source.wav")
+        wav.writeBytes(AudioKodec.encode(sweep(32_000, 2, 44_100), AudioFormat(44_100, 2), EncodeTarget.wav(16)))
+        for (layer in listOf(2, 3)) {
+            val encoded = temp("leading-junk-source.mp$layer")
+            val command = mutableListOf(ffmpeg, "-y", "-v", "quiet", "-i", wav.absolutePath,
+                "-c:a", if (layer == 2) "mp2" else "libmp3lame", "-b:a", "128k")
+            if (layer == 3) command += listOf("-write_xing", "0", "-id3v2_version", "0")
+            command += encoded.absolutePath
+            run(command, "encoding Layer $layer")
+            val audio = encoded.readBytes()
+            val header = assertNotNull(MpegFrameHeader.parse(audio, 0))
+            val baseline = AudioKodec.decode(audio)
+            val prefixes = listOf(byteArrayOf(1, 2, 3), ByteArray(1_000),
+                audio.copyOfRange(header.frameBytes / 2, header.frameBytes))
+            for ((index, prefix) in prefixes.withIndex()) {
+                val file = temp("leading-junk-$index.mp$layer").also { it.writeBytes(prefix + audio) }
+                val reference = decodeWithFfmpeg(ffmpeg, file, 44_100, 2, "mp${layer}float")
+                val decoded = AudioKodec.decode(file.readBytes())
+                // Float synthesis retains the established maximum per-sample
+                // difference from FFmpeg for each MPEG layer.
+                TestSignals.assertClose(reference, decoded.samples, if (layer == 2) 1e-5f else 1e-4f)
+                TestSignals.assertExact(baseline.samples, decoded.samples)
+                assertEquals(prefix.size.toLong(), AudioKodec.probe(file.readBytes()).dataOffset)
+            }
+        }
+    }
 
     @Test
     fun largeEmbeddedTagsKeepTheReferenceAudioBeforeAndAfterTheJoin() {

@@ -52,7 +52,8 @@ public object AudioKodec {
      * window, not a guarantee: leading ID3 metadata or QuickTime padding and
      * the following signature must fit. ID3 alone never identifies MPEG audio.
      * QuickTime detection examines at most 128 leading atoms. Supply more bytes
-     * or use [probe], which can jump past padding, when the result is null.
+     * or use [probe], which can jump past padding and confirm MPEG frames after
+     * leading junk, when the result is null.
      */
     public fun sniff(header: ByteArray): AudioContainer? = Sniffer.sniff(header)
 
@@ -639,6 +640,11 @@ public object AudioKodec {
             ?: if (Sniffer.isMp4(view)) AudioContainer.MP4 else null
         if (container == null) {
             if (offset > 0) return DetectedContainer(AudioContainer.MPEG_AUDIO, root)
+            // MPEG has no container magic. Reuse its bounded search and frame
+            // confirmation before refusing a capture that starts mid-frame.
+            if (MpegStream.findFirstFrame(root, 0, if (root.size < 0) Long.MAX_VALUE else root.size) != null) {
+                return DetectedContainer(AudioContainer.MPEG_AUDIO, root)
+            }
             throw UnsupportedFormatException(
                 null,
                 "these bytes do not start with any audio format AudioKodec knows",

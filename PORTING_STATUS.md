@@ -349,6 +349,11 @@ can be enlarged, or `probe` and `open` can walk valid leading tags from a
 complete source. Common tests cover tag, footer and stacked-tag boundaries;
 Mutagen-written tags and FFprobe check complete files independently.
 
+Source-based detection also searches the first 512 KiB for confirmed MPEG
+frames after leading junk or a partial frame, once container signatures have
+been ruled out. Unknown input retains a bounded search; byte-array sniffing
+still reports only a visible leading signature.
+
 Ten container identifiers have decoder paths: WAV, RF64, Wave64, AIFF, AU,
 FLAC, CAF, Ogg, MPEG audio and MP4. Ogg decodes the Vorbis, Opus and FLAC
 mappings and refuses unsupported mappings by codec name. `SnifferTest` checks

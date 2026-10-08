@@ -95,6 +95,11 @@ following signature must fit. Supply more bytes when the result is null, or
 use `probe` or `open` with the complete source: these walk valid leading tags
 before reading the audio header.
 
+When no container signature is recognised, `probe` and `open` also search the
+first 512 KiB for confirmed MPEG frames. This accepts leading junk, zero padding
+and captures beginning partway through a frame. Byte-array `sniff` still needs
+a leading signature within its supplied window.
+
 ## Stream and seek
 
 Whole-file decoding allocates the whole file, so use the streaming decoder for

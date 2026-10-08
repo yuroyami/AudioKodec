@@ -362,6 +362,9 @@ MPEG audio. `SNIFF_HEADER_BYTES` recommends an initial 64 KiB window; larger
 tags can require more bytes. Supply more bytes or use `probe` with a complete
 source. See [sniffing windows](docs/index.md#name-a-format).
 
+Complete-source APIs also recover MPEG audio after leading junk or a partial
+frame by confirming frames within the first 512 KiB.
+
 ## Formats
 
 ### Read and write
