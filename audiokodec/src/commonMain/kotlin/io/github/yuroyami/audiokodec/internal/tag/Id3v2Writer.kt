@@ -15,8 +15,9 @@ import io.github.yuroyami.audiokodec.UnsupportedFeatureException
  *
  * Version 2.4 is written by default and version 2.3 on request, because some
  * hardware players never learned the newer one. Version 2.2 is read and never
- * written: it has been obsolete since 1998, and a file that had one gets a
- * version 2.3 block instead, which is what every other tagger does.
+ * written: a file that had one is upgraded to the requested version, which
+ * defaults to 2.4. Standard identifiers are mapped to their four-character
+ * counterparts; old frames without a safe counterpart are omitted.
  *
  * Unsynchronisation is not applied. It exists so that a player scanning for an
  * MPEG frame sync cannot find one inside the tag, and every player written
@@ -549,13 +550,17 @@ internal object Id3v2Writer {
                 val key = when {
                     entry.key.length == 4 -> entry.key
                     Id3Dates.isAuxiliary(entry.key) -> Id3Dates.auxiliaryKey(entry.key)
-                    entry.key == "UFI" -> "UFID"
-                    entry.key == "TXX" -> "TXXX"
-                    entry.key == "COM" -> "COMM"
-                    else -> throw UnsupportedFeatureException(
-                        "preserving unknown ID3v2.2 frame '${entry.key}'",
-                        "this tag contains a three-character frame with no safe ID3v2.3/2.4 equivalent",
-                    )
+                    else -> Id3v22Frames.identifier(entry.key, major) ?: continue
+                }
+                if (entry.key == "LNK") {
+                    val old = entry.binary ?: continue
+                    if (old.size < 4) continue
+                    val linked = Id3v22Frames.identifier(old.decodeToString(0, 3), major) ?: continue
+                    val body = ByteArray(checkedArraySize(old.size.toLong() + 1, "an upgraded ID3 link"))
+                    linked.encodeToByteArray().copyInto(body)
+                    old.copyInto(body, 4, 3)
+                    frames.add(frame(key, body, major))
+                    continue
                 }
                 if (key == "UFID" && entry.description == TagMapping.MUSICBRAINZ_OWNER &&
                     !tags.all(TagField.MUSICBRAINZ_RECORDING_ID).isEmpty()

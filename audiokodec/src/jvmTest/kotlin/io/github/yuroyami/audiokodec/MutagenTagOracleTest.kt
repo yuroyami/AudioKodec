@@ -43,6 +43,33 @@ class MutagenTagOracleTest {
     }
 
     @Test
+    fun version22StandardFramesUpgradeToWhatMutagenReadsInBothVersions() {
+        val tool = python
+        val file = plainMp3("legacy-v22-frames")
+        val audio = file.readBytes()
+        val original = Id3V22UpgradeFixtures.tag(listOf(
+            Id3V22UpgradeFixtures.text("TT2", "Old"), Id3V22UpgradeFixtures.text("TLE", "12345"),
+            Id3V22UpgradeFixtures.text("TDY", "250"), Id3V22UpgradeFixtures.text("TFT", "MPG/3"),
+            Id3V22UpgradeFixtures.text("TOF", "original.wav"), Id3V22UpgradeFixtures.text("TOA", "Alice/Bob/Alice"),
+            "CNT" to byteArrayOf(0, 0, 1, 0), "BUF" to byteArrayOf(0, 0x20, 0, 0, 0, 0, 0, 0),
+            "GEO" to (byteArrayOf(0) + "application/octet-stream\u0000file.bin\u0000blob\u0000data".encodeToByteArray()),
+            "IPL" to (byteArrayOf(0) + "producer\u0000Alice\u0000guitar\u0000Bob\u0000".encodeToByteArray()),
+            "LNK" to "TLEhttps://example.org/tag\u0000extra".encodeToByteArray(),
+            "WXX" to (byteArrayOf(0) + "Private site\u0000https://example.org/private".encodeToByteArray()),
+        )) + audio
+        file.writeBytes(original)
+        run(listOf(tool, "-c", LEGACY_V22_FRAMES, file.path, "2"))
+        for (major in 3..4) {
+            val written = AudioKodec.writeTags(original, AudioKodec.readTags(original).edit {
+                set(TagField.TITLE, "Changed 日本語")
+            }, TagWriteOptions(id3Version = major, padding = 0))
+            file.writeBytes(written)
+            run(listOf(tool, "-c", LEGACY_V22_FRAMES, file.path, major.toString()))
+            assertContentEquals(audio, written.takeLast(audio.size).toByteArray())
+        }
+    }
+
+    @Test
     fun encodingFactsAgreeWithIndependentId3FramesAndSeparateEdits() {
         val python = python
         val expected = mapOf(
@@ -633,6 +660,35 @@ class MutagenTagOracleTest {
         ?.map { File(it, name) }?.firstOrNull { it.canExecute() }?.absolutePath
 
     private companion object {
+        const val LEGACY_V22_FRAMES = """
+import sys
+from mutagen.id3 import ID3
+major = int(sys.argv[2])
+tag = ID3(sys.argv[1], translate=False)
+assert tag.version == (2, major, 0), tag.version
+assert tag['TIT2'].text == ['Old' if major == 2 else 'Changed 日本語']
+for key, value in [('TLEN', '12345'), ('TDLY', '250'), ('TFLT', 'MPG/3'), ('TOFN', 'original.wav')]:
+    assert tag[key].text == [value], (key, tag[key])
+artists = tag['TOPE'].text
+# Mutagen exposes the native slash-delimited string in v2.2/v2.3.
+if major < 4: artists = [part for value in artists for part in value.split('/')]
+assert artists == ['Alice', 'Bob', 'Alice'], artists
+assert tag['PCNT'].count == 256
+assert tag['RBUF'].size == 8192
+object_frame = tag.getall('GEOB')[0]
+assert (object_frame.mime, object_frame.filename, object_frame.desc, object_frame.data) == ('application/octet-stream', 'file.bin', 'blob', b'data')
+people = tag.getall('IPLS') + tag.getall('TIPL')
+assert len(people) == 1 and people[0].people == [['producer', 'Alice'], ['guitar', 'Bob']], people
+links = tag.getall('LINK')
+assert len(links) == 1
+identifier = links[0].frameid
+if isinstance(identifier, bytes): identifier = identifier.decode('ascii')
+assert identifier in (['TLE', 'TLEN'] if major == 2 else ['TLEN']), identifier
+assert (links[0].url, links[0].data) == ('https://example.org/tag', b'extra')
+urls = tag.getall('WXXX')
+assert len(urls) == 1 and (urls[0].desc, urls[0].url) == ('Private site', 'https://example.org/private')
+"""
+
         const val ENCODING_FACTS = """
 import sys
 from mutagen.id3 import ID3, TSSE, TENC, TXXX

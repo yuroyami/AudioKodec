@@ -314,6 +314,10 @@ and the metadata chunks of RIFF and AIFF. MP4 `ilst` tags are not read or
 written yet; that work is tracked in [#8](https://github.com/yuroyami/AudioKodec/issues/8).
 MP4 chapters are read separately from the container.
 
+ID3v2.2 input upgrades to v2.4 by default, or v2.3 when requested. Standard
+frame equivalents are retained; `CRM` and unknown three-character extensions
+without a safe equivalent are omitted during upgrade. See [ID3 editing rules](docs/index.md#tags).
+
 Undeclared RIFF INFO uses UTF-8, and edits honour supported `CSET` declarations.
 AIFF native output uses ASCII; Unicode output uses ID3. Native reads also accept
 UTF-8 and legacy Latin-1 text. Unsupported declarations and unrepresentable native-only

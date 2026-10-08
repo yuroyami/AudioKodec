@@ -821,6 +821,14 @@ one distinct value under that owner. Unrelated owners' binary identifiers
 are preserved. Malformed MusicBrainz identifiers remain in the raw view;
 setting the named field replaces that owner's old entry.
 
+ID3v2.2 tags are upgraded to v2.4 by default, or v2.3 when requested. Standard
+three-character identifiers are mapped to their four-character equivalents,
+including `TLE` to `TLEN`, user URLs, binary frames and linked-frame identifiers.
+Legacy artist, composer and lyricist slash lists retain their separate members.
+The old encrypted meta-frame `CRM` and unknown three-character extensions have
+no safe equivalent and are omitted during upgrade; other fields and the audio
+remain editable. Existing four-character unknown frames retain their payloads.
+
 Compressed or encrypted frames keep their payloads and flags across edits
 within the same ID3 version. Frames marked for removal when the tag changes
 are discarded as requested by their flags. Other opaque frames cannot be

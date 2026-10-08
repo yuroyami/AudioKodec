@@ -189,7 +189,7 @@ inspected and edited.
 |---|---|---|---|
 | **ID3v2.4** | ✅ | ✅ | Text frames, multi-value frames, `TXXX`, `COMM`, `USLT`, `APIC`, `UFID`, `CHAP`, all four text encodings, frame-level unsynchronisation, extended header, appended blocks |
 | **ID3v2.3** | ✅ | ✅ | The same set, with the version's own flag bits, size form and frame differences. Named artist/composer/lyricist lists use slashes; genres use references and an optional refinement; unsupported multi-value fields and literal slashes in list values are refused rather than written with duplicate identities |
-| **ID3v2.2** | ✅ | upgraded | Three-character frames and three-byte sizes. Writing produces a 2.3 block, which is what every other tagger does |
+| **ID3v2.2** | ✅ | upgraded | Three-character frames and three-byte sizes. Writing defaults to 2.4; callers can request 2.3. Standard frame identifiers, linked identifiers and people lists are upgraded, including unmodelled text, URLs and binary payloads. `CRM` and unknown three-character extensions without a safe equivalent are omitted so they do not block other edits |
 | **ID3v1 and v1.1** | ✅ | update only | Never created. An existing block is kept in step with the real tag, and the 1.1 track number is detected rather than assumed |
 | **APEv2** | ✅ | ✅ | Header and footer, multi-value text items, binary items, cover art. Found at either end of a file |
 | **APEv1** | ✅ | upgraded | Footer only. Writing produces a v2 block |

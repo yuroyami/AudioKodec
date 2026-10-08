@@ -29,8 +29,10 @@ internal object TagMapping {
         return if (valid) TagField.MUSICBRAINZ_RECORDING_ID else null
     }
 
-    /** Only these ID3v2.3 text fields define slash-separated lists. */
-    fun id3UsesSlashList(key: String, major: Int): Boolean = major == 3 && when (key) {
+    /** These ID3v2.2/v2.3 people fields define slash-separated lists. */
+    fun id3UsesSlashList(key: String, major: Int): Boolean = major in 2..3 && when (
+        if (major == 2) Id3v22Frames.identifier(key, 3) else key
+    ) {
         "TPE1", "TCOM", "TEXT", "TOPE", "TOLY" -> true
         else -> false
     }
