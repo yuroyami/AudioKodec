@@ -2,7 +2,9 @@ package io.github.yuroyami.audiokodec
 
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4Reader
+import io.github.yuroyami.audiokodec.internal.mp4.Mp4Box
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -22,6 +24,153 @@ import kotlin.test.assertTrue
  * ffmpeg on the JVM.
  */
 class Mp4Test {
+
+    @Test
+    fun chunkOffsetsMustKeepCompletePacketsInsideMediaData() {
+        for (wide in listOf(false, true)) {
+            val original = build(16, 1, 16, moovFirst = true, useCo64 = wide)
+            val mdat = typeAt(original, "mdat") - 4
+            val positions = listOf(0L, 8L, (typeAt(original, "moov") + 4).toLong(),
+                mdat + 4L, mdat + 7L, original.size - 1L, original.size.toLong()) +
+                if (wide) listOf(Long.MAX_VALUE - 1) else emptyList()
+            for (position in positions) {
+                val bytes = original.copyOf()
+                if (wide) u64(position).copyInto(bytes, typeAt(bytes, "co64") + 12)
+                else patchU32(bytes, "stco", 12, position.toInt())
+                assertBadPacketRange(bytes)
+            }
+        }
+        val original = build(16, 1, 16, moovFirst = true)
+        val mdat = typeAt(original, "mdat") - 4
+        val overflowing = original.copyOfRange(0, mdat) + u32(1) + ascii("mdat") + u64(Long.MAX_VALUE) + ByteArray(32)
+        assertBadPacketRange(overflowing)
+    }
+
+    @Test
+    fun fragmentOffsetsCannotPointAtHeadersOrCrossMediaDataEnds() {
+        val original = buildFragmented(16, 1, 16)
+        val moof = typeAt(original, "moof") - 4
+        val mdat = typeAt(original, "mdat") - 4
+        for (relative in listOf(-moof, 0, mdat - moof, mdat + 7 - moof, original.size - 1 - moof)) {
+            val bytes = original.copyOf()
+            patchU32(bytes, "trun", 12, relative)
+            assertBadPacketRange(bytes)
+        }
+        val crossing = buildFragmented(32, 1, 16)
+        patchU32(crossing, "trun", 8, 20)
+        assertBadPacketRange(crossing)
+    }
+
+    @Test
+    fun separateExtendedAndOpenEndedMediaDataKeepExactAudioAndSeeking() {
+        val original = build(32, 1, 16, moovFirst = true)
+        val mdat = typeAt(original, "mdat") - 4
+        val stco = typeAt(original, "stco")
+        val payload = original.copyOfRange(mdat + 8, original.size)
+        val prefix = original.copyOfRange(0, mdat)
+        val extendedPrefix = prefix.copyOf()
+        for (at in listOf(stco + 12, stco + 16)) {
+            u32(Mp4Box.readU32(original, at).toInt() + 8).copyInto(extendedPrefix, at)
+        }
+        val extended = extendedPrefix + u32(1) + ascii("mdat") + u64(payload.size + 16L) + payload
+        val openEnded = original.copyOf().also { u32(0).copyInto(it, mdat) }
+        val splitPrefix = prefix.copyOf()
+        u32(Mp4Box.readU32(original, stco + 16).toInt() + 27).copyInto(splitPrefix, stco + 16)
+        val split = splitPrefix + box("mdat", payload.copyOfRange(0, 32)) + box("free", ByteArray(11)) +
+            box("mdat", payload.copyOfRange(32, payload.size))
+        val expected = AudioKodec.decode(original).samples
+        for (file in listOf(original, extended, openEnded, split)) for (unknown in listOf(false, true)) {
+            assertEquals(32L, AudioKodec.probe(MpegTrailerFixtures.source(file, unknown)).durationFrames)
+            assertContentEquals(expected, AudioKodec.decode(MpegTrailerFixtures.source(file, unknown)).samples)
+            AudioKodec.open(MpegTrailerFixtures.source(file, unknown)).use { decoder ->
+                assertEquals(17L, decoder.seek(17))
+                val block = assertNotNull(decoder.nextFrame())
+                assertContentEquals(expected.copyOfRange(17, 17 + block.frameCount), block.samples)
+            }
+        }
+        val crossing = split.copyOf()
+        patchU32(crossing, "stco", 12, mdat + 8 + 31)
+        assertBadPacketRange(crossing)
+    }
+
+    @Test
+    fun dataReferenceIndicesSelectLocalDataAndRefuseExternalData() {
+        val local = fullBox("url ", 0, 1)
+        val alias = fullBox("alis", 0, 1)
+        val external = fullBox("url ", 0, 0, ascii("other.mov"), byteArrayOf(0))
+        val references = fullBox("dref", 0, 0, u32(2), external, alias)
+        val valid = build(16, 1, 16, dataReferences = references, dataReferenceIndex = 2)
+        assertSamples(valid, 1, 0, 16, "selected local alias, unused external reference")
+        assertSamples(build(16, 1, 16, dataReferences = fullBox("dref", 0, 0, u32(1), local)), 1, 0, 16, "local URL reference")
+        for (tolerant in listOf(false, true)) {
+            val options = DecodeOptions(tolerant = tolerant)
+            val file = build(16, 1, 16, dataReferences = references)
+            for (operation in listOf<() -> Unit>({ AudioKodec.probe(file, options) }, { AudioKodec.open(file, options).close() })) {
+                val failure = assertFailsWith<UnsupportedFeatureException>(block = operation)
+                assertTrue("external" in failure.message.orEmpty())
+            }
+            for (index in listOf(0, 3)) {
+                assertFailsWith<CorruptStreamException> {
+                    AudioKodec.probe(build(16, 1, 16, dataReferences = references, dataReferenceIndex = index), options)
+                }
+            }
+            assertFailsWith<CorruptStreamException> { AudioKodec.probe(build(16, 1, 16, dataReferenceIndex = 2), options) }
+        }
+    }
+
+    @Test
+    fun packetDescriptionsMustResolveToTheSingleAudioDescription() {
+        for (index in listOf(0, 2)) {
+            val ordinary = build(16, 1, 16).also { patchU32(it, "stsc", 20, index) }
+            val defaults = buildFragmented(16, 1, 16).also { patchU32(it, "trex", 12, index) }
+            val override = buildFragmented(16, 1, 16, audioDescriptionIndex = index)
+            for (file in listOf(ordinary, defaults, override)) for (tolerant in listOf(false, true)) {
+                assertFailsWith<CorruptStreamException> { AudioKodec.probe(file, DecodeOptions(tolerant = tolerant)) }
+            }
+        }
+        assertSamples(buildFragmented(16, 1, 16, audioDescriptionIndex = 1), 1, 0, 16, "valid fragment description override")
+    }
+
+    @Test
+    fun mediaDataRegionIndexRespectsTheAllocationLimit() {
+        val extra = ByteArray(200 * 8)
+        repeat(200) { box("mdat").copyInto(extra, it * 8) }
+        val file = build(16, 1, 16, moovFirst = true) + extra
+        assertFailsWith<AllocationGuardException> { AudioKodec.probe(file, DecodeOptions(maxAllocationBytes = 1_024)) }
+    }
+
+    @Test
+    fun mediaDataOwnershipChecksRetainTruncatedRecordingRecovery() {
+        for (fragmented in listOf(false, true)) {
+            val original = if (fragmented) buildFragmented(40_000, 1, 16_384) else build(40_000, 1, 16_384, moovFirst = true)
+            val mdat = (0..original.size - 4).last { at -> (0..3).all { k -> original[at + k] == "mdat"[k].code.toByte() } } - 4
+            val cutAt = mdat + 8 + if (fragmented) 100 else 65_536 + 100
+            val expected = AudioKodec.decode(original).samples.copyOf(32_768)
+            for (openEnded in listOf(false, true)) {
+                val cut = original.copyOf(cutAt)
+                if (openEnded) u32(0).copyInto(cut, mdat)
+                for (unknown in listOf(false, true)) {
+                    assertEquals(40_000L, AudioKodec.probe(MpegTrailerFixtures.source(cut, unknown)).durationFrames)
+                    assertFailsWith<TruncatedStreamException> { AudioKodec.decode(MpegTrailerFixtures.source(cut, unknown)) }
+                    assertContentEquals(expected, AudioKodec.decode(MpegTrailerFixtures.source(cut, unknown), DecodeOptions(tolerant = true)).samples)
+                }
+            }
+        }
+    }
+
+    private fun typeAt(bytes: ByteArray, type: String): Int =
+        (0..bytes.size - 4).first { at -> (0..3).all { k -> bytes[at + k] == type[k].code.toByte() } }
+
+    private fun assertBadPacketRange(file: ByteArray) {
+        for (unknown in listOf(false, true)) for (tolerant in listOf(false, true)) {
+            val options = DecodeOptions(tolerant = tolerant)
+            for (operation in listOf<() -> Unit>(
+                { AudioKodec.probe(MpegTrailerFixtures.source(file, unknown), options) },
+                { AudioKodec.open(MpegTrailerFixtures.source(file, unknown), options).close() },
+                { AudioKodec.decode(MpegTrailerFixtures.source(file, unknown), options) },
+            )) assertFailsWith<CorruptStreamException>(block = operation)
+        }
+    }
 
     @Test
     fun unbrandedQuickTimeFilesReachTheDecoderWithEitherMoviePosition() {
@@ -138,7 +287,7 @@ class Mp4Test {
 
     @Test
     fun largeConstantPcmClaimsDoNotRequirePerFrameWork() {
-        val ordinary = build(5, 1, 5)
+        val ordinary = build(5, 1, 5, moovFirst = true)
         patchU32(ordinary, "stsz", 12, Int.MAX_VALUE)
         patchU32(ordinary, "stsc", 16, Int.MAX_VALUE)
         patchU32(ordinary, "stts", 12, Int.MAX_VALUE)
@@ -147,17 +296,46 @@ class Mp4Test {
         val zeroSize = fragmented.copyOf()
         patchU32(zeroSize, "trex", 20, 0)
         val options = DecodeOptions(maxAllocationBytes = 2L shl 20)
-        for (file in listOf(ordinary, fragmented, zeroSize)) {
-            val parsed = Mp4Reader.parse(SourceReader(file.asAudioSource(), options), options)
+        val sources = listOf(sparseMediaData(ordinary, Int.MAX_VALUE * 2L),
+            sparseMediaData(fragmented, Int.MAX_VALUE * 2L), zeroSize.asAudioSource())
+        for ((i, source) in sources.withIndex()) {
+            val parsed = Mp4Reader.parse(SourceReader(source, options), options)
             assertEquals(Int.MAX_VALUE.toLong(), parsed.audio.times.last())
-            assertEquals(if (file === zeroSize) 1 else 65_536, parsed.audio.sizes.size)
-            assertEquals(Int.MAX_VALUE.toLong(), AudioKodec.probe(file, options).durationFrames)
+            assertEquals(if (i == 2) 1 else 65_536, parsed.audio.sizes.size)
+            assertEquals(Int.MAX_VALUE.toLong(), AudioKodec.probe(source, options).durationFrames)
         }
         val overflowingTime = buildFragmented(10, 1, 5)
         patchU32(overflowingTime, "trun", 8, Int.MAX_VALUE)
         patchU32(overflowingTime, "trex", 20, 0)
         patchU32(overflowingTime, "trex", 16, -1)
         assertFailsWith<CorruptStreamException> { AudioKodec.probe(overflowingTime, options) }
+    }
+
+    /** A virtual zero-filled payload keeps multi-gigabyte indexing tests bounded. */
+    private fun sparseMediaData(file: ByteArray, payloadBytes: Long): AudioSource {
+        val mdat = typeAt(file, "mdat") - 4
+        val shifted = file.copyOf()
+        val fragment = (0..file.size - 4).any { at -> (0..3).all { k -> file[at + k] == "trun"[k].code.toByte() } }
+        val type = if (fragment) "trun" else "stco"
+        val value = Mp4Box.readU32(file, typeAt(file, type) + 12).toInt()
+        patchU32(shifted, type, 12, value + 8)
+        val prefix = shifted.copyOfRange(0, mdat) + u32(1) + ascii("mdat") + u64(payloadBytes + 16) +
+            file.copyOfRange(mdat + 8, file.size)
+        return object : AudioSource {
+            override val size: Long = mdat + 16L + payloadBytes
+            override fun readAt(position: Long, into: ByteArray, offset: Int, count: Int): Int {
+                if (count == 0) return 0
+                if (position >= size) return -1
+                val got = minOf(count.toLong(), size - position).toInt()
+                into.fill(0, offset, offset + got)
+                if (position < prefix.size) {
+                    val copied = minOf(got.toLong(), prefix.size - position).toInt()
+                    prefix.copyInto(into, offset, position.toInt(), position.toInt() + copied)
+                }
+                return got
+            }
+            override fun close() = Unit
+        }
     }
 
     @Test
@@ -654,6 +832,9 @@ class Mp4Test {
         timeRuns: List<Pair<Int, Int>>? = null,
         sampleSizes: IntArray? = null,
         leadingBoxes: ByteArray = ByteArray(0),
+        useCo64: Boolean = false,
+        dataReferences: ByteArray? = null,
+        dataReferenceIndex: Int = 1,
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
         require(!singlePacket || chunkCount == 1)
@@ -683,7 +864,7 @@ class Mp4Test {
                 fullBox("stsc", 0, 0, u32(2), u32(1), u32(chunkFrames), u32(1), u32(chunkCount), u32(lastFrames), u32(1))
             }
             val entry = box(
-                format, ByteArray(6), u16(1), u16(0), u16(0), u32(0), u16(sampleEntryChannels), u16(16), u16(0), u16(0), u32(sampleEntryRate shl 16),
+                format, ByteArray(6), u16(dataReferenceIndex), u16(0), u16(0), u32(0), u16(sampleEntryChannels), u16(16), u16(0), u16(0), u32(sampleEntryRate shl 16),
                 channelTag?.let { fullBox("chan", 0, 0, u32(it), u32(0), u32(0)) } ?: ByteArray(0),
                 sampleEntryBoxes,
             )
@@ -697,13 +878,14 @@ class Mp4Test {
                 if (singlePacket) fullBox("stsz", 0, 0, u32(0), u32(1), u32(data.size))
                 else if (sampleSizes != null) fullBox("stsz", 0, 0, u32(0), u32(sampleSizes.size), *sampleSizes.map(::u32).toTypedArray())
                 else fullBox("stsz", 0, 0, u32(1), u32(frames)),
-                fullBox("stco", 0, 0, u32(chunkCount), *starts.map { u32(dataAt + it) }.toTypedArray()),
+                if (useCo64) fullBox("co64", 0, 0, u32(chunkCount), *starts.map { u64(dataAt + it.toLong()) }.toTypedArray())
+                else fullBox("stco", 0, 0, u32(chunkCount), *starts.map { u32(dataAt + it) }.toTypedArray()),
             )
             val mdia = box(
                 "mdia",
                 fullBox("mdhd", 0, 0, u32(0), u32(0), u32(RATE), u32(frames), u16(0), u16(0)),
                 fullBox("hdlr", 0, 0, u32(0), ascii("soun"), ByteArray(12), byteArrayOf(0)),
-                box("minf", fullBox("smhd", 0, 0, u32(0)), stbl),
+                box("minf", fullBox("smhd", 0, 0, u32(0)), dataReferences?.let { box("dinf", it) } ?: ByteArray(0), stbl),
             )
             val edts = edit?.let { (start, duration) ->
                 val timing = if (editVersion == 1) u64(duration) + u64(start) else u32(duration.toInt()) + u32(start.toInt())
@@ -742,6 +924,7 @@ class Mp4Test {
         otherTrexSize: Int = 0,
         otherPayload: ByteArray = ByteArray(0),
         implicitAudioBase: Boolean = false,
+        audioDescriptionIndex: Int? = null,
         otherTraf: ((Int) -> ByteArray)? = null,
     ): ByteArray {
         val frameBytes = channels * 2
@@ -782,7 +965,8 @@ class Mp4Test {
                 "moof",
                 fullBox("mfhd", 0, 0, u32(sequence)),
                 otherTraf?.invoke(dataOffset) ?: ByteArray(0),
-                box("traf", fullBox("tfhd", 0, if (implicitAudioBase) 0 else 0x020000, u32(1)),
+                box("traf", fullBox("tfhd", 0, (if (implicitAudioBase) 0 else 0x020000) or (if (audioDescriptionIndex == null) 0 else 2),
+                    u32(1), audioDescriptionIndex?.let(::u32) ?: ByteArray(0)),
                     fullBox("trun", 0, if (implicitAudioBase) 0 else 1, u32(count), if (implicitAudioBase) ByteArray(0) else u32(dataOffset + otherPayload.size))),
             )
             val moofSize = moof(0).size

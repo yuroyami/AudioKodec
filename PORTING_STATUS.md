@@ -366,6 +366,15 @@ packet regressions cover initial float and integer output, and FFmpeg-generated
 mono and stereo Opus edits check the opening samples and edit alignment. Opus
 run-up approximates continuous decoder state; seeking is not claimed bit-exact.
 
+MP4 packet and chapter ranges are validated against indexed `mdat` payloads,
+including fragment runs, multiple payloads, 64-bit headers and final zero-sized
+boxes. Header, metadata and cross-boundary offsets are corruption in both modes.
+Selected local URL and alias references are supported; external and resource-fork
+references are refused. Description and reference indices must resolve. The
+range index is allocation-guarded, and physical truncation retains the existing
+packet recovery policy. Sparse multi-gigabyte PCM sources check bounded indexing
+work; real FFmpeg PCM files check valid samples and damaged offsets.
+
 **File output through kotlinx-io.** `Path.asAudioSink` opens on the first valid non-empty write, so unused sinks and encodes rejected before output preserve an existing file. `Path.writeAudioAtomically` writes a temporary file, closes it and replaces the destination through the platform atomic move. Shared filesystem tests cover successful replacement, rejected layouts, unknown lengths, partial-write failures and cleanup. The parent must exist; atomicity follows the filesystem, with the WASI guarantee unverifiable.
 
 ## Known differences

@@ -348,6 +348,14 @@ and QuickTime `.mov`. The audio track's packets are found from its sample
 tables wherever the `moov` box sits, before the audio or after it, and in
 fragmented files from each fragment's own table.
 
+Every indexed packet must fit wholly inside one declared `mdat` payload.
+Offsets into atom headers, metadata or gaps are corruption in either mode.
+The selected data reference must describe a local URL or alias; external files
+and resource-fork references are named and refused. Legacy self-contained
+files without `dref` retain implicit reference 1. Packet reads still detect
+physical truncation, including in a final zero-sized `mdat`, so tolerant mode
+can retain the complete audio prefix.
+
 QuickTime files do not need an `ftyp` brand atom. Detection recognises `moov`
 and `mdat`, and can skip leading `free`, `skip`, `wide` and `uuid` atoms. It
 checks at most 128 atom headers. For byte-array `sniff`, the identifying header

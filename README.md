@@ -187,6 +187,9 @@ too, the edit list that says which part of the track plays, and chapters from
 either a chapter track or a Nero `chpl` list. Every packet is found where
 ffmpeg finds it.
 
+Packet ranges are checked against media-data payloads before decoding, and
+external data references are named and refused.
+
 ALAC, Opus, FLAC and QuickTime's uncompressed codings decode, seeking
 included. AAC, MP3, AC-3 and AMR are named, with their length and chapters, and
 `open` refuses them by name.

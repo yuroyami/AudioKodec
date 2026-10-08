@@ -10,6 +10,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -121,6 +122,43 @@ class Mp4OracleTest {
             // which AudioKodec leaves out and ffprobe counts.
             val preSkip = if (case.codec == AudioCodec.OPUS && "frag" in case.name) 312 else 0
             assertEquals(stream.getValue("duration_ts").toLong() - preSkip, info.durationFrames, "${case.name}: length")
+        }
+    }
+
+    @Test
+    fun referencePcmFilesRejectContainerHeaderOffsetsBeforeOpening() {
+        val ffmpeg = ffmpeg ?: return skip()
+        for (fragmented in listOf(false, true)) {
+            val options = listOf("-c:a", "pcm_s16le") + if (fragmented)
+                listOf("-movflags", "frag_keyframe+empty_moov", "-frag_duration", "100000") else emptyList()
+            val file = encode(ffmpeg, "packet_ownership_$fragmented.mov", 2, options, seconds = 0.5)
+            val original = file.readBytes()
+            val decoded = AudioKodec.decode(original)
+            val output = temp("packet_ownership_$fragmented.f32")
+            run(listOf(ffmpeg, "-y", "-v", "error", "-i", file.path, "-f", "f32le", output.path))
+            val buffer = ByteBuffer.wrap(output.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+            TestSignals.assertExact(FloatArray(buffer.remaining()).also { buffer.get(it) }, decoded.samples)
+            val damaged = original.copyOf()
+            if (fragmented) {
+                val trun = indexOfType(damaged, "trun")
+                assertTrue(trun > 0 && damaged[trun + 7].toInt() and 1 != 0)
+                writeU32(damaged, trun + 12, 0)
+            } else {
+                val stco = indexOfType(damaged, "stco")
+                assertTrue(stco > 0)
+                writeU32(damaged, stco + 12, 0)
+            }
+            val external = original.copyOf()
+            val dref = indexOfType(external, "dref")
+            assertTrue(dref > 0)
+            assertEquals("url ", external.decodeToString(dref + 16, dref + 20))
+            external[dref + 23] = 0
+            for (tolerant in listOf(false, true)) {
+                val settings = DecodeOptions(tolerant = tolerant)
+                assertFailsWith<CorruptStreamException> { AudioKodec.probe(damaged, settings) }
+                assertFailsWith<CorruptStreamException> { AudioKodec.open(damaged, settings).close() }
+                assertFailsWith<UnsupportedFeatureException> { AudioKodec.open(external, settings).close() }
+            }
         }
     }
 

@@ -23,6 +23,8 @@ internal class Mp4Box(
     val headerBytes: Int,
     /** Bytes the whole box occupies, header included. */
     val size: Long,
+    /** A zero-sized top-level box occupies the remainder of its source. */
+    val extendsToEnd: Boolean = false,
 ) {
     /** Offset of the first byte of the body. */
     val bodyOffset: Long get() = offset + headerBytes

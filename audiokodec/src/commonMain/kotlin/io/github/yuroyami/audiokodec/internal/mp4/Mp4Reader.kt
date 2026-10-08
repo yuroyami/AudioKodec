@@ -49,6 +49,8 @@ internal object Mp4Reader {
         val boxes: Map<String, ByteArray>,
         /** Where the entry starts in the file. */
         val offset: Long,
+        /** One-based entry in the track's data-reference table. */
+        val dataReferenceIndex: Int,
     )
 
     /** The audio track. */
@@ -82,6 +84,7 @@ internal object Mp4Reader {
 
     fun parse(reader: SourceReader, options: DecodeOptions): Mp4File {
         val top = topLevelBoxes(reader, options)
+        val mediaData = MediaData(top, reader, options)
         val moov = top.singleOrNull { it.type == "moov" } ?: run {
             if (top.count { it.type == "moov" } > 1) throw CorruptStreamException("the file holds more than one 'moov' box")
             throw TruncatedStreamException(
@@ -121,6 +124,7 @@ internal object Mp4Reader {
                 "this MP4 file has no sound track: it holds ${tracks.map { it.handler }.distinct().joinToString(", ").ifEmpty { "no tracks" }}",
             )
         val entry = chosen.entry!!
+        checkDataReference(body, chosen, base)
         if (isFramewisePcm(entry)) {
             Mp4Codecs.checkShape(entry, options, entry.sampleRate, entry.channels)
         }
@@ -134,10 +138,11 @@ internal object Mp4Reader {
                 readFragment(reader, moof, chosen.id, defaults, samples, options)
             }
         }
+        samples.checkRanges(mediaData)
 
         val chapterTracks = chosen.chapterTrackIds.mapNotNull { id -> tracks.firstOrNull { it.id == id } }
         val chapters = try {
-            chapterTracks.firstOrNull()?.let { readChapterTrack(reader, it, body, base, options) }
+            chapterTracks.firstOrNull()?.let { readChapterTrack(reader, it, body, base, options, mediaData) }
                 ?: children.firstOrNull { it.type == "udta" }?.let { readNeroChapters(body, it, base) }
                 ?: emptyList()
         } catch (failure: AudioKodecException) {
@@ -194,7 +199,10 @@ internal object Mp4Reader {
                 if (options.tolerant && boxes.any { it.type == "moov" }) break
                 throw CorruptStreamException("the box '$type' states $boxSize bytes, less than its own header", at)
             }
-            boxes += Mp4Box(type, at, headerBytes, boxSize)
+            if (boxSize > Long.MAX_VALUE - at) {
+                throw CorruptStreamException("the box '$type' overflows 64-bit file offsets", at)
+            }
+            boxes += Mp4Box(type, at, headerBytes, boxSize, extendsToEnd = small == 0L)
             if (boxes.size > MAX_TOP_LEVEL_BOXES) {
                 throw CorruptStreamException("the file holds more than $MAX_TOP_LEVEL_BOXES top-level boxes", at)
             }
@@ -247,6 +255,7 @@ internal object Mp4Reader {
         val edit: Edit?,
         val chapterTrackIds: List<Int>,
         val stbl: Mp4Box?,
+        val dataReferences: Mp4Box?,
     )
 
     private fun readTrack(body: ByteArray, trak: Mp4Box, base: Long, movieTimescale: Long, options: DecodeOptions): Track {
@@ -271,7 +280,9 @@ internal object Mp4Reader {
             cursor.skip(8)
             cursor.fourCc()
         } ?: ""
-        val stbl = child(body, mdia, "minf", base)?.let { child(body, it, "stbl", base) }
+        val minf = child(body, mdia, "minf", base)
+        val stbl = minf?.let { child(body, it, "stbl", base) }
+        val dataReferences = minf?.let { child(body, it, "dinf", base) }?.let { child(body, it, "dref", base) }
         val entry = if (handler == "soun" && stbl != null) {
             child(body, stbl, "stsd", base)?.let { readSampleEntry(body, it, base, id) }
         } else {
@@ -286,7 +297,7 @@ internal object Mp4Reader {
                 List(cursor.remaining / 4) { cursor.i32() }
             }
         }.orEmpty()
-        return Track(id, flags and 1 != 0, handler, timescale, entry, edit, chapters, stbl)
+        return Track(id, flags and 1 != 0, handler, timescale, entry, edit, chapters, stbl, dataReferences)
     }
 
     private fun readSampleEntry(body: ByteArray, stsd: Mp4Box, base: Long, trackId: Int): SampleEntry? {
@@ -304,7 +315,8 @@ internal object Mp4Reader {
             )
         }
         val entry = cursorOf(body, first, base, "the '${first.type}' sample entry")
-        entry.skip(8)
+        entry.skip(6)
+        val dataReferenceIndex = entry.u16()
         val version = entry.u16()
         entry.skip(6)
         var channels = entry.u16()
@@ -351,7 +363,47 @@ internal object Mp4Reader {
             bitsPerChannel = bitsPerChannel,
             boxes = boxes,
             offset = base + first.offset,
+            dataReferenceIndex = dataReferenceIndex,
         )
+    }
+
+    /** Only the selected self-contained data reference belongs to this source. */
+    private fun checkDataReference(body: ByteArray, track: Track, base: Long) {
+        val entry = track.entry ?: return
+        val index = entry.dataReferenceIndex
+        if (index < 1) throw CorruptStreamException("the audio sample entry names data reference $index", entry.offset)
+        val dref = track.dataReferences
+        if (dref == null) {
+            // Retain legacy self-contained files which omit this table. Their
+            // packet ranges must still belong to this source's media data.
+            if (index != 1) throw CorruptStreamException("the audio sample entry names data reference $index without a 'dref' table", entry.offset)
+            return
+        }
+        val cursor = cursorOf(body, dref, base, "the 'dref' box")
+        cursor.skip(4)
+        val count = cursor.count()
+        cursor.requireEntries(count, 12)
+        if (index > count) throw CorruptStreamException("the audio sample entry names data reference $index but 'dref' holds $count", entry.offset)
+        var at = cursor.position
+        for (i in 1..index) {
+            val reference = Mp4Box.at(body, at, dref.end.toInt(), base)
+                ?: throw CorruptStreamException("the 'dref' box ends before reference $i", base + at)
+            at = reference.end.toInt()
+            if (i != index) continue
+            val fields = cursorOf(body, reference, base, "data reference $index")
+            val version = fields.u8()
+            val flags = fields.u24()
+            if (version != 0) throw UnsupportedFeatureException("MP4 data reference version $version")
+            if (flags and 0xFFFFFE != 0) throw CorruptStreamException("data reference $index sets reserved flags", base + reference.offset)
+            if (flags and 1 == 0) {
+                throw UnsupportedFeatureException("external MP4 data references",
+                    "this audio track uses an external data reference outside its MP4 source")
+            }
+            if (reference.type != "url " && reference.type != "alis") {
+                throw UnsupportedFeatureException("MP4 data reference '${reference.type}'",
+                    "this MP4 data reference does not describe supported local media data")
+            }
+        }
     }
 
     /**
@@ -432,19 +484,52 @@ internal object Mp4Reader {
         return Edit(real.first().mediaTime, duration)
     }
 
-    private class Trex(val trackId: Int, val duration: Long, val size: Long)
+    private class Trex(val trackId: Int, val description: Long, val duration: Long, val size: Long)
 
     private fun readTrex(body: ByteArray, trex: Mp4Box, base: Long): Trex {
         val cursor = cursorOf(body, trex, base, "the 'trex' box")
         cursor.skip(4)
         val trackId = cursor.i32()
-        cursor.skip(4)
+        val description = cursor.u32()
         val duration = cursor.u32()
         val size = cursor.u32()
-        return Trex(trackId, duration, size)
+        return Trex(trackId, description, duration, size)
     }
 
     // Packets.
+
+    /** Ordered payload ranges let each packet be checked in logarithmic time. */
+    private class MediaData(top: List<Mp4Box>, private val reader: SourceReader, options: DecodeOptions) {
+        private val regions: List<Mp4Box>
+        init {
+            val count = top.count { it.type == "mdat" }
+            options.checkAllocation(count.toLong() * 16, "indexing $count MP4 media-data regions")
+            regions = top.filter { it.type == "mdat" }
+        }
+
+        fun check(offset: Long, size: Long) {
+            if (offset < 0 || size < 0 || size > Long.MAX_VALUE - offset) {
+                throw CorruptStreamException("a packet's data offsets overflow the supported file range", offset)
+            }
+            var low = 0
+            var high = regions.size - 1
+            var found = -1
+            while (low <= high) {
+                val middle = (low + high) ushr 1
+                if (regions[middle].bodyOffset <= offset) {
+                    found = middle
+                    low = middle + 1
+                } else high = middle - 1
+            }
+            val region = regions.getOrNull(found)
+            // A final zero-sized mdat has no declared end. Physical EOF is
+            // checked while reading packets, preserving cut-recording recovery.
+            val end = if (region?.extendsToEnd == true) Long.MAX_VALUE else region?.end
+            if (end == null || offset > end || size > end - offset) {
+                throw CorruptStreamException("a packet of $size bytes is outside an 'mdat' payload", reader.absoluteOffset(offset))
+            }
+        }
+    }
 
     /** Gathers packets, growing as needed and checking the allocation as it does. */
     private class SampleList(private val options: DecodeOptions, private val coalesce: Boolean) {
@@ -474,6 +559,7 @@ internal object Mp4Reader {
 
         fun add(offset: Long, size: Long, duration: Long) {
             if (size > Int.MAX_VALUE || size < 0) throw CorruptStreamException("a packet states $size bytes", offset)
+            if (offset < 0 || size > Long.MAX_VALUE - offset) throw CorruptStreamException("a packet's data offsets overflow 64 bits", offset)
             if (duration < 0 || totalBytes > Long.MAX_VALUE - size) throw CorruptStreamException("the packets' sizes or durations overflow 64 bits", offset)
             if (coalesce && count > 0) {
                 val last = count - 1
@@ -544,6 +630,10 @@ internal object Mp4Reader {
 
         fun offsetAt(i: Int): Long = offsets[i]
         fun sizeAt(i: Int): Int = sizes[i]
+
+        fun checkRanges(mediaData: MediaData) {
+            for (i in 0 until count) mediaData.check(offsets[i], sizes[i].toLong())
+        }
     }
 
     /**
@@ -616,7 +706,10 @@ internal object Mp4Reader {
         for (i in 0 until runs) {
             firstChunks[i] = toChunk.u32()
             perChunk[i] = toChunk.u32()
-            toChunk.skip(4)
+            val description = toChunk.u32()
+            if (description != 1L) {
+                throw CorruptStreamException("the 'stsc' box names sample description $description but the track holds one", base + stsc.offset)
+            }
             if (firstChunks[i] < 1 || (i > 0 && firstChunks[i] <= firstChunks[i - 1])) {
                 throw CorruptStreamException("the 'stsc' box lists its chunks out of order", base + stsc.offset)
             }
@@ -702,7 +795,10 @@ internal object Mp4Reader {
             if (explicitBase != null && explicitBase < 0) {
                 throw CorruptStreamException("the 'tfhd' box's base data offset exceeds the supported file range", base + tfhd.offset)
             }
-            if (flags and 0x2 != 0) header.skip(4)
+            val description = if (flags and 0x2 != 0) header.u32() else trackDefaults.description
+            if (id == trackId && description != 1L) {
+                throw CorruptStreamException("the 'tfhd' box selects sample description $description but the audio track holds one", base + tfhd.offset)
+            }
             val defaultDuration = if (flags and 0x8 != 0) header.u32() else trackDefaults.duration
             val defaultSize = if (flags and 0x10 != 0) header.u32() else trackDefaults.size
             val dataBase = when {
@@ -766,10 +862,11 @@ internal object Mp4Reader {
      * Reads a QuickTime chapter track: a text track whose every packet is one
      * chapter title, a 16-bit length and the text, timed by the packet.
      */
-    private fun readChapterTrack(reader: SourceReader, track: Track, body: ByteArray, base: Long, options: DecodeOptions): List<TagChapter>? {
+    private fun readChapterTrack(reader: SourceReader, track: Track, body: ByteArray, base: Long, options: DecodeOptions, mediaData: MediaData): List<TagChapter>? {
         val samples = SampleList(options, coalesce = false)
         expandTables(body, track.stbl, samples, base, null, options)
         if (samples.count == 0) return null
+        samples.checkRanges(mediaData)
         val times = samples.times()
         val chapters = ArrayList<TagChapter>(samples.count)
         for (i in 0 until samples.count) {
