@@ -606,6 +606,9 @@ internal class AlacPacketCodec(private val config: AlacConfig, sampleRate: Int) 
     /** Every packet stands alone: the predictor starts again in each. */
     override val preRollFrames: Long = 0
 
+    /** Decodes into existing scratch storage to resolve a packet's actual length. */
+    fun decodedFrameCount(packet: ByteArray): Int = decoder.decode(packet, packet.size, scratch)
+
     override fun decodeInt(packet: ByteArray, length: Int, out: IntArray): Int {
         val frames = decoder.decode(packet, length, scratch)
         for (f in 0 until frames) {

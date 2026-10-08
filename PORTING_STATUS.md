@@ -42,6 +42,9 @@ passing one. Within them:
   encodings at 16 and 24 bits pass reference decoding with exact samples.
 - CAF files from `afconvert` decode bit-exactly across its uncompressed data
   formats in both byte orders.
+- CAF ALAC files from ffmpeg decode bit-exactly at 16 and 24 bits in mono
+  and stereo, including a short final packet whose packet table overstates
+  its length. Opening resolves that duration; seeking and strict EOF agree.
 - Ogg FLAC files from the reference encoder decode **bit-exactly**, seek to the
   sample, and survive a tag rewrite that the reference decoder then accepts.
 - The headers and comments of Ogg Vorbis, Ogg Opus and Ogg Speex files from

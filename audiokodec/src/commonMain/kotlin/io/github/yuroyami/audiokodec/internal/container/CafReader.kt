@@ -64,16 +64,50 @@ internal object CafReader {
 
     fun open(reader: SourceReader, options: DecodeOptions): AudioDecoder = when (val stream = read(reader, options)) {
         is Stream.Blocks -> stream.parsed.toDecoder(reader, options)
-        is Stream.Alac -> PacketStreamDecoder.of(
-            reader, stream.index, AlacPacketCodec(stream.config, stream.sampleRate), alacInfo(reader, stream),
-            stream.primingFrames, stream.validFrames, options,
-        )
+        is Stream.Alac -> {
+            val codec = AlacPacketCodec(stream.config, stream.sampleRate)
+            val validFrames = alacPlayFrames(reader, stream, codec, options)
+            PacketStreamDecoder.of(
+                reader, stream.index, codec, alacInfo(reader, stream, codec.format, validFrames),
+                stream.primingFrames, validFrames, options,
+            )
+        }
     }
 
-    private fun alacInfo(reader: SourceReader, stream: Stream.Alac): AudioInfo {
-        val format = AlacPacketCodec(stream.config, stream.sampleRate).format
-        val bitrate = if (stream.validFrames > 0) {
-            (stream.payloadBytes.toDouble() * 8.0 * stream.sampleRate / stream.validFrames).coerceIn(0.0, Int.MAX_VALUE.toDouble()).toInt()
+    /** FFmpeg can count a partial final ALAC packet as a full packet in `pakt`. */
+    private fun alacPlayFrames(reader: SourceReader, stream: Stream.Alac, codec: AlacPacketCodec, options: DecodeOptions): Long {
+        val index = stream.index
+        val last = index.count - 1
+        if (last < 0 || stream.validFrames <= (index.starts[last] - stream.primingFrames).coerceAtLeast(0L)) {
+            return stream.validFrames
+        }
+        val frames = try {
+            reader.seek(index.offsets[last])
+            codec.decodedFrameCount(reader.readBytes(index.sizes[last]))
+        } catch (failure: TruncatedStreamException) {
+            if (!options.tolerant) throw failure
+            return stream.validFrames
+        } catch (failure: CorruptStreamException) {
+            if (!options.tolerant) {
+                throw CorruptStreamException("the final ALAC packet is damaged: ${failure.message}", reader.absoluteOffset(index.offsets[last]))
+            }
+            // Leave tolerant recovery to sequential decoding, so earlier valid
+            // packets are still available even when the final one is damaged.
+            return stream.validFrames
+        }
+        if (frames >= index.starts[last + 1] - index.starts[last]) return stream.validFrames
+        index.starts[last + 1] = index.starts[last] + frames
+        return minOf(stream.validFrames, (index.totalFrames - stream.primingFrames).coerceAtLeast(0L))
+    }
+
+    private fun alacInfo(
+        reader: SourceReader,
+        stream: Stream.Alac,
+        format: AudioFormat = AlacPacketCodec(stream.config, stream.sampleRate).format,
+        validFrames: Long = stream.validFrames,
+    ): AudioInfo {
+        val bitrate = if (validFrames > 0) {
+            (stream.payloadBytes.toDouble() * 8.0 * stream.sampleRate / validFrames).coerceIn(0.0, Int.MAX_VALUE.toDouble()).toInt()
         } else {
             null
         }
@@ -81,7 +115,7 @@ internal object CafReader {
             container = AudioContainer.CAF,
             codec = AudioCodec.ALAC,
             format = format,
-            durationFrames = stream.validFrames,
+            durationFrames = validFrames,
             bitDepth = stream.config.bitDepth,
             bitrate = bitrate,
             isVariableBitrate = true,

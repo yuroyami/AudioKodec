@@ -28,7 +28,10 @@ public interface AudioDecoder : AutoCloseable {
      */
     public val durationFrames: Long?
 
-    /** What the header said about the file, without decoding. */
+    /**
+     * Information about the opened stream. CAF ALAC durations include a check
+     * of the final packet and can be shorter than [AudioKodec.probe] reports.
+     */
     public val info: AudioInfo
 
     /** Position of the next frame [nextFrame] will return, counted in frames. */

@@ -91,6 +91,9 @@ public object AudioKodec {
      * source is closed before the failure is thrown, and
      * `AudioKodec.open(source).use { ... }` never leaks it. Pull blocks with
      * [AudioDecoder.nextFrame] until it returns null.
+     *
+     * Opening CAF ALAC decodes its final packet once to resolve a possibly
+     * overstated packet-table duration; [probe] reports the metadata value.
      */
     public fun open(
         source: AudioSource,

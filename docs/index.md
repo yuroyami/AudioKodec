@@ -44,6 +44,12 @@ println(info.durationSeconds)
 `probe` reads headers only. Scanning a folder of music costs a few kilobytes
 of reads per file rather than a full decode of each one.
 
+CAF ALAC packet tables from some encoders, including ffmpeg, count a short
+final packet as a full one. `probe` reports that metadata duration. `open`
+decodes the final packet once and corrects the decoder's duration and `info`
+before playback, so complete files end cleanly and seeking uses the actual
+length. Damaged or missing packets still fail in strict mode.
+
 AIFF-C QuickTime IMA (`ima4`) stores its length as groups of compressed
 packets. AudioKodec reports the decoded length, with 64 frames per group.
 Both Apple's and ffmpeg's files are accepted: IMA sample widths may be 0, 4

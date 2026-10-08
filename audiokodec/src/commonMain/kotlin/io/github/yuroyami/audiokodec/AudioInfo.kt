@@ -1,12 +1,13 @@
 package io.github.yuroyami.audiokodec
 
 /**
- * What a file says about its encoded audio, without decoding samples.
+ * Information about a file's encoded audio.
  *
  * [AudioKodec.probe] fills this from headers, tags and container indexes. A
  * format with no global index, notably unindexed MPEG audio, may require a
  * lightweight scan of frame or page headers across the file. The compressed
- * sample payload is never decoded.
+ * sample payload is never decoded by probing. [AudioDecoder.info] may refine
+ * the duration when opening needs a packet decoded, as CAF ALAC does.
  */
 public class AudioInfo(
     /** The container the file is wrapped in. */
@@ -17,7 +18,9 @@ public class AudioInfo(
     public val format: AudioFormat,
     /**
      * Length in frames, or null when the header does not state it and finding
-     * out would mean decoding.
+     * out would mean decoding. A CAF ALAC packet table can count a short final
+     * packet as a full one, overstating this value from [AudioKodec.probe].
+     * [AudioKodec.open] checks that packet and reports its actual length.
      */
     public val durationFrames: Long?,
     /**

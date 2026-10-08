@@ -24,6 +24,52 @@ class CafOracleTest {
     private val ffmpeg: String? by lazy { findOnPath("ffmpeg") }
 
     @Test
+    fun ffmpegAlacWithAPartialFinalPacketDecodesAndSeeksExactly() {
+        val ffmpeg = ffmpeg ?: return org.junit.Assume.assumeTrue("ffmpeg is required", false)
+        for (channels in 1..2) {
+            for (depth in intArrayOf(16, 24)) {
+                val what = "CAF ALAC, $channels channels, $depth-bit"
+                val frames = 26_460
+                val samples = TestSignals.quantise(TestSignals.sine(frames, channels), depth)
+                val input = temp("alac_${channels}_$depth.wav")
+                input.writeBytes(AudioKodec.encode(samples, AudioFormat(44_100, channels), EncodeTarget.wav(depth)))
+                val caf = temp("alac_${channels}_$depth.caf")
+                run(listOf(ffmpeg, "-y", "-v", "error", "-i", input.path, "-c:a", "alac", caf.path), what)
+                val reference = temp("alac_${channels}_$depth.f32")
+                run(listOf(ffmpeg, "-y", "-v", "error", "-i", caf.path, "-f", "f32le", reference.path), what)
+                val buffer = ByteBuffer.wrap(reference.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+                val expected = FloatArray(buffer.remaining()).also { buffer.get(it) }
+                assertEquals(frames * channels, expected.size, what)
+                val bytes = caf.readBytes()
+                for (tolerant in listOf(false, true)) {
+                    val options = DecodeOptions(tolerant = tolerant)
+                    val decoded = AudioKodec.decode(bytes, options)
+                    assertEquals(frames, decoded.frames, what)
+                    // Every 16-bit and 24-bit PCM value is exact in Float32.
+                    assertContentEquals(expected, decoded.samples, what)
+                    AudioKodec.open(bytes, options).use { decoder ->
+                        assertEquals(frames.toLong(), decoder.durationFrames, what)
+                        assertEquals(frames.toLong(), decoder.info.durationFrames, what)
+                        for (target in longArrayOf(0, 4_095, 4_096, 24_575, 24_576, 26_459, 26_460)) {
+                            assertEquals(target, decoder.seek(target), what)
+                            val block = decoder.nextFrame()
+                            if (target == frames.toLong()) {
+                                assertEquals(null, block, what)
+                            } else {
+                                assertNotNull(block, what)
+                                assertEquals(target, block.positionFrames, what)
+                                for (i in 0 until block.frameCount * channels) {
+                                    assertEquals(expected[target.toInt() * channels + i], block.samples[i], what)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun theUncompressedCafFormatsDecodeExactly() {
         val afconvert = afconvert ?: return skip()
         // Every one of these is lossless, so the samples have to come back
