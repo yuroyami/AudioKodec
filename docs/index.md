@@ -404,7 +404,8 @@ AudioKodec.open(mp3Bytes).use { decoder ->
 ```
 
 Oracle tests compare all three layers with ffmpeg's floating-point decoders;
-their output agrees to about one part in a million.
+the maximum sample difference must be below 1e-4 for Layers I and III and
+below 1e-5 for Layer II.
 
 ## Tags
 
@@ -426,7 +427,7 @@ merges them so that the richer format wins:
 | Format | Beaten by |
 |---|---|
 | ID3v2 | nothing |
-| Vorbis comments, MP4 atoms | ID3v2 |
+| Vorbis comments | ID3v2 |
 | APEv2 | the above |
 | APEv1 | APEv2 |
 | RIFF `INFO`, AIFF text chunks | the above |
@@ -439,7 +440,7 @@ is dropped for being in the wrong place. Everything stays available exactly as
 it was stored:
 
 ```kotlin
-println(tags.raw.formats)                    // [ID3v2.4, ID3v1]
+println(tags.raw.formats.map { it.displayName }) // [ID3v2.4, ID3v1]
 for (block in tags.raw.blocks) {
     println("${block.format.displayName} at ${block.offset}, ${block.size} bytes")
     for (entry in block.entries) println("  ${entry.key} = ${entry.text}")

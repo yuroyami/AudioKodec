@@ -195,10 +195,11 @@ exact integers are available through `IntPcmAccess`. It is translated from
 Apple's Apache-2.0 reference, and every file that reference encodes decodes to
 exactly the samples that went in.
 
-Vorbis decodes the whole format: both floor and residue kinds an encoder emits,
+Vorbis decodes floor type 1 and all three residue kinds,
 channel coupling, block switching, and up to eight channels reordered into
 AudioKodec's own channel order rather than Vorbis's. It is checked against
-libvorbis, sample for sample, at every quality level and every channel count.
+libvorbis at qualities 0, 4 and 9 in mono and stereo, plus a 5.1 comparison,
+with a maximum sample difference below 1e-4.
 The one thing left out is floor type 0, which no encoder has produced since the
 format's 2001 beta releases; a file using it is named and refused rather than
 guessed at.
@@ -252,11 +253,10 @@ AudioKodec.open(mp3Bytes).use { decoder ->
 }
 ```
 
-Measured against ffmpeg's own decoders, the output agrees to about one part in a
-million for Layer III and to the same for Layers I and II. Note that ffmpeg
-ships two decoders for the older layers and picks its fixed point one by
-default; the comparison above is against its float decoder, because its two
-disagree with each other by far more than either disagrees with AudioKodec.
+The oracle tests compare with ffmpeg's floating-point decoders. They enforce
+a maximum sample difference below 1e-4 for Layers I and III, and below 1e-5
+for Layer II. FFmpeg also ships fixed-point decoders for the older layers;
+these comparisons use its float decoders.
 
 ## Read and edit tags
 
@@ -276,7 +276,7 @@ winning any field the two disagree on. Everything stays available as it was
 stored:
 
 ```kotlin
-println(tags.raw.formats)                      // [ID3v2.4, ID3v1]
+println(tags.raw.formats.map { it.displayName }) // [ID3v2.4, ID3v1]
 println(tags.raw.blocksOf(TagFormat.ID3V1))    // the older block, untouched
 ```
 
@@ -302,8 +302,9 @@ Vorbis comments in both FLAC and Ogg, FLAC picture blocks, Lyrics3v2, the
 `LIST INFO` and `bext` chunks of a WAV, the text chunks of an AIFF, and an
 `id3 ` chunk inside either. Writing produces ID3v2.3 or 2.4, Vorbis comments and
 pictures in FLAC and Ogg, an updated ID3v1 block where the file already had one,
-and the metadata chunks of RIFF and AIFF. MP4 atoms arrive with the MP4
-container.
+and the metadata chunks of RIFF and AIFF. MP4 `ilst` tags are not read or
+written yet; that work is tracked in [#8](https://github.com/yuroyami/AudioKodec/issues/8).
+MP4 chapters are read separately from the container.
 
 Undeclared RIFF INFO uses UTF-8, and edits honour supported `CSET` declarations.
 AIFF native output uses ASCII; Unicode output uses ID3. Native reads also accept
@@ -364,7 +365,6 @@ source. See [sniffing windows](docs/index.md#name-a-format).
 | Container | Codings |
 |---|---|
 | FLAC | FLAC, 8 to 32-bit on read and 8, 16 or 24-bit on write |
-| Ogg | Vorbis, Opus and FLAC. Speex has its headers, length and tags read, and its audio is not decoded yet |
 | WAV (RIFF), including WAVE_FORMAT_EXTENSIBLE | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law, IMA ADPCM, Microsoft ADPCM |
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
 | AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law |
@@ -380,6 +380,7 @@ and `42ni` is 24-bit.
 
 | Container | Codings |
 |---|---|
+| Ogg | Vorbis, Opus and FLAC. Speex has its headers, length and tags read, and its audio is not decoded yet. Tags can be rewritten; audio encoding is not implemented |
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |

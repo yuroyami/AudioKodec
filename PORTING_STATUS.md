@@ -149,9 +149,9 @@ them.
 | Speex | ❌ | ❌ | Its Ogg carriage is done: headers, length and comments are read. The codec itself is #18 |
 | **ALAC** | ✅ | ❌ | Translated from Apple's Apache-2.0 reference: adaptive Golomb residues, the adaptive predictor in every order, mixed stereo pairs, shifted-off low bytes at 24 and 32 bits, uncompressed escape frames, one to eight channels reordered from ALAC's order. Every file Apple's `alacconvert` encodes at 16, 24 and 32 bits with one to eight channels decodes to exactly its input, and every ffmpeg file in MP4 to exactly ffmpeg's decode. 20-bit decoding follows the reference, but neither tool here writes a 20-bit file to check it against. Encoding is #11 |
 | WavPack, APE, TTA | ❌ | ❌ | #14, #15 and #16 |
-| MP3 (Layer III) | ✅ | ❌ | MPEG-1, 2 and 2.5. Bit reservoir, all four block shapes including mixed, mid-side and intensity stereo for both versions, alias reduction, sample-accurate seeking. Agrees with ffmpeg to about 1e-6 |
-| MP2 (Layer II) | ✅ | ❌ | All five bit allocation tables, grouped quantisation, scalefactor selection, joint stereo. Agrees with ffmpeg's float decoder to about 1e-6 |
-| MP1 (Layer I) | ✅ | ❌ | Agrees with ffmpeg's float decoder to about 1e-6 |
+| MP3 (Layer III) | ✅ | ❌ | MPEG-1, 2 and 2.5. Bit reservoir, all four block shapes including mixed, mid-side and intensity stereo for both versions, alias reduction, sample-accurate seeking. FFmpeg float comparisons enforce a maximum sample difference below 1e-4 |
+| MP2 (Layer II) | ✅ | ❌ | All five bit allocation tables, grouped quantisation, scalefactor selection, joint stereo. FFmpeg float comparisons enforce a maximum sample difference below 1e-5 |
+| MP1 (Layer I) | ✅ | ❌ | FFmpeg float comparisons enforce a maximum sample difference below 1e-4 |
 | AAC, AC-3, and the rest | ❌ | ❌ | #13 and #42 |
 
 ## Tags
@@ -329,10 +329,11 @@ can be enlarged, or `probe` and `open` can walk valid leading tags from a
 complete source. Common tests cover tag, footer and stacked-tag boundaries;
 Mutagen-written tags and FFprobe check complete files independently.
 
-Nine container identifiers have decoder paths: WAV, RF64, Wave64, AIFF, AU,
-FLAC, CAF, Ogg and MPEG audio. Ogg decodes the Vorbis and FLAC mappings and
-refuses unsupported mappings by codec name. A unit test fixes that set in code
-so it cannot drift accidentally.
+Ten container identifiers have decoder paths: WAV, RF64, Wave64, AIFF, AU,
+FLAC, CAF, Ogg, MPEG audio and MP4. Ogg decodes the Vorbis, Opus and FLAC
+mappings and refuses unsupported mappings by codec name. `SnifferTest` checks
+the declared container set; that set alone does not verify every coding or
+documentation claim.
 
 **File output through kotlinx-io.** `Path.asAudioSink` opens on the first valid non-empty write, so unused sinks and encodes rejected before output preserve an existing file. `Path.writeAudioAtomically` writes a temporary file, closes it and replaces the destination through the platform atomic move. Shared filesystem tests cover successful replacement, rejected layouts, unknown lengths, partial-write failures and cleanup. The parent must exist; atomicity follows the filesystem, with the WASI guarantee unverifiable.
 
@@ -431,9 +432,10 @@ Vorbis closes the larger half of the lossy work, and it leaves behind an
 inverse MDCT and a complex FFT that Opus, AAC and AC-3 all need, so the next
 transform codec starts further along than this one did.
 
-MPEG audio is done, all three layers. The framing layer answers what a caller
-usually wants from an MP3 without decoding anything, and the codec behind it now
-decodes to within about a millionth of ffmpeg.
+MPEG audio decodes all three layers. The framing layer reports headers and
+duration without decoding samples. FFmpeg float comparisons enforce maximum
+sample differences below 1e-4 for Layers I and III and below 1e-5 for Layer II;
+remaining conformance findings are tracked separately.
 
 Two things about it are worth writing down because they cost real time. First,
 the constant tables are large blocks of published data and a single wrong digit

@@ -277,7 +277,7 @@ class SnifferTest {
         assertTrue(AudioContainer.FLAC.isDecodable)
         assertTrue(AudioContainer.CAF.isDecodable)
         // Ogg decodes what it carries that AudioKodec has a codec for, which is
-        // Vorbis and FLAC. A mapping without one is refused by name, and that
+        // Vorbis, Opus and FLAC. A mapping without one is refused by name, and that
         // is a question about the codec rather than about the container.
         assertTrue(AudioContainer.OGG.isDecodable)
         // MPEG audio decodes all three of its layers.
