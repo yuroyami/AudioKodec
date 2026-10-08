@@ -1117,7 +1117,7 @@ bytes into a `Buffer` and call `readAudioSource()`.
 On a host with a filesystem:
 
 ```kotlin
-val info = Path("song.wav").readAudioSource().use { AudioKodec.probe(it) }
+val info = Path("song.wav").openAudioSource().use { AudioKodec.probe(it) }
 
 Path("out.wav").writeAudioAtomically { sink ->
     AudioKodec.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
@@ -1137,14 +1137,17 @@ valid, non-empty write. Creating or closing an unused sink leaves it untouched.
 Once writing begins, a later failure can leave partial output, so use the
 atomic helper when replacing a file that must survive an unsuccessful encode.
 
-Reading loads the file into memory, because decoding needs random access and
-kotlinx-io offers sequential streams only. A sink cannot seek backwards
-either, so encoding to one needs a `PcmSource` whose frame count is known in
-advance.
+`Path.openAudioSource()` opens a seekable read-only handle on JVM/Android,
+Native, Node.js 20.16 or later, and WASI with a matching preopened directory.
+Reads are capped at 64 KiB and temporary storage stays bounded independently of file size.
+The decoder takes ownership of the source and closes the handle with it.
+See [seekable file input](file-input.md) for backend details and WASI setup.
 
-For a large file, implement `AudioSource` over a seekable handle of your own.
-It has three members, and the platform APIs behind it differ enough that
-AudioKodec does not try to wrap them all.
+`Path.readAudioSource()` and `RawSource.readAudioSource()` still load the
+complete contents into memory, with a default 512 MiB ceiling. Browser
+input uses that path on a downloaded or user-selected `Buffer`.
+The kotlinx-io output bridge cannot patch lengths; WAV, AIFF and AU output
+therefore needs a float or integer PCM source whose frame count is known.
 
 ## Playing the result
 

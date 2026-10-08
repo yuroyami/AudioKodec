@@ -7,6 +7,7 @@
 
 // Library unique name: <io.github.yuroyami:audiokodec-io>
 final fun (kotlinx.io.files/Path).io.github.yuroyami.audiokodec.io/asAudioSink(): io.github.yuroyami.audiokodec/AudioSink // io.github.yuroyami.audiokodec.io/asAudioSink|asAudioSink@kotlinx.io.files.Path(){}[0]
+final fun (kotlinx.io.files/Path).io.github.yuroyami.audiokodec.io/openAudioSource(): io.github.yuroyami.audiokodec/AudioSource // io.github.yuroyami.audiokodec.io/openAudioSource|openAudioSource@kotlinx.io.files.Path(){}[0]
 final fun (kotlinx.io.files/Path).io.github.yuroyami.audiokodec.io/readAudioSource(kotlin/Long = ...): io.github.yuroyami.audiokodec/AudioSource // io.github.yuroyami.audiokodec.io/readAudioSource|readAudioSource@kotlinx.io.files.Path(kotlin.Long){}[0]
 final fun (kotlinx.io.files/Path).io.github.yuroyami.audiokodec.io/writeAudioAtomically(kotlin/Function1<io.github.yuroyami.audiokodec/AudioSink, kotlin/Unit>) // io.github.yuroyami.audiokodec.io/writeAudioAtomically|writeAudioAtomically@kotlinx.io.files.Path(kotlin.Function1<io.github.yuroyami.audiokodec.AudioSink,kotlin.Unit>){}[0]
 final fun (kotlinx.io/RawSink).io.github.yuroyami.audiokodec.io/asAudioSink(): io.github.yuroyami.audiokodec/AudioSink // io.github.yuroyami.audiokodec.io/asAudioSink|asAudioSink@kotlinx.io.RawSink(){}[0]

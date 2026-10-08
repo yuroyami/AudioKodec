@@ -15,15 +15,9 @@ import kotlinx.io.readByteArray
 /**
  * Bridges AudioKodec to kotlinx-io.
  *
- * Two things happen here. Reading loads a file into memory and hands back an
- * [AudioSource], because decoding needs random access and kotlinx-io offers
- * sequential streams only. Writing goes the other way and streams, because an
- * encoder only ever moves forwards.
- *
- * A caller that has a genuinely seekable handle, such as a Java
- * `RandomAccessFile` or a POSIX file descriptor, should implement
- * [AudioSource] over it directly instead. That avoids holding the file in
- * memory, and the interface is three members.
+ * [readAudioSource] buffers a sequential source or a whole file.
+ * [openAudioSource] opens a seekable file handle and keeps reads bounded
+ * regardless of file size. Writing streams forwards through [AudioSink].
  */
 
 /**
@@ -49,14 +43,13 @@ public fun RawSource.readAudioSource(maxBytes: Long = 512L * 1024 * 1024): Audio
             if (read > maxBytes - total) {
                 throw AudioKodecException(
                     "this source holds more than $maxBytes bytes. Raise maxBytes, or " +
-                        "implement AudioSource over a seekable handle so the file does not " +
-                        "have to be held in memory.",
+                        "use Path.openAudioSource for file input without whole-file buffering.",
                 )
             }
             if (read > Int.MAX_VALUE.toLong() - total) {
                 throw AudioKodecException(
-                    "this source is too large to hold in one Kotlin ByteArray. Implement " +
-                        "AudioSource over a seekable handle instead.",
+                    "this source is too large to hold in one Kotlin ByteArray. " +
+                        "Use Path.openAudioSource for seekable file input instead.",
                 )
             }
             total += read
@@ -69,7 +62,8 @@ public fun RawSource.readAudioSource(maxBytes: Long = 512L * 1024 * 1024): Audio
 /**
  * Reads the file at [this] into memory and returns it as an [AudioSource].
  *
- * See [readAudioSource] for why the file is read rather than streamed.
+ * The default ceiling is 512 MiB. Use [openAudioSource] for a seekable file
+ * handle whose memory use is independent of file size.
  */
 public fun Path.readAudioSource(maxBytes: Long = 512L * 1024 * 1024): AudioSource =
     SystemFileSystem.source(this).readAudioSource(maxBytes)

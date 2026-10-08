@@ -11,3 +11,7 @@ public final class io/github/yuroyami/audiokodec/io/AudioKodecIoKt {
 	public static synthetic fun readAudioSource$default (Lkotlinx/io/files/Path;JILjava/lang/Object;)Lio/github/yuroyami/audiokodec/AudioSource;
 }
 
+public final class io/github/yuroyami/audiokodec/io/SeekableAudioFileKt {
+	public static final fun openAudioSource (Lkotlinx/io/files/Path;)Lio/github/yuroyami/audiokodec/AudioSource;
+}
+

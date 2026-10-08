@@ -37,9 +37,14 @@ Streaming checks positive progress and bounded block counts. A new decoder
 container must supply a fixture before the coverage check can pass.
 
 The I/O bridge also publishes JavaScript. Its Node suite includes file
-operations, while the Chromium suite exercises only the browser-safe buffer
-and raw stream bridge. The browser task excludes `AudioFileTest` because
-kotlinx-io's local filesystem is unavailable in that host.
+operations, while the Chromium suites exercise the buffer and raw stream
+bridge and named file-host refusals. Browser tasks exclude the file-operation
+suites because local filesystem handles are unavailable in that host.
+`Path.openAudioSource` reads through bounded, read-only handles on JVM/Android,
+Native, Node and WASI. Common cases cover byte offsets, EOF, source ownership,
+tags, truncation and lossless seeks; JVM sparse-file cases cover a WAV above
+512 MiB and positions past 4 GiB. The buffering helpers retain their names
+and ceiling.
 
 All published archives carry the root `LICENSE` and `NOTICE` under `META-INF`,
 including source archives, native/JS/Wasm KLIBs and Android AARs. JS library
@@ -528,11 +533,10 @@ Settled decisions, kept here so nobody has to work out the reasons again.
    sample is one channel of one frame.
 3. **`IntPcmAccess.nextIntFrame()`, not `readIntFrame()`.** It matches
    `AudioDecoder.nextFrame()`, which is the call it parallels.
-4. **`audiokodec-io` reads a file into memory rather than streaming it.**
-   kotlinx-io has no random-access file handle, and decoding needs one. The
-   functions are named `readAudioSource` so the cost is visible, and the
-   README points a caller with a large file at implementing `AudioSource` over
-   a seekable handle instead.
+4. **Separate buffered and seekable file inputs.** `readAudioSource` keeps its
+   whole-file buffering behaviour and 512 MiB default ceiling.
+   `Path.openAudioSource` uses platform read-only handles with bounded memory;
+   browsers can use the existing sequential buffer bridge.
 5. **The `:sample` application is not in this release.** The plan lists it in
    the scaffold. It is a demonstration rather than part of the library's
    portable codec and container surface, so it remains a separate deliverable.

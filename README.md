@@ -496,15 +496,18 @@ The core never touches the filesystem, so it ports everywhere. `audiokodec-io`
 adds the bridge to kotlinx-io:
 
 ```kotlin
-val info = Path("song.wav").readAudioSource().use { AudioKodec.probe(it) }
+val info = Path("song.wav").openAudioSource().use { AudioKodec.probe(it) }
 Path("out.wav").writeAudioAtomically { sink ->
     AudioKodec.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
 }
 ```
 
-Reading loads the file into memory, because decoding needs random access and
-kotlinx-io offers sequential streams only. For large files, implement
-`AudioSource` over a seekable handle of your own: it has three members.
+`Path.openAudioSource()` reads through a seekable handle on JVM/Android,
+Native, Node.js 20.16 or later, and WASI with a preopened directory.
+Memory stays bounded independently of file length. `Path.readAudioSource()`
+and `RawSource.readAudioSource()` keep their whole-file buffering behaviour
+and 512 MiB default ceiling. Browsers use that buffering path for downloaded
+or user-selected bytes. See [seekable file input](docs/file-input.md).
 
 `writeAudioAtomically` writes to a temporary file beside the destination and
 replaces it after the write and close succeed, using kotlinx-io's atomic move.

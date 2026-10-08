@@ -73,12 +73,22 @@ kotlin {
     }
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
-        browser()
+        browser {
+            testTask {
+                useKarma { useChromeHeadless() }
+                filter.excludeTestsMatching("*AudioFileTest*")
+            }
+        }
         nodejs()
     }
     jvm()
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
+        val jvmSharedMain by creating { dependsOn(commonMain.get()) }
+        jvmMain.get().dependsOn(jvmSharedMain)
+        named("androidMain") { dependsOn(jvmSharedMain) }
         commonMain.dependencies {
             api(projects.audiokodec)
             api(libs.kotlinx.io.core)
