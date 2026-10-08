@@ -192,7 +192,7 @@ class OpusJoinOracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("the libopus reference build is not present, so the Opus join comparison did not run")
+        org.junit.Assume.assumeTrue("the libopus reference build is not present, so the Opus join comparison did not run", false)
     }
 
     private companion object {

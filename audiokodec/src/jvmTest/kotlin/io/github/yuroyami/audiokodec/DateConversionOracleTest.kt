@@ -35,10 +35,17 @@ class DateConversionOracleTest {
                     val tags = AudioKodec.readTags(file.readBytes()).edit { set(TagField.TITLE, "Unrelated edit") }
                     file.writeBytes(AudioKodec.writeTags(file.readBytes(), tags, TagWriteOptions(id3Version = version, padding = 0)))
                     run(listOf(python, "-c", DATES, file.path, "check", "$version", value))
-                    // FFprobe exposes TDRC and TDRL under the same date key.
-                    // Mutagen checks their identities; compare every FFprobe value here.
-                    assertEquals((if (version == 4) listOf(value, "2026-10-06T12:34:56") else listOf(value)).sorted(),
-                        probeDates(file).sorted())
+                    // FFprobe versions expose both date frames under one key
+                    // or keep just one value. Mutagen above verifies both frame
+                    // identities and every value, including release precision.
+                    val probed = probeDates(file).sorted()
+                    if (version == 4) {
+                        val release = "2026-10-06T12:34:56"
+                        assertTrue(probed in listOf(listOf(value), listOf(release), listOf(value, release).sorted()),
+                            "FFprobe must expose a native date value: $probed")
+                    } else {
+                        assertEquals(listOf(value), probed)
+                    }
                     assertEquals(fields, AudioKodec.readTags(file.readBytes()).fields - TagField.TITLE)
                     assertContentEquals(payload, mpegPayload(file.readBytes()))
                     assertContentEquals(samples, decode(file))

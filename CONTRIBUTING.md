@@ -67,9 +67,11 @@ repository.
 
 The oracle suites compare against outside tools: `ffmpeg` and `ffprobe`
 for most formats, the reference `flac` tools for FLAC, and Apple's `afconvert`
-for Core Audio Format files on macOS. Each suite skips itself when its tool is
-missing, so a green run on a machine without them is proving less than it
-looks. Install all three before trusting one.
+for Core Audio Format files on macOS. Missing tools produce explicit JUnit
+skips, which must be reported separately from comparisons that ran. CI prepares
+the Linux and macOS dependencies with `.github/scripts/prepare-codec-oracles.sh`
+and checks JVM reports with `.github/scripts/check-oracle-results.py`. Linux
+permits the five macOS-only `afconvert` skips; the macOS job runs them as well.
 
 The ID3 identity and mixed-artwork suites also run Mutagen through Python. It reports an actual
 test skip when the module is unavailable. Use an isolated interpreter:

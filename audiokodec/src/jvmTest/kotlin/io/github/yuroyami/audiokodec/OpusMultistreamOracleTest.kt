@@ -330,7 +330,7 @@ class OpusMultistreamOracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("the libopus reference build or a C compiler is not present, so the multistream comparison did not run")
+        org.junit.Assume.assumeTrue("the libopus reference build or a C compiler is not present, so the multistream comparison did not run", false)
     }
 
     private companion object {

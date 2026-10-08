@@ -152,7 +152,7 @@ class OpusConformanceTest {
     }
 
     private fun skip() {
-        println("the Opus conformance vectors are not available, so the conformance run did not happen")
+        org.junit.Assume.assumeTrue("the Opus conformance vectors are not available, so the conformance run did not happen", false)
     }
 
     private companion object {

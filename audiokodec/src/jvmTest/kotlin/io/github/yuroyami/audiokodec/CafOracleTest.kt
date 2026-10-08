@@ -263,7 +263,7 @@ class CafOracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("the CAF oracle tool is not on the path, so the comparison did not run")
+        org.junit.Assume.assumeTrue("the CAF oracle tool is not on the path, so the comparison did not run", false)
     }
 
     private companion object {

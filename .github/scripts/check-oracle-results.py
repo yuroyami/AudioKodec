@@ -1,0 +1,47 @@
+"""Reject missing comparisons and unexpected skips in a full JVM CI run."""
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+reports = Path("audiokodec/build/test-results/jvmTest")
+required = {
+    "AiffCOracleTest", "AlacOracleTest", "CafOracleTest", "FfmpegOracleTest",
+    "FfmpegTagOracleTest", "FlacEncodeOracleTest", "FlacOracleTest",
+    "Mp4OracleTest", "MpegCrcOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
+    "OggOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
+    "OpusJoinOracleTest", "OpusMultistreamOracleTest", "OpusOracleTest",
+    "SilkDecodeOracleTest", "VorbisOracleTest", "MutagenTagOracleTest",
+    "NativeTextTagOracleTest", "NativeTextEncodingOracleTest", "R128TagOracleTest",
+}
+apple_only = {
+    ("AiffCOracleTest", "reversedIntegerTypesAgreeWithApplesIntegerReader"),
+    ("AiffCOracleTest", "appleFilesPreserveLengthSamplesAndSeeking"),
+    ("CafOracleTest", "theUncompressedCafFormatsDecodeExactly"),
+    ("CafOracleTest", "theCompandingLawsInCafDecodeWithinTheirAccuracy"),
+    ("CafOracleTest", "quickTimeAdpcmInsideCafDecodes"),
+}
+seen = set()
+failures = []
+passed = skipped = 0
+for report in reports.glob("TEST-*.xml"):
+    suite = ET.parse(report).getroot()
+    name = suite.attrib["name"].split(".")[-1].split("[")[0]
+    if name in required:
+        seen.add(name)
+        if not any(all(case.find(outcome) is None for outcome in ("skipped", "failure", "error"))
+                   for case in suite.findall("testcase")):
+            failures.append(f"{name}: no comparisons ran")
+    for case in suite.findall("testcase"):
+        method = case.attrib["name"].split("[")[0]
+        if case.find("skipped") is not None:
+            skipped += 1
+            if sys.platform == "darwin" or (name, method) not in apple_only:
+                failures.append(f"{name}.{method}: unexpected skip")
+        elif case.find("failure") is not None or case.find("error") is not None:
+            failures.append(f"{name}.{method}: failed")
+        else:
+            passed += 1
+failures += [f"{name}: missing test report" for name in sorted(required - seen)]
+if failures:
+    raise SystemExit("Oracle coverage failed:\n" + "\n".join(failures))
+print(f"JVM coverage verified: {passed} passed, {skipped} explicit platform skips; all required oracle suites reported")

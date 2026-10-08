@@ -6,16 +6,19 @@ read the [README](README.md).
 
 ## Test and target summary
 
-The complete common and JVM suites run green, including the optional
-`audiokodec-io` bridge and external-tool oracle suites. The common tests also
-run green on JS (Node), wasmJs (Node), wasmWasi (Node), and Kotlin/Native on
-macOS arm64 and the iOS simulator. CI additionally executes the Linux x64 and
-MinGW x64 native suites on their required hosts.
+The common and JVM suites include the optional `audiokodec-io` bridge and
+external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),
+wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
+Execution on one host does not establish results on another.
 
-The oracle suites compare against ffmpeg, the reference FLAC tools and Apple's
-`afconvert`, and skip themselves when those are not installed, so continuous
-integration installs them rather than leaving a skipped test to read like a
-passing one. Within them:
+Missing oracle tools and unavailable encoder cases produce explicit JUnit
+skips. CI is configured to install ffmpeg, FLAC, LAME, ExifTool, Mutagen and
+libopusfile and to build the pinned Opus and Apple ALAC reference executables.
+The Linux and macOS jobs run the JVM comparisons and reject missing suite
+reports, failed tests and unexpected skips. Linux permits only the five
+`afconvert` comparisons that require macOS; macOS permits no skips. The Opus
+vectors are checksum-verified before the tests run. Hosted validation remains
+subject to runner availability, including account billing. Within the suites:
 
 - Integer PCM at every depth, IEEE float, AIFF, AU, A-law, mu-law and
   Microsoft ADPCM all decode **bit-identically to ffmpeg**. IMA ADPCM does

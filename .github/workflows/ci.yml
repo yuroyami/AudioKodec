@@ -28,21 +28,26 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # The oracle suite skips itself when ffmpeg is missing, and a skipped
-      # test reads exactly like a passing one, so it is installed rather than
-      # left to chance. The tests find it on PATH.
+      # Install executable oracles and build the pinned permissive references.
+      # Missing tools are real skips, and the coverage step rejects unexpected ones.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install the codec oracles
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg flac
-          for t in ffmpeg ffprobe flac metaflac; do
-            command -v "$t" >/dev/null || echo "::warning::oracle tool $t is not on PATH; its suite will skip"
-          done
+          sudo apt-get install -y ffmpeg flac lame libopusfile0 libimage-exiftool-perl cmake build-essential python3-venv
+          bash .github/scripts/prepare-codec-oracles.sh
 
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Core tests (JVM)
         run: ./gradlew :audiokodec:jvmTest :audiokodec-io:jvmTest --stacktrace
+
+      - name: Verify oracle comparisons ran
+        if: always()
+        run: python3 .github/scripts/check-oracle-results.py
 
       - name: Core tests (JS + wasm)
         run: >-
@@ -107,7 +112,23 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install the codec oracles
+        run: |
+          brew install ffmpeg flac lame exiftool opusfile cmake
+          bash .github/scripts/prepare-codec-oracles.sh
+
       - uses: gradle/actions/setup-gradle@v4
+
+      - name: Core tests and Apple format comparisons (JVM)
+        run: ./gradlew :audiokodec:jvmTest :audiokodec-io:jvmTest --stacktrace
+
+      - name: Verify oracle comparisons ran
+        if: always()
+        run: python3 .github/scripts/check-oracle-results.py
 
       - name: Native tests
         run: >-

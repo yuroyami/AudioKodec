@@ -152,7 +152,7 @@ class OpusOracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("ffmpeg is not on the path, so the Opus comparison did not run")
+        org.junit.Assume.assumeTrue("ffmpeg is not on the path, so the Opus comparison did not run", false)
     }
 
     private companion object {

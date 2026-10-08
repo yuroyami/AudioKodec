@@ -159,7 +159,7 @@ class AlacOracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("alacconvert has not been built under reference/alac, so the ALAC comparison did not run")
+        org.junit.Assume.assumeTrue("alacconvert has not been built under reference/alac, so the ALAC comparison did not run", false)
     }
 
     private companion object {

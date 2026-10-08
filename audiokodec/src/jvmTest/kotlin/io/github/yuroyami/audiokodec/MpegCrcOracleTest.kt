@@ -208,7 +208,7 @@ class MpegCrcOracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("ffmpeg or its libtwolame encoder is missing, so the checksum comparison did not run")
+        org.junit.Assume.assumeTrue("ffmpeg or its libtwolame encoder is missing, so the checksum comparison did not run", false)
     }
 
     private companion object {

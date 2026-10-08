@@ -162,7 +162,7 @@ class OggOracleTest {
         // The container work is the same whatever the codec, so the headers of
         // the mappings whose codecs are not implemented still have to be read.
         val cases = listOf(
-            Triple("vorbis", AudioCodec.VORBIS, 44_100),
+            Triple("libvorbis", AudioCodec.VORBIS, 44_100),
             Triple("libopus", AudioCodec.OPUS, 48_000),
             Triple("libspeex", AudioCodec.SPEEX, 16_000),
         )
@@ -176,10 +176,7 @@ class OggOracleTest {
                     "-c:a", encoder, ogg.absolutePath,
                 ),
             )
-            if (!made) {
-                println("this ffmpeg cannot encode $encoder, so that mapping was not checked")
-                continue
-            }
+            org.junit.Assume.assumeTrue("ffmpeg must encode $encoder to check this mapping", made)
 
             val what = "the $encoder mapping"
             assertEquals(AudioContainer.OGG, AudioKodec.sniff(ogg.readBytes()), "$what: sniff")
@@ -200,7 +197,7 @@ class OggOracleTest {
     @Test
     fun theCommentsOfEveryOggMappingAreRead() {
         val ffmpeg = ffmpeg ?: return skip()
-        for (encoder in listOf("vorbis", "libopus")) {
+        for (encoder in listOf("libvorbis", "libopus")) {
             val ogg = temp("tags_$encoder.ogg")
             ogg.delete()
             val made = tryRun(
@@ -215,7 +212,7 @@ class OggOracleTest {
                     "-c:a", encoder, ogg.absolutePath,
                 ),
             )
-            if (!made) continue
+            org.junit.Assume.assumeTrue("ffmpeg must encode $encoder to check its comments", made)
 
             val tags = AudioKodec.readTags(ogg.readBytes())
             assertEquals("Ogg Title", tags[TagField.TITLE], "$encoder title")
@@ -543,7 +540,7 @@ class OggOracleTest {
     }
 
     private fun skip() {
-        println("the Ogg oracle tool is not on the path, so the comparison did not run")
+        org.junit.Assume.assumeTrue("the Ogg oracle tool is not on the path, so the comparison did not run", false)
     }
 
     private companion object {

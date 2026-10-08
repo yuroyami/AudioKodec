@@ -339,7 +339,7 @@ class Mp4OracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("ffmpeg or ffprobe is not on the path, so the MP4 comparison did not run")
+        org.junit.Assume.assumeTrue("ffmpeg or ffprobe is not on the path, so the MP4 comparison did not run", false)
     }
 
     private companion object {

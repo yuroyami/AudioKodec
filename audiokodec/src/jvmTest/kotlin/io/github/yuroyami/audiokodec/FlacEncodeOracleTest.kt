@@ -365,7 +365,7 @@ class FlacEncodeOracleTest {
     private fun temp(name: String): File = File(workDirectory, name)
 
     private fun skip() {
-        println("the flac binary is not on the path, so the encoder was not checked against it")
+        org.junit.Assume.assumeTrue("the flac binary is not on the path, so the encoder was not checked against it", false)
     }
 
     private companion object {

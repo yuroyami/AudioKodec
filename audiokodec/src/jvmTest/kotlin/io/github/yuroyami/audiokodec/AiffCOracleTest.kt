@@ -191,7 +191,7 @@ class AiffCOracleTest {
     }
 
     private fun skip(tool: String) {
-        println("$tool is not on the path, so its AIFF-C comparison did not run")
+        org.junit.Assume.assumeTrue("$tool is not on the path, so its AIFF-C comparison did not run", false)
     }
 
     private companion object {
