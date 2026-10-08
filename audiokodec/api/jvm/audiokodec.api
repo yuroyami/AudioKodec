@@ -156,12 +156,18 @@ public final class io/github/yuroyami/audiokodec/AudioKodec {
 	public final fun decode ([BLio/github/yuroyami/audiokodec/DecodeOptions;)Lio/github/yuroyami/audiokodec/DecodedAudio;
 	public static synthetic fun decode$default (Lio/github/yuroyami/audiokodec/AudioKodec;Lio/github/yuroyami/audiokodec/AudioSource;Lio/github/yuroyami/audiokodec/DecodeOptions;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/DecodedAudio;
 	public static synthetic fun decode$default (Lio/github/yuroyami/audiokodec/AudioKodec;[BLio/github/yuroyami/audiokodec/DecodeOptions;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/DecodedAudio;
+	public final fun encode (Lio/github/yuroyami/audiokodec/IntPcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/AudioSink;Lio/github/yuroyami/audiokodec/tag/TagBundle;)V
+	public final fun encode (Lio/github/yuroyami/audiokodec/IntPcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;)[B
 	public final fun encode (Lio/github/yuroyami/audiokodec/PcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/AudioSink;Lio/github/yuroyami/audiokodec/tag/TagBundle;)V
 	public final fun encode (Lio/github/yuroyami/audiokodec/PcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;)[B
 	public final fun encode ([FLio/github/yuroyami/audiokodec/AudioFormat;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;)[B
+	public final fun encode ([ILio/github/yuroyami/audiokodec/AudioFormat;ILio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;)[B
+	public static synthetic fun encode$default (Lio/github/yuroyami/audiokodec/AudioKodec;Lio/github/yuroyami/audiokodec/IntPcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/AudioSink;Lio/github/yuroyami/audiokodec/tag/TagBundle;ILjava/lang/Object;)V
+	public static synthetic fun encode$default (Lio/github/yuroyami/audiokodec/AudioKodec;Lio/github/yuroyami/audiokodec/IntPcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;ILjava/lang/Object;)[B
 	public static synthetic fun encode$default (Lio/github/yuroyami/audiokodec/AudioKodec;Lio/github/yuroyami/audiokodec/PcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/AudioSink;Lio/github/yuroyami/audiokodec/tag/TagBundle;ILjava/lang/Object;)V
 	public static synthetic fun encode$default (Lio/github/yuroyami/audiokodec/AudioKodec;Lio/github/yuroyami/audiokodec/PcmSource;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;ILjava/lang/Object;)[B
 	public static synthetic fun encode$default (Lio/github/yuroyami/audiokodec/AudioKodec;[FLio/github/yuroyami/audiokodec/AudioFormat;Lio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;ILjava/lang/Object;)[B
+	public static synthetic fun encode$default (Lio/github/yuroyami/audiokodec/AudioKodec;[ILio/github/yuroyami/audiokodec/AudioFormat;ILio/github/yuroyami/audiokodec/EncodeTarget;Lio/github/yuroyami/audiokodec/tag/TagBundle;ILjava/lang/Object;)[B
 	public final fun open (Lio/github/yuroyami/audiokodec/AudioSource;Lio/github/yuroyami/audiokodec/DecodeOptions;)Lio/github/yuroyami/audiokodec/AudioDecoder;
 	public final fun open ([BLio/github/yuroyami/audiokodec/DecodeOptions;)Lio/github/yuroyami/audiokodec/AudioDecoder;
 	public static synthetic fun open$default (Lio/github/yuroyami/audiokodec/AudioKodec;Lio/github/yuroyami/audiokodec/AudioSource;Lio/github/yuroyami/audiokodec/DecodeOptions;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/AudioDecoder;
@@ -359,6 +365,18 @@ public final class io/github/yuroyami/audiokodec/IntAudioFrame {
 public abstract interface class io/github/yuroyami/audiokodec/IntPcmAccess {
 	public abstract fun getBitDepth ()I
 	public abstract fun nextIntFrame ()Lio/github/yuroyami/audiokodec/IntAudioFrame;
+}
+
+public abstract interface class io/github/yuroyami/audiokodec/IntPcmSource {
+	public abstract fun getBitDepth ()I
+	public abstract fun getFormat ()Lio/github/yuroyami/audiokodec/AudioFormat;
+	public abstract fun getFrameCount ()Ljava/lang/Long;
+	public abstract fun read ([III)I
+}
+
+public final class io/github/yuroyami/audiokodec/IntPcmSourceKt {
+	public static final fun asIntPcmSource ([ILio/github/yuroyami/audiokodec/AudioFormat;II)Lio/github/yuroyami/audiokodec/IntPcmSource;
+	public static synthetic fun asIntPcmSource$default ([ILio/github/yuroyami/audiokodec/AudioFormat;IIILjava/lang/Object;)Lio/github/yuroyami/audiokodec/IntPcmSource;
 }
 
 public final class io/github/yuroyami/audiokodec/Pcm {

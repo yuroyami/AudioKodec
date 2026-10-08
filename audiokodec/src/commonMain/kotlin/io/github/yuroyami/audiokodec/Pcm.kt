@@ -13,7 +13,7 @@ import kotlin.math.roundToLong
  */
 public sealed interface Dither {
 
-    /** Round only. The right choice when the depth is not being reduced. */
+    /** No noise. Float input is rounded; integer input discards low bits on depth reduction. */
     public data object None : Dither
 
     /**

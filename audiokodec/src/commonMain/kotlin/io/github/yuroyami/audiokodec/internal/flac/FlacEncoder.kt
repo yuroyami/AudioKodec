@@ -4,9 +4,11 @@ import io.github.yuroyami.audiokodec.AudioFormat
 import io.github.yuroyami.audiokodec.AudioSink
 import io.github.yuroyami.audiokodec.Dither
 import io.github.yuroyami.audiokodec.AudioKodecException
+import io.github.yuroyami.audiokodec.IntPcmSource
 import io.github.yuroyami.audiokodec.PcmSource
 import io.github.yuroyami.audiokodec.readChecked
 import io.github.yuroyami.audiokodec.internal.bits.BitWriterMsb
+import io.github.yuroyami.audiokodec.internal.codec.IntegerPcmConverter
 import io.github.yuroyami.audiokodec.internal.tag.FlacPicture
 import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
 import io.github.yuroyami.audiokodec.tag.TagBundle
@@ -69,7 +71,43 @@ internal class FlacEncoder(
     private val hash = Md5()
 
     fun encode(pcm: PcmSource, tags: TagBundle?, sink: AudioSink) {
-        val declaredFrames = pcm.frameCount
+        val readBuffer = FloatArray(blockSize * channels)
+        encodeBlocks(pcm.frameCount, tags, sink) {
+            var filled = 0
+            while (filled < blockSize) {
+                val got = pcm.readChecked(readBuffer, filled * channels, blockSize - filled)
+                if (got == 0) break
+                filled += got
+            }
+            quantiseInto(readBuffer, filled)
+            filled
+        }
+    }
+
+    fun encode(pcm: IntPcmSource, tags: TagBundle?, sink: AudioSink) {
+        val conversion = IntegerPcmConverter(pcm.bitDepth, bitsPerSample, dither)
+        val readBuffer = IntArray(blockSize * channels)
+        encodeBlocks(pcm.frameCount, tags, sink) {
+            var filled = 0
+            while (filled < blockSize) {
+                val got = pcm.readChecked(readBuffer, filled * channels, blockSize - filled)
+                if (got == 0) break
+                filled += got
+            }
+            conversion.convertInPlace(readBuffer, filled * channels)
+            for (frame in 0 until filled) {
+                for (channel in 0 until channels) blocks[channel][frame] = readBuffer[frame * channels + channel]
+            }
+            filled
+        }
+    }
+
+    private fun encodeBlocks(
+        declaredFrames: Long?,
+        tags: TagBundle?,
+        sink: AudioSink,
+        readBlock: () -> Int,
+    ) {
         require(declaredFrames == null || declaredFrames in 0..MAX_TOTAL_SAMPLES) {
             "FLAC frameCount must be 0..$MAX_TOTAL_SAMPLES, was $declaredFrames"
         }
@@ -96,22 +134,15 @@ internal class FlacEncoder(
         val streamInfoAt = sink.position + 4
         writeMetadata(sink, declaredFrames, comment, pictures)
 
-        val readBuffer = FloatArray(blockSize * channels)
         var totalFrames = 0L
         var minimumFrameSize = Int.MAX_VALUE
         var maximumFrameSize = 0
         var frameNumber = 0L
 
         while (true) {
-            var filled = 0
-            while (filled < blockSize) {
-                val got = pcm.readChecked(readBuffer, filled * channels, blockSize - filled)
-                if (got == 0) break
-                filled += got
-            }
+            val filled = readBlock()
             if (filled == 0) break
 
-            quantiseInto(readBuffer, filled)
             feedHash(filled)
 
             val bytes = encodeFrame(frameNumber, filled)
@@ -133,7 +164,7 @@ internal class FlacEncoder(
         if (declaredFrames != null && declaredFrames != totalFrames) {
             throw AudioKodecException(
                 "the source promised $declaredFrames frames and produced $totalFrames; " +
-                    "PcmSource.frameCount must describe the complete stream",
+                    "source frameCount must describe the complete stream",
             )
         }
         if (!sink.canPatch) return

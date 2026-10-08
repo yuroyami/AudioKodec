@@ -390,6 +390,50 @@ public object AudioKodec {
     ): ByteArray = encode(samples.asPcmSource(format), target, tags)
 
     /**
+     * Encodes exact signed integer [pcm] into [sink], without Float32.
+     *
+     * Supports integer WAV, AIFF and AU, and 8/16/24-bit FLAC. See
+     * [IntPcmSource] for depth conversion and dither rules. Sources are consumed
+     * through their own cursor. The sink remains open; unpatchable WAV, AIFF
+     * and AU sinks need [IntPcmSource.frameCount]. FLAC can leave totals unknown.
+     * Tags follow the Float32 overload's rules.
+     * Other target codings are refused before output or source consumption.
+     */
+    public fun encode(
+        pcm: IntPcmSource,
+        target: EncodeTarget,
+        sink: AudioSink,
+        tags: TagBundle? = null,
+    ) {
+        ContainerWriter.write(pcm, target, sink, tags)
+    }
+
+    /** Encodes exact signed integer [pcm] and returns the file as a byte array. */
+    public fun encode(
+        pcm: IntPcmSource,
+        target: EncodeTarget,
+        tags: TagBundle? = null,
+    ): ByteArray {
+        val sink = ByteArrayAudioSink()
+        encode(pcm, target, sink, tags)
+        return sink.toByteArray()
+    }
+
+    /**
+     * Encodes interleaved signed integers with explicit input [bitDepth].
+     *
+     * [bitDepth] describes right-justified input values, independently of the
+     * target depth. See [IntPcmSource] for conversion and dither rules.
+     */
+    public fun encode(
+        samples: IntArray,
+        format: AudioFormat,
+        bitDepth: Int,
+        target: EncodeTarget,
+        tags: TagBundle? = null,
+    ): ByteArray = encode(samples.asIntPcmSource(format, bitDepth), target, tags)
+
+    /**
      * Reads what an MPEG audio file's frames say.
      *
      * MPEG audio has no file header, so this finds the first frame and reads

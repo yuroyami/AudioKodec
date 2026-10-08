@@ -384,6 +384,7 @@ A 13 MiB image also checks streaming allocations and an exact metaflac export.
 |---|---|
 | Float32 interleaved as the interchange form | ✅ |
 | Integer view for lossless codings, through `IntPcmAccess` | ✅ |
+| Exact integer encoder input through `IntPcmSource` and `IntArray` | ✅ integer WAV/AIFF/AU at 8/16/24/32 bits and FLAC at 8/16/24; explicit source depth, shifts and optional TPDF reduction; FFmpeg and reference FLAC comparisons, 32-bit transcodes, short reads and invalid-source coverage |
 | Conversion between Float32 and 8/16/24/32-bit integers | ✅ exact for 8, 16 and 24 |
 | TPDF dither, deterministic from a seed | ✅ |
 | Interleave and split | ✅ |

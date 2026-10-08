@@ -448,6 +448,16 @@ AudioKodec.open(bytes).use { decoder ->
 }
 ```
 
+Encode those samples through `IntPcmSource` or the integer-array overload:
+
+```kotlin
+val exact = AudioKodec.encode(integerSamples, format, bitDepth = 32, target = EncodeTarget.aiff(32))
+```
+
+Integer WAV, AIFF and AU preserve all 32 bits at equal depth; FLAC accepts
+8, 16 and 24-bit targets. See [integer PCM encoding](docs/integer-pcm.md)
+for streaming input, depth changes and dither rules.
+
 ## Malformed input
 
 Every failure is an `AudioKodecException`: `UnsupportedFormatException`,

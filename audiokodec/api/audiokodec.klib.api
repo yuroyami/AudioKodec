@@ -277,6 +277,17 @@ abstract interface io.github.yuroyami.audiokodec/IntPcmAccess { // io.github.yur
     abstract fun nextIntFrame(): io.github.yuroyami.audiokodec/IntAudioFrame? // io.github.yuroyami.audiokodec/IntPcmAccess.nextIntFrame|nextIntFrame(){}[0]
 }
 
+abstract interface io.github.yuroyami.audiokodec/IntPcmSource { // io.github.yuroyami.audiokodec/IntPcmSource|null[0]
+    abstract val bitDepth // io.github.yuroyami.audiokodec/IntPcmSource.bitDepth|{}bitDepth[0]
+        abstract fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.audiokodec/IntPcmSource.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    abstract val format // io.github.yuroyami.audiokodec/IntPcmSource.format|{}format[0]
+        abstract fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/IntPcmSource.format.<get-format>|<get-format>(){}[0]
+    abstract val frameCount // io.github.yuroyami.audiokodec/IntPcmSource.frameCount|{}frameCount[0]
+        abstract fun <get-frameCount>(): kotlin/Long? // io.github.yuroyami.audiokodec/IntPcmSource.frameCount.<get-frameCount>|<get-frameCount>(){}[0]
+
+    abstract fun read(kotlin/IntArray, kotlin/Int, kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/IntPcmSource.read|read(kotlin.IntArray;kotlin.Int;kotlin.Int){}[0]
+}
+
 abstract interface io.github.yuroyami.audiokodec/PcmSource { // io.github.yuroyami.audiokodec/PcmSource|null[0]
     abstract val format // io.github.yuroyami.audiokodec/PcmSource.format|{}format[0]
         abstract fun <get-format>(): io.github.yuroyami.audiokodec/AudioFormat // io.github.yuroyami.audiokodec/PcmSource.format.<get-format>|<get-format>(){}[0]
@@ -727,9 +738,12 @@ final object io.github.yuroyami.audiokodec/AudioKodec { // io.github.yuroyami.au
 
     final fun decode(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/DecodedAudio // io.github.yuroyami.audiokodec/AudioKodec.decode|decode(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
     final fun decode(kotlin/ByteArray, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/DecodedAudio // io.github.yuroyami.audiokodec/AudioKodec.decode|decode(kotlin.ByteArray;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
+    final fun encode(io.github.yuroyami.audiokodec/IntPcmSource, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(io.github.yuroyami.audiokodec.IntPcmSource;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
+    final fun encode(io.github.yuroyami.audiokodec/IntPcmSource, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec/AudioSink, io.github.yuroyami.audiokodec.tag/TagBundle? = ...) // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(io.github.yuroyami.audiokodec.IntPcmSource;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.AudioSink;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
     final fun encode(io.github.yuroyami.audiokodec/PcmSource, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(io.github.yuroyami.audiokodec.PcmSource;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
     final fun encode(io.github.yuroyami.audiokodec/PcmSource, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec/AudioSink, io.github.yuroyami.audiokodec.tag/TagBundle? = ...) // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(io.github.yuroyami.audiokodec.PcmSource;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.AudioSink;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
     final fun encode(kotlin/FloatArray, io.github.yuroyami.audiokodec/AudioFormat, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(kotlin.FloatArray;io.github.yuroyami.audiokodec.AudioFormat;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
+    final fun encode(kotlin/IntArray, io.github.yuroyami.audiokodec/AudioFormat, kotlin/Int, io.github.yuroyami.audiokodec/EncodeTarget, io.github.yuroyami.audiokodec.tag/TagBundle? = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.encode|encode(kotlin.IntArray;io.github.yuroyami.audiokodec.AudioFormat;kotlin.Int;io.github.yuroyami.audiokodec.EncodeTarget;io.github.yuroyami.audiokodec.tag.TagBundle?){}[0]
     final fun open(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/AudioDecoder // io.github.yuroyami.audiokodec/AudioKodec.open|open(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
     final fun open(kotlin/ByteArray, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/AudioDecoder // io.github.yuroyami.audiokodec/AudioKodec.open|open(kotlin.ByteArray;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
     final fun probe(io.github.yuroyami.audiokodec/AudioSource, io.github.yuroyami.audiokodec/DecodeOptions = ...): io.github.yuroyami.audiokodec/AudioInfo // io.github.yuroyami.audiokodec/AudioKodec.probe|probe(io.github.yuroyami.audiokodec.AudioSource;io.github.yuroyami.audiokodec.DecodeOptions){}[0]
@@ -757,3 +771,4 @@ final object io.github.yuroyami.audiokodec/Pcm { // io.github.yuroyami.audiokode
 
 final fun (kotlin/ByteArray).io.github.yuroyami.audiokodec/asAudioSource(): io.github.yuroyami.audiokodec/AudioSource // io.github.yuroyami.audiokodec/asAudioSource|asAudioSource@kotlin.ByteArray(){}[0]
 final fun (kotlin/FloatArray).io.github.yuroyami.audiokodec/asPcmSource(io.github.yuroyami.audiokodec/AudioFormat, kotlin/Int = ...): io.github.yuroyami.audiokodec/PcmSource // io.github.yuroyami.audiokodec/asPcmSource|asPcmSource@kotlin.FloatArray(io.github.yuroyami.audiokodec.AudioFormat;kotlin.Int){}[0]
+final fun (kotlin/IntArray).io.github.yuroyami.audiokodec/asIntPcmSource(io.github.yuroyami.audiokodec/AudioFormat, kotlin/Int, kotlin/Int = ...): io.github.yuroyami.audiokodec/IntPcmSource // io.github.yuroyami.audiokodec/asIntPcmSource|asIntPcmSource@kotlin.IntArray(io.github.yuroyami.audiokodec.AudioFormat;kotlin.Int;kotlin.Int){}[0]

@@ -7,12 +7,14 @@ import io.github.yuroyami.audiokodec.AudioSink
 import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.EncodeTarget
 import io.github.yuroyami.audiokodec.AudioKodecException
+import io.github.yuroyami.audiokodec.IntPcmSource
 import io.github.yuroyami.audiokodec.PcmSource
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.fresh
 import io.github.yuroyami.audiokodec.readChecked
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
 import io.github.yuroyami.audiokodec.internal.codec.ImaAdpcmWavCodec
+import io.github.yuroyami.audiokodec.internal.codec.IntegerPcmConverter
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.MsAdpcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.PcmLayout
@@ -44,14 +46,7 @@ internal object ContainerWriter {
         sink: AudioSink,
         tags: TagBundle? = null,
     ) {
-        validateChannelLayout(pcm.format, target)
-        if (target.container == AudioContainer.AU && tags?.isEmpty == false) {
-            throw UnsupportedFeatureException(
-                "tags in AU",
-                "AU has no structured tag format; write the audio without tags or choose " +
-                    "WAV, AIFF or FLAC",
-            )
-        }
+        validateInput(pcm.format, target, tags)
         if (target.container == AudioContainer.FLAC) {
             // FLAC has its own framing and its own idea of a block, so it does
             // not go through the shared encode loop below.
@@ -64,23 +59,81 @@ internal object ContainerWriter {
             ).encode(pcm, tags, sink)
             return
         }
-        val encoder = encoderFor(pcm.format, target, target.dither.fresh())
+        writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->
+            encodeAll(pcm, encoder, writer)
+        }
+    }
+
+    fun write(
+        pcm: IntPcmSource,
+        target: EncodeTarget,
+        sink: AudioSink,
+        tags: TagBundle? = null,
+    ) {
+        if (target.codec != AudioCodec.PCM_INTEGER && target.codec != AudioCodec.FLAC) {
+            throw UnsupportedFeatureException(
+                "integer input for ${target.codec.displayName}",
+                "choose integer WAV, AIFF or AU, or 8/16/24-bit FLAC",
+            )
+        }
+        validateInput(pcm.format, target, tags)
+        val conversion = IntegerPcmConverter(pcm.bitDepth, target.bitDepth, target.dither.fresh())
+        if (target.container == AudioContainer.FLAC) {
+            FlacEncoder(
+                format = pcm.format,
+                bitsPerSample = target.bitDepth,
+                maxLpcOrder = lpcOrderFor(target.blockAlign),
+                maxPartitionOrder = partitionOrderFor(target.blockAlign),
+                dither = target.dither.fresh(),
+            ).encode(pcm, tags, sink)
+            return
+        }
+        writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->
+            encodeAllIntegers(pcm, encoder as LinearPcmCodec, conversion, writer)
+        }
+    }
+
+    private fun validateInput(format: AudioFormat, target: EncodeTarget, tags: TagBundle?) {
+        validateChannelLayout(format, target)
+        if (target.container == AudioContainer.AU && tags?.isEmpty == false) {
+            throw UnsupportedFeatureException(
+                "tags in AU",
+                "AU has no structured tag format; write the audio without tags or choose " +
+                    "WAV, AIFF or FLAC",
+            )
+        }
+    }
+
+    private fun writeUncompressed(
+        format: AudioFormat,
+        declaredFrames: Long?,
+        target: EncodeTarget,
+        sink: AudioSink,
+        tags: TagBundle?,
+        encodeAudio: (SampleEncoder, SinkWriter) -> Long,
+    ) {
+        val encoder = encoderFor(format, target, target.dither.fresh())
         val writer = SinkWriter(sink)
-        val declaredFrames = pcm.frameCount
         require(declaredFrames == null || declaredFrames >= 0) {
-            "PcmSource.frameCount must not be negative, was $declaredFrames"
+            "source frameCount must not be negative, was $declaredFrames"
         }
         if (!writer.canPatch && declaredFrames == null) {
             throw AudioKodecException(
                 "this sink cannot be patched, so the frame count has to be known before " +
-                    "writing starts. Give the PcmSource a frameCount, or encode to a sink " +
+                    "writing starts. Give the source a frameCount, or encode to a sink " +
                     "that supports patching.",
             )
         }
         when (target.container) {
-            AudioContainer.WAV -> writeWave(pcm, target, encoder, writer, declaredFrames, tags)
-            AudioContainer.AIFF -> writeAiff(pcm, target, encoder, writer, declaredFrames, tags)
-            AudioContainer.AU -> writeAu(pcm, target, encoder, writer, declaredFrames)
+            AudioContainer.WAV -> writeWave(format, target, encoder, writer, declaredFrames, tags) {
+                encodeAudio(encoder, writer)
+            }
+            AudioContainer.AIFF -> writeAiff(format, target, encoder, writer, declaredFrames, tags) {
+                encodeAudio(encoder, writer)
+            }
+            AudioContainer.AU -> writeAu(format, target, encoder, writer, declaredFrames) {
+                encodeAudio(encoder, writer)
+            }
             else -> throw AudioKodecException(
                 "AudioKodec cannot write ${target.container.displayName} files",
             )
@@ -293,17 +346,52 @@ internal object ContainerWriter {
     private fun minimumBlockFrames(encoder: SampleEncoder): Int =
         if (encoder is MsAdpcmCodec) 2 else 1
 
+    private fun encodeAllIntegers(
+        pcm: IntPcmSource,
+        encoder: LinearPcmCodec,
+        conversion: IntegerPcmConverter,
+        writer: SinkWriter,
+    ): Long {
+        val framesPerChunk = 4096
+        val inputEntries = framesPerChunk.toLong() * encoder.channels
+        val outputBytes = framesPerChunk.toLong() * encoder.blockBytes
+        if (inputEntries > Int.MAX_VALUE || outputBytes > Int.MAX_VALUE) {
+            throw AudioKodecException("the encoder's working block is too large for a Kotlin array")
+        }
+        val input = IntArray(inputEntries.toInt())
+        val output = ByteArray(outputBytes.toInt())
+        var total = 0L
+        while (true) {
+            var filled = 0
+            while (filled < framesPerChunk) {
+                val got = pcm.readChecked(input, filled * encoder.channels, framesPerChunk - filled)
+                if (got == 0) break
+                filled += got
+            }
+            if (filled == 0) break
+            conversion.convertInPlace(input, filled * encoder.channels)
+            val written = encoder.encodeInt(input, 0, filled, output, 0)
+            writer.writeBytes(output, 0, written)
+            if (total > Long.MAX_VALUE - filled) {
+                throw AudioKodecException("the encoded frame count overflows 64 bits")
+            }
+            total += filled
+            if (filled < framesPerChunk) break
+        }
+        return total
+    }
+
     // WAV
 
     private fun writeWave(
-        pcm: PcmSource,
+        format: AudioFormat,
         target: EncodeTarget,
         encoder: SampleEncoder,
         writer: SinkWriter,
         declaredFrames: Long?,
         tags: TagBundle?,
+        encodeAudio: () -> Long,
     ) {
-        val format = pcm.format
         val channels = format.channels
         require(channels <= 0xFFFF) {
             "WAV's channel-count field cannot represent $channels channels"
@@ -420,7 +508,7 @@ internal object ContainerWriter {
         )
         val dataStart = writer.position
 
-        val frames = encodeAll(pcm, encoder, writer)
+        val frames = encodeAudio()
         val dataBytes = writer.position - dataStart
         if (dataBytes % 2 == 1L) writer.writeU8(0)
 
@@ -537,14 +625,14 @@ internal object ContainerWriter {
     // AIFF
 
     private fun writeAiff(
-        pcm: PcmSource,
+        format: AudioFormat,
         target: EncodeTarget,
         encoder: SampleEncoder,
         writer: SinkWriter,
         declaredFrames: Long?,
         tags: TagBundle?,
+        encodeAudio: () -> Long,
     ) {
-        val format = pcm.format
         require(format.channels <= 0xFFFF) {
             "AIFF's channel-count field cannot represent ${format.channels} channels"
         }
@@ -662,7 +750,7 @@ internal object ContainerWriter {
         writer.writeU32Be(0) // Block size.
         val dataStart = writer.position
 
-        val frames = encodeAll(pcm, encoder, writer)
+        val frames = encodeAudio()
         if (frames > MAX_32) {
             throw AudioKodecException("AIFF cannot represent more than $MAX_32 frames")
         }
@@ -714,13 +802,13 @@ internal object ContainerWriter {
     // AU
 
     private fun writeAu(
-        pcm: PcmSource,
+        format: AudioFormat,
         target: EncodeTarget,
         encoder: SampleEncoder,
         writer: SinkWriter,
         declaredFrames: Long?,
+        encodeAudio: () -> Long,
     ) {
-        val format = pcm.format
         val encoding = when (target.codec) {
             AudioCodec.MU_LAW -> 1
             AudioCodec.A_LAW -> 27
@@ -746,7 +834,7 @@ internal object ContainerWriter {
         writer.writeU32Be(format.channels.toLong())
         val dataStart = writer.position
 
-        val frames = encodeAll(pcm, encoder, writer)
+        val frames = encodeAudio()
         val dataBytes = writer.position - dataStart
 
         checkPromisedFrames(declaredFrames, frames)
@@ -769,7 +857,7 @@ internal object ContainerWriter {
         if (declared != null && declared != actual) {
             throw AudioKodecException(
                 "the source promised $declared frames and produced $actual; " +
-                    "PcmSource.frameCount must describe the complete stream",
+                    "source frameCount must describe the complete stream",
             )
         }
     }

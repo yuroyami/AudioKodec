@@ -209,6 +209,20 @@ AudioKodec.open(bytes).use { decoder ->
 Use one or the other on a given decoder, not both. They advance the same
 cursor.
 
+`IntPcmSource` and the integer-array encode overload consume those exact
+signed, right-justified values without Float32:
+
+```kotlin
+val exact = AudioKodec.encode(integerSamples, format, bitDepth = 32, target = EncodeTarget.aiff(32))
+```
+
+Integer WAV, AIFF and AU preserve every bit at equal depths, including 32.
+FLAC supports integer input with 8, 16 and 24-bit targets. Increasing depth
+shifts left; decreasing it without dither uses an arithmetic right shift.
+TPDF depth reduction uses Float64 scaling, seeded noise and nearest-even
+rounding. See [integer PCM encoding](integer-pcm.md) for source contracts,
+supported targets and examples.
+
 ## FLAC
 
 FLAC decodes bit-exactly, and encodes to files the reference decoder accepts.

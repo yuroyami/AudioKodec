@@ -66,7 +66,7 @@ Run as programs, never read as source.
 
 | Tool | Used for |
 |---|---|
-| ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write |
+| ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write. `IntegerEncodingOracleTest` compares exact 32-bit WAV/AIFF/AU transcodes, every integer target depth and channel count, and independent PCM depth reduction; the reference FLAC executable also verifies the integer-input files' samples and MD5 |
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks (#115). `FlacBinarySeekTest` measures source bytes at 10%, 50% and 90% of an unindexed recording, and exercises CRC-8-valid fake headers embedded in RFC 9639 verbatim samples; the oracle suite repeats the read bounds on reference FLAC output and verifies the embedded-header PCM with FFmpeg (#116) |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
