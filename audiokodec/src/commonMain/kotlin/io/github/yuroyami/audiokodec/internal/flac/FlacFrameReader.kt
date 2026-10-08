@@ -7,6 +7,8 @@ import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.bits.BitReaderMsb
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 
+private const val INITIAL_FRAME_BYTES = 256
+
 /**
  * Decodes FLAC frames into integer samples.
  *
@@ -80,8 +82,8 @@ internal class FlacFrameReader(
 
     private fun initialBufferSize(): Int {
         val stated = streamInfo.maximumFrameSize
-        if (stated > 0) return stated + 64
-        return verbatimFrameBound().toInt()
+        val bound = if (stated > 0) stated + 64L else verbatimFrameBound()
+        return minOf(INITIAL_FRAME_BYTES.toLong(), bound, options.maxAllocationBytes).toInt()
     }
 
     /**
@@ -102,17 +104,19 @@ internal class FlacFrameReader(
      * to reject a false sync word.
      */
     fun decodeAt(at: Long): Frame? {
+        var wanted = minOf(buffer.size, INITIAL_FRAME_BYTES)
+        var available = fill(at, wanted)
         while (true) {
-            val available = fill(at)
             if (available < 5) return null
             try {
                 return decodeFrom(buffer, available, at)
             } catch (short: TruncatedStreamException) {
-                // A frame that runs off the end of a full buffer may only be
-                // longer than the buffer. One that runs off a short read has
-                // run off the end of the source.
-                if (available < buffer.size) throw short
-                grow()
+                // Extend only when the actual frame needs more. A short read
+                // means EOF, regardless of the declared maximum frame size.
+                if (available < wanted) throw short
+                if (wanted == buffer.size) grow()
+                wanted = minOf(wanted.toLong() * 2, buffer.size.toLong()).toInt()
+                available += reader.readSome(buffer, available, wanted - available).coerceAtLeast(0)
             }
         }
     }
@@ -211,11 +215,10 @@ internal class FlacFrameReader(
     /**
      * Doubles the frame buffer, for a frame that did not fit in it.
      *
-     * The buffer starts at the maximum frame size the stream information
-     * states, or at the size of a verbatim frame when it states none, so this
-     * runs only for a frame larger than that. It grows because one frame
-     * needs it, never because the source has more bytes to give, so memory
-     * follows the largest frame and not the length of the recording.
+     * The buffer starts with a small prefix and retains bytes when extended.
+     * It grows because one frame needs it, never because the source or a
+     * declared maximum has more bytes to give. Each new frame starts with a
+     * small read even after a larger frame has expanded the working buffer.
      */
     private fun grow() {
         // With a stated maximum, a frame beyond both it and the size of the
@@ -235,12 +238,12 @@ internal class FlacFrameReader(
             throw CorruptStreamException("a FLAC frame is larger than any array can hold")
         }
         options.checkAllocation(next, "growing the FLAC frame buffer")
-        buffer = ByteArray(next.toInt())
+        buffer = buffer.copyOf(next.toInt())
     }
 
-    private fun fill(at: Long): Int {
+    private fun fill(at: Long, count: Int): Int {
         reader.seek(at)
-        return reader.readSome(buffer, 0, buffer.size).coerceAtLeast(0)
+        return reader.readSome(buffer, 0, count).coerceAtLeast(0)
     }
 
     private enum class StereoMode { INDEPENDENT, LEFT_SIDE, RIGHT_SIDE, MID_SIDE }

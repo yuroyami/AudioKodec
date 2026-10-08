@@ -28,6 +28,19 @@ class FlacOracleTest {
     private val flac: String? by lazy { findOnPath("flac") }
 
     @Test
+    fun oversizedFrameSizeHintsPreserveTheReferenceDecodedAudio() {
+        val flac = flac ?: return skip()
+        val bytes = FlacReadCostFixtures.file(0xFF_FFFF)
+        val encoded = temp("oversized-frame-hint.flac")
+        encoded.writeBytes(bytes)
+        val reference = temp("oversized-frame-hint.wav")
+        run(listOf(flac, "--silent", "--force", "--decode", "-o", reference.path, encoded.path))
+        val expected = AudioKodec.decode(reference.readBytes()).samples
+        assertEquals(128_000, expected.size)
+        assertContentEquals(expected, AudioKodec.decode(bytes).samples)
+    }
+
+    @Test
     fun unusableSeekTablesKeepReferenceEncodedSamplesAndTags() {
         val flac = flac ?: return skip()
         val samples = TestSignals.quantise(TestSignals.sine(9_000, 1), 16)

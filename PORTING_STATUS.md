@@ -59,6 +59,10 @@ subject to runner availability, including account billing. Within the suites:
   tests cover leading padding, bounded atom detection and malformed sizes.
 - FLAC files written by the reference encoder decode **bit-exactly** at 8, 16
   and 24 bits, 1, 2 and 6 channels, and every compression level from 0 to 8.
+- Native FLAC frame reads start with a small prefix and grow only when the
+  actual frame needs more bytes. An overstated maximum does not demand a
+  large initial allocation or repeated full-file reads; source-byte counters,
+  scanning seeks and reference decoding cover the largest stated maximum.
 - Unusable FLAC seek points discard the optional table, preserving decoding,
   scanning seeks and tags in both modes. Common and reference-encoder tests
   cover repeated, descending and invalid points, with valid placeholder
