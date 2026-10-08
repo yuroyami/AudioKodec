@@ -16,6 +16,12 @@ external-tool comparisons. Common tests also target JS (Node), wasmJs (Node),
 wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
+The twenty findings from the original [code-quality audit](https://github.com/yuroyami/AudioKodec/issues/68),
+issues #48 through #67, have been remediated and closed. The local Linux JVM
+validation after the final fix passed 742 core tests and 14 I/O tests, with
+five explicit macOS-only skips. Later audit follow-ups remain tracked in their
+own issues; completion of this group does not qualify untested hosts.
+
 Missing oracle tools and unavailable encoder cases produce explicit JUnit
 skips. CI is configured to install ffmpeg, FLAC, LAME, ExifTool, Mutagen and
 libopusfile and to build the pinned Opus and Apple ALAC reference executables.
