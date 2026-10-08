@@ -241,7 +241,7 @@ class AlacOracleTest {
             ProcessBuilder(
                 "c++", "-std=c++11", "-O1", "-Wno-multichar", "-I", codec.path,
                 "-o", binary.path, source.path, File(codec, "libalac.a").path,
-            ).redirectErrorStream(true).start()
+            ).redirectErrorStream(true).oracleStart()
         } catch (failure: java.io.IOException) {
             return null
         }
@@ -306,7 +306,7 @@ class AlacOracleTest {
     }
 
     private fun run(command: List<String>) {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(120, TimeUnit.SECONDS), "${command.first()} did not finish")
         assertEquals(0, process.exitValue(), "${command.joinToString(" ")} failed:\n$output")

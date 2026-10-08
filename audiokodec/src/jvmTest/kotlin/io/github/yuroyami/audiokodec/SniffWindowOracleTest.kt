@@ -53,7 +53,7 @@ class SniffWindowOracleTest {
             assertNull(AudioKodec.sniff(bytes))
             assertNull(AudioKodec.sniff(bytes.copyOf(AudioKodec.SNIFF_HEADER_BYTES)))
             val process = ProcessBuilder(tool("ffprobe"), "-v", "error", "-show_entries", "format=format_name", standalone.path)
-                .redirectErrorStream(true).start()
+                .redirectErrorStream(true).oracleStart()
             assertTrue(process.waitFor(30, TimeUnit.SECONDS))
             val output = process.inputStream.bufferedReader().readText()
             assertTrue(process.exitValue() != 0, "standalone metadata unexpectedly identified audio: $output")
@@ -79,7 +79,7 @@ class SniffWindowOracleTest {
     private fun python(): String {
         val configured = System.getenv("AUDIOKODEC_MUTAGEN_PYTHON")
         val python = configured ?: tool("python3")
-        val process = ProcessBuilder(python, "-c", "import mutagen.id3").redirectErrorStream(true).start()
+        val process = ProcessBuilder(python, "-c", "import mutagen.id3").redirectErrorStream(true).oracleStart()
         assertTrue(process.waitFor(30, TimeUnit.SECONDS))
         val output = process.inputStream.bufferedReader().readText()
         if (configured != null) assertEquals(0, process.exitValue(), output)
@@ -94,7 +94,7 @@ class SniffWindowOracleTest {
     }
 
     private fun run(command: List<String>): String {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         assertTrue(process.waitFor(60, TimeUnit.SECONDS), "${command.first()} did not finish")
         val output = process.inputStream.bufferedReader().readText()
         assertEquals(0, process.exitValue(), output)

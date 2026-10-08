@@ -184,7 +184,7 @@ class AiffCOracleTest {
     }
 
     private fun run(command: List<String>) {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(120, TimeUnit.SECONDS), "${command.first()} did not finish")
         assertEquals(0, process.exitValue(), "${command.joinToString(" ")} failed:\n$output")

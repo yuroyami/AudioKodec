@@ -133,7 +133,7 @@ class DateConversionOracleTest {
     private fun python(): String {
         val configured = System.getenv("AUDIOKODEC_MUTAGEN_PYTHON")
         val python = configured ?: tool("python3")
-        val process = ProcessBuilder(python, "-c", "import mutagen.id3").redirectErrorStream(true).start()
+        val process = ProcessBuilder(python, "-c", "import mutagen.id3").redirectErrorStream(true).oracleStart()
         assertTrue(process.waitFor(30, TimeUnit.SECONDS))
         val output = process.inputStream.bufferedReader().readText()
         if (configured != null) assertEquals(0, process.exitValue(), output)
@@ -148,7 +148,7 @@ class DateConversionOracleTest {
     }
 
     private fun run(command: List<String>): String {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         assertTrue(process.waitFor(60, TimeUnit.SECONDS), "${command.first()} did not finish")
         val output = process.inputStream.bufferedReader().readText()
         assertEquals(0, process.exitValue(), output)

@@ -192,14 +192,14 @@ class MpegCrcOracleTest {
     private fun ffmpegAcceptsChecksums(ffmpeg: String, file: File): Boolean {
         val process = ProcessBuilder(
             ffmpeg, "-v", "error", "-err_detect", "crccheck+explode", "-i", file.path, "-f", "null", "-",
-        ).redirectErrorStream(true).start()
+        ).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(120, TimeUnit.SECONDS), "ffmpeg did not finish")
         return !output.contains("crc", ignoreCase = true)
     }
 
     private fun runTool(command: List<String>): Boolean {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(120, TimeUnit.SECONDS), "${command.first()} did not finish")
         return process.exitValue() == 0

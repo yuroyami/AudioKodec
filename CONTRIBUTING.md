@@ -63,6 +63,45 @@ repository.
 
 ## Running the tests
 
+To regenerate every JVM fixture and record the exact tool versions, executable
+SHA-256, argument arrays, caller recipes and input/output hashes, run:
+
+```sh
+python3 generate-test-fixtures.py --output audiokodec/build/fixtures-first
+python3 generate-test-fixtures.py --output audiokodec/build/fixtures-second --compare audiokodec/build/fixtures-first
+```
+
+Prepare the executable oracles first using the instructions below and
+`.github/scripts/prepare-codec-oracles.sh`. The generator uses Python 3.11 or
+later, downloads the pinned FLAC corpus, gives the test JVM a fresh temporary
+directory, and forces both JVM suites to execute. Recording directories must
+be empty. `--tests '*VorbisOracleTest*'` selects a smaller recipe; repeat the
+option for several suites. Matching versions and build identities are required
+for a byte-for-byte comparison. A mismatch saves both normalised manifests
+for inspection rather than overwriting an earlier recording.
+
+`test-data/fixture-tools.json` states the last locally qualified versions and
+build hashes. Each CI run publishes its own Linux or macOS provenance artifact,
+including exact commands and inline Python scripts. `run.json` fingerprints
+the owned Kotlin fixture generators, resources and build configuration, so
+hand-built data and AudioKodec-generated PCM also have a reproducible recipe.
+`runtime-*.json` records the actual test JVM and Kotlin versions.
+`commands.json` records files before and after every process, including files
+later deleted by tests; consumed pipes have separate byte counts and hashes.
+Argument arrays are data, never shell commands to paste or evaluate. No audio
+blobs are added to version control by the generator.
+
+Use `oracleStart()` for every JVM test process. The generator checks for
+unrecorded calls. Ordinary runs need no recording directory; FFmpeg and FLAC Ogg
+fixtures use deterministic stream serials in either mode. Large published
+inputs live in ignored caches with pinned manifests and retrieval commands,
+including the exact upstream bytes of the two committed FLAC vectors. Their
+original upstream encoder invocations are not asserted. The permissive
+reference build recipe pins its source revisions; copyleft tools remain
+executables only and their implementation source stays unopened.
+
+For tests without provenance recording:
+
 ```
 ./gradlew :audiokodec:jvmTest
 ./gradlew :audiokodec:jsNodeTest :audiokodec:wasmJsNodeTest :audiokodec:wasmWasiNodeTest

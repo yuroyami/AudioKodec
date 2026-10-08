@@ -119,7 +119,7 @@ class NativeTextEncodingOracleTest {
     }
 
     private fun run(command: List<String>): String {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val finished = process.waitFor(60, TimeUnit.SECONDS)
         if (!finished) process.destroyForcibly()
         assertTrue(finished, "${command.first()} did not finish")

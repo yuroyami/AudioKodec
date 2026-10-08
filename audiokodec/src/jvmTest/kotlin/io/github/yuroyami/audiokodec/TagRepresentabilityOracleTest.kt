@@ -131,7 +131,7 @@ class TagRepresentabilityOracleTest {
         val configured = System.getenv("AUDIOKODEC_MUTAGEN_PYTHON")
         val python = configured ?: tool("python3")
         val check = ProcessBuilder(python, "-c", "import mutagen.id3, mutagen.apev2, mutagen.flac, mutagen.oggopus")
-            .redirectErrorStream(true).start()
+            .redirectErrorStream(true).oracleStart()
         assertTrue(check.waitFor(30, TimeUnit.SECONDS))
         val output = check.inputStream.bufferedReader().readText()
         if (configured != null) assertEquals(0, check.exitValue(), output)
@@ -146,7 +146,7 @@ class TagRepresentabilityOracleTest {
     }
 
     private fun run(command: List<String>): String {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         assertTrue(process.waitFor(60, TimeUnit.SECONDS), "${command.first()} did not finish")
         val output = process.inputStream.bufferedReader().readText()
         assertEquals(0, process.exitValue(), output)

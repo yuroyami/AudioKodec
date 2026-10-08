@@ -581,7 +581,7 @@ class OggOracleTest {
         val two = temp("chain-two.oga")
         two.delete()
         run(
-            listOf(flac, "--silent", "--force", "--ogg", "-8", "-o", two.absolutePath, wav.absolutePath),
+            listOf(flac, "--silent", "--force", "--ogg", "--serial-number=1", "-8", "-o", two.absolutePath, wav.absolutePath),
             "second chained stream",
         )
         val chained = temp("chained.oga")
@@ -784,7 +784,7 @@ class OggOracleTest {
     // Running the tools
 
     private fun run(command: List<String>, what: String) {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         val finished = process.waitFor(180, TimeUnit.SECONDS)
         assertTrue(finished, "${command.first()} did not finish within three minutes")
@@ -796,7 +796,7 @@ class OggOracleTest {
 
     /** Runs a command that is allowed to fail, for optional encoders. */
     private fun tryRun(command: List<String>): Boolean {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         process.inputStream.bufferedReader().readText()
         if (!process.waitFor(180, TimeUnit.SECONDS)) return false
         return process.exitValue() == 0

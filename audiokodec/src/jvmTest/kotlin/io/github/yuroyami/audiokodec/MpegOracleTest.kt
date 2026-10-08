@@ -827,14 +827,14 @@ class MpegOracleTest {
                 ffprobe, "-v", "quiet", "-show_entries", "format=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1", file.absolutePath,
             ),
-        ).redirectErrorStream(true).start()
+        ).redirectErrorStream(true).oracleStart()
         val text = process.inputStream.bufferedReader().readText().trim()
         process.waitFor(60, TimeUnit.SECONDS)
         return text.toDoubleOrNull() ?: 0.0
     }
 
     private fun run(command: List<String>, what: String) {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         val finished = process.waitFor(180, TimeUnit.SECONDS)
         assertTrue(finished, "${command.first()} did not finish within three minutes")

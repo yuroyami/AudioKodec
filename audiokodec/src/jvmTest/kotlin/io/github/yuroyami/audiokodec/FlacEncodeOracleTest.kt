@@ -351,7 +351,7 @@ class FlacEncodeOracleTest {
     }
 
     private fun capture(command: List<String>, what: String = ""): String {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         val finished = process.waitFor(180, TimeUnit.SECONDS)
         assertTrue(finished, "${command.first()} did not finish within three minutes")

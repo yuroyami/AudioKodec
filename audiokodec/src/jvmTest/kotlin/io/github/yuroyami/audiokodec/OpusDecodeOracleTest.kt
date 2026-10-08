@@ -241,7 +241,7 @@ class OpusDecodeOracleTest {
     private var lastExit = 0
 
     private fun runCapturing(command: List<String>): String {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(300, TimeUnit.SECONDS), "${command.first()} did not finish")
         lastExit = process.exitValue()

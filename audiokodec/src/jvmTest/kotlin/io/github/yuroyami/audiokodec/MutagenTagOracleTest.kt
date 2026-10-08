@@ -34,7 +34,7 @@ class MutagenTagOracleTest {
         val configured = System.getenv("AUDIOKODEC_MUTAGEN_PYTHON")
         val executable = configured ?: findOnPath("python3")
         assumeTrue("Python with Mutagen is required for the ID3 oracle", executable != null)
-        val process = ProcessBuilder(executable!!, "-c", "import mutagen.id3").redirectErrorStream(true).start()
+        val process = ProcessBuilder(executable!!, "-c", "import mutagen.id3").redirectErrorStream(true).oracleStart()
         assertTrue(process.waitFor(30, TimeUnit.SECONDS), "checking Mutagen did not finish")
         val output = process.inputStream.bufferedReader().readText()
         if (configured != null) assertEquals(0, process.exitValue(), output)
@@ -646,7 +646,7 @@ class MutagenTagOracleTest {
     }
 
     private fun run(command: List<String>): String {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         if (!process.waitFor(60, TimeUnit.SECONDS)) {
             process.destroyForcibly()
             throw AssertionError("${command.first()} did not finish")

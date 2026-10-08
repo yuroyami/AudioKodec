@@ -64,6 +64,14 @@ reports, failed tests and unexpected skips. Linux permits only the five
 vectors are checksum-verified before the tests run. Hosted validation remains
 subject to runner availability, including account billing. Within the suites:
 
+- The root fixture generator records exact process arguments, executable
+  versions and SHA-256, file and consumed-pipe hashes, and owned recipe source
+  fingerprints. A second recording can verify byte-for-byte reproduction.
+  CI publishes Linux and macOS recordings; the last local tool identities are
+  committed in `test-data/fixture-tools.json`. FFmpeg and FLAC Ogg serials are fixed
+  for deterministic fixtures, and published corpora retain pinned retrieval
+  manifests without adding large binary files to the repository.
+
 - All 86 published IETF CELLAR FLAC vectors at commit
   `aa7b0c6cf32994c106ae517a08134c28a96ff5b2` run individually: 69 exact integer
   PCM and seek comparisons with FLAC 1.5.0, checking stored MD5 and duration

@@ -96,7 +96,7 @@ class R128TagOracleTest {
     }
 
     private fun execute(command: List<String>): Pair<Int, String> {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         if (!process.waitFor(60, TimeUnit.SECONDS)) {
             process.destroyForcibly()
             throw AssertionError("${command.first()} did not finish")

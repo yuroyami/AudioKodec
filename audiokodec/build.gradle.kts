@@ -26,6 +26,12 @@ plugins {
  */
 tasks.withType<Test>().configureEach {
     maxHeapSize = "3g"
+    providers.gradleProperty("audiokodecFixtureTmp").orNull?.let { systemProperty("java.io.tmpdir", it) }
+    // A cached green result cannot produce a fresh provenance recording.
+    providers.environmentVariable("AUDIOKODEC_FIXTURE_RECORDING_DIR").orNull?.let {
+        environment("AUDIOKODEC_FIXTURE_RECORDING_DIR", it)
+        outputs.upToDateWhen { false }
+    }
 }
 
 kotlin {

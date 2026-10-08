@@ -310,7 +310,7 @@ class OpusMultistreamOracleTest {
             ProcessBuilder(
                 "cc", "-O1", "-I", File(libopus, "include").path, "-o", binary.path, source.path,
                 File(libopus, "build-plain/libopus.a").path, "-lm",
-            ).redirectErrorStream(true).start()
+            ).redirectErrorStream(true).oracleStart()
         } catch (failure: java.io.IOException) {
             return null
         }
@@ -321,7 +321,7 @@ class OpusMultistreamOracleTest {
     }
 
     private fun run(command: List<String>) {
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val process = ProcessBuilder(command).redirectErrorStream(true).oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         assertTrue(process.waitFor(300, TimeUnit.SECONDS), "${command.first()} did not finish")
         assertEquals(0, process.exitValue(), "${command.joinToString(" ")} failed:\n$output")

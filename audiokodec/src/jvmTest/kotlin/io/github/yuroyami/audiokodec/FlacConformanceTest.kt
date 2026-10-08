@@ -69,7 +69,7 @@ class FlacConformanceTest(private val path: String, private val length: Long, pr
             val output = File(directory, "reference.wav")
             val log = File(directory, "reference.log")
             val process = ProcessBuilder(assertNotNull(flac).path, "--silent", "--decode", "--force",
-                "-o", output.path, input.path).redirectErrorStream(true).redirectOutput(log).start()
+                "-o", output.path, input.path).redirectErrorStream(true).redirectOutput(log).oracleStart()
             val finished = process.waitFor(60, TimeUnit.SECONDS)
             if (!finished) process.destroyForcibly()
             assertTrue(finished, "$path: the reference decoder did not finish")

@@ -43,7 +43,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Core tests (JVM)
-        run: ./gradlew :audiokodec:jvmTest :audiokodec-io:jvmTest --stacktrace
+        run: python3 generate-test-fixtures.py
 
       - name: Verify oracle comparisons ran
         if: always()
@@ -81,6 +81,13 @@ jobs:
         with:
           name: test-reports-linux
           path: '**/build/reports/tests/**'
+
+      - name: Upload fixture provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-provenance-linux
+          path: audiokodec/build/fixture-provenance/*.json*
 
   # MinGW binaries cross-compile elsewhere, but their tests can only execute
   # on Windows. Keep this separate from the JVM oracle suite so native failures
@@ -134,7 +141,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Core tests and Apple format comparisons (JVM)
-        run: ./gradlew :audiokodec:jvmTest :audiokodec-io:jvmTest --stacktrace
+        run: python3 generate-test-fixtures.py
 
       - name: Verify oracle comparisons ran
         if: always()
@@ -155,6 +162,13 @@ jobs:
         with:
           name: test-reports-apple
           path: '**/build/reports/tests/**'
+
+      - name: Upload fixture provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-provenance-apple
+          path: audiokodec/build/fixture-provenance/*.json*
 
       - name: Check framework attribution
         run: |

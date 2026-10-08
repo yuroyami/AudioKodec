@@ -1,0 +1,152 @@
+{
+  "generatorRuntimes": [
+    {
+      "architecture": "amd64",
+      "javaVendor": "Debian",
+      "javaVersion": "21.0.12.1",
+      "kotlinVersion": "2.4.10",
+      "vmVersion": "21.0.12.1+1-1-deb13u1-Debian"
+    }
+  ],
+  "macOSBuild": null,
+  "opusfileLibrarySha256": "cbb2d87dc3a07096fb942b6baf9d78be10bad59702cabc87d708d0c18bb560aa",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "qualifiedAt": "2026-10-08T21:42:03.066627+00:00",
+  "referenceBuildRecipeSha256": "a5bff48e71460bb01746ac8a2451089f64c510dea9b78fc20d4f6cd7f3279670",
+  "referenceBuilds": {
+    "alac": {
+      "commit": "c38887c5c5e64a4b31108733bd79ca9b2496d987",
+      "sourceChanges": []
+    },
+    "libopus": {
+      "commit": "ddbe48383984d56acd9e1ab6a090c54ca6b735a6",
+      "sourceChanges": []
+    }
+  },
+  "skipped": 5,
+  "testCount": 958,
+  "tools": [
+    {
+      "path": "ffmpeg",
+      "sha256": "e8a8d46f5225f3062cec7c07fb145d58ae73c603cb740dcd5bad34bfb54e455a",
+      "version": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with gcc 14 (Debian 14.2.0-19)\nconfiguration: --prefix=/usr --extra-version=0+deb13u1 --toolchain=hardened --libdir=/usr/lib/x86_64-linux-gnu --incdir=/usr/include/x86_64-linux-gnu --arch=amd64 --enable-gpl --disable-stripping --disable-libmfx --disable-omx --enable-gnutls --enable-libaom --enable-libass --enable-libbs2b --enable-libcdio --enable-libcodec2 --enable-libdav1d --enable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libglslang --enable-libgme --enable-libgsm --enable-libharfbuzz --enable-libmp3lame --enable-libmysofa --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzimg --enable-openal --enable-opencl --enable-opengl --disable-sndio --enable-libvpl --enable-libdc1394 --enable-libdrm --enable-libiec61883 --enable-chromaprint --enable-frei0r --enable-ladspa --enable-libbluray --enable-libcaca --enable-libdvdnav --enable-libdvdread --enable-libjack --enable-libpulse --enable-librabbitmq --enable-librist --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libx264 --enable-libzmq --enable-libzvbi --enable-lv2 --enable-sdl2 --enable-libplacebo --enable-librav1e --enable-pocketsphinx --enable-librsvg --enable-libjxl --enable-shared\nlibavutil      59. 39.100 / 59. 39.100\nlibavcodec     61. 19.101 / 61. 19.101\nlibavformat    61.  7.103 / 61.  7.103\nlibavdevice    61.  3.100 / 61.  3.100\nlibavfilter    10.  5.100 / 10.  5.100\nlibswscale      8.  3.100 /  8.  3.100\nlibswresample   5.  3.100 /  5.  3.100\nlibpostproc    58.  3.100 / 58.  3.100",
+      "versionArgv": [
+        "ffmpeg",
+        "-version"
+      ]
+    },
+    {
+      "path": "alacconvert",
+      "sha256": "6ea4887b58742161e2cb44ac98d3e745d2f272021fb2edc2a4c4a782ff97c086",
+      "version": "Compiled reference or test helper: identify by executable SHA-256 and the recorded build recipe",
+      "versionArgv": []
+    },
+    {
+      "path": "c++",
+      "sha256": "6b3696e4dcb85e1c949c732a02befa50e3983ecf94ce7e8e58d9d503b954b79d",
+      "version": "c++ (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+      "versionArgv": [
+        "c++",
+        "--version"
+      ]
+    },
+    {
+      "path": "alac_20bit_oracle",
+      "sha256": "bc3a27a105e3f46469792bfc83a83acdf270f84ad1b2b484192f98a02f3ecd77",
+      "version": "Compiled reference or test helper: identify by executable SHA-256 and the recorded build recipe",
+      "versionArgv": []
+    },
+    {
+      "path": "python",
+      "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+      "version": "Python 3.12.14\nMutagen 1.47.0",
+      "versionArgv": [
+        "python",
+        "-c",
+        "import platform\nprint('Python ' + platform.python_version())\ntry:\n    import mutagen\n    print('Mutagen ' + mutagen.version_string)\nexcept ImportError:\n    print('Mutagen unavailable')"
+      ]
+    },
+    {
+      "path": "ffprobe",
+      "sha256": "cefc5f81c0b18429cdbf8fa5a89e1e9c759235e10f93f9b329ff1b2fdff26f46",
+      "version": "ffprobe version 7.1.5-0+deb13u1 Copyright (c) 2007-2026 the FFmpeg developers\nbuilt with gcc 14 (Debian 14.2.0-19)\nconfiguration: --prefix=/usr --extra-version=0+deb13u1 --toolchain=hardened --libdir=/usr/lib/x86_64-linux-gnu --incdir=/usr/include/x86_64-linux-gnu --arch=amd64 --enable-gpl --disable-stripping --disable-libmfx --disable-omx --enable-gnutls --enable-libaom --enable-libass --enable-libbs2b --enable-libcdio --enable-libcodec2 --enable-libdav1d --enable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libglslang --enable-libgme --enable-libgsm --enable-libharfbuzz --enable-libmp3lame --enable-libmysofa --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzimg --enable-openal --enable-opencl --enable-opengl --disable-sndio --enable-libvpl --enable-libdc1394 --enable-libdrm --enable-libiec61883 --enable-chromaprint --enable-frei0r --enable-ladspa --enable-libbluray --enable-libcaca --enable-libdvdnav --enable-libdvdread --enable-libjack --enable-libpulse --enable-librabbitmq --enable-librist --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libx264 --enable-libzmq --enable-libzvbi --enable-lv2 --enable-sdl2 --enable-libplacebo --enable-librav1e --enable-pocketsphinx --enable-librsvg --enable-libjxl --enable-shared\nlibavutil      59. 39.100 / 59. 39.100\nlibavcodec     61. 19.101 / 61. 19.101\nlibavformat    61.  7.103 / 61.  7.103\nlibavdevice    61.  3.100 / 61.  3.100\nlibavfilter    10.  5.100 / 10.  5.100\nlibswscale      8.  3.100 /  8.  3.100\nlibswresample   5.  3.100 /  5.  3.100\nlibpostproc    58.  3.100 / 58.  3.100",
+      "versionArgv": [
+        "ffprobe",
+        "-version"
+      ]
+    },
+    {
+      "path": "flac",
+      "sha256": "c4a8f9def1bb55d33c3716c119d58c0fa226cf49ab0d91dcdffbfed96562f90e",
+      "version": "flac 1.5.0",
+      "versionArgv": [
+        "flac",
+        "--version"
+      ]
+    },
+    {
+      "path": "metaflac",
+      "sha256": "7637d25a43f5e86718feb7a8bc1ef9dcd18ca7c04161540944d51e2d2b534bc9",
+      "version": "metaflac 1.5.0",
+      "versionArgv": [
+        "metaflac",
+        "--version"
+      ]
+    },
+    {
+      "path": "lame",
+      "sha256": "09b4b5c27915c767d9ad6591671e0d54705970ea694cfc4de0cb4df4c2133829",
+      "version": "LAME 64bits version 3.100 (http://lame.sf.net)\n\nCopyright (c) 1999-2011 by The LAME Project\nCopyright (c) 1999,2000,2001 by Mark Taylor\nCopyright (c) 1998 by Michael Cheng\nCopyright (c) 1995,1996,1997 by Michael Hipp: mpglib\n\nThis library is free software; you can redistribute it and/or\nmodify it under the terms of the GNU Library General Public\nLicense as published by the Free Software Foundation; either\nversion 2 of the License, or (at your option) any later version.\n\nThis library is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU\nLibrary General Public License for more details.\n\nYou should have received a copy of the GNU Library General Public\nLicense along with this program. If not, see\n<http://www.gnu.org/licenses/>.",
+      "versionArgv": [
+        "lame",
+        "--version"
+      ]
+    },
+    {
+      "path": "python3",
+      "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+      "version": "Python 3.12.14\nMutagen unavailable",
+      "versionArgv": [
+        "python3",
+        "-c",
+        "import platform\nprint('Python ' + platform.python_version())\ntry:\n    import mutagen\n    print('Mutagen ' + mutagen.version_string)\nexcept ImportError:\n    print('Mutagen unavailable')"
+      ]
+    },
+    {
+      "path": "exiftool",
+      "sha256": "aad164d81c96fe255fcc617532613b3288ba6ea2d607c58142ffbdfe408a02c4",
+      "version": "13.25",
+      "versionArgv": [
+        "exiftool",
+        "-ver"
+      ]
+    },
+    {
+      "path": "opus_demo",
+      "sha256": "8d67f71053266a990378a8f65a68e1b29aecd1118f37a694a9942e9405e39d6d",
+      "version": "Compiled reference or test helper: identify by executable SHA-256 and the recorded build recipe",
+      "versionArgv": []
+    },
+    {
+      "path": "opus_compare",
+      "sha256": "267dca19feedd63a015e4712180f476e773a8cd988ef2429ce762b509bc6c573",
+      "version": "Compiled reference or test helper: identify by executable SHA-256 and the recorded build recipe",
+      "versionArgv": []
+    },
+    {
+      "path": "cc",
+      "sha256": "a23ecab8ff08f09ad8c80602c2c5df7f49e09c25905cb8975902e101bf72635f",
+      "version": "cc (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+      "versionArgv": [
+        "cc",
+        "--version"
+      ]
+    },
+    {
+      "path": "opus_multistream_oracle",
+      "sha256": "1fcaeb956085830dae8cecd95536f637a28be5464d0737f19cdc484070b3afeb",
+      "version": "Compiled reference or test helper: identify by executable SHA-256 and the recorded build recipe",
+      "versionArgv": []
+    }
+  ]
+}

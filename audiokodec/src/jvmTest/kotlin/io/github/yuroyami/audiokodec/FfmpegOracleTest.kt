@@ -327,7 +327,7 @@ class FfmpegOracleTest {
     private fun run(command: List<String>) {
         val process = ProcessBuilder(command)
             .redirectErrorStream(true)
-            .start()
+            .oracleStart()
         val output = process.inputStream.bufferedReader().readText()
         val finished = process.waitFor(120, TimeUnit.SECONDS)
         assertTrue(finished, "${command.first()} did not finish within two minutes")
