@@ -15,6 +15,9 @@ page is the full list of what works today and what is coming.
 0.1.0 is unreleased and is not yet published to Maven Central. The snippet
 below shows the planned coordinates for that release.
 
+Both JVM modules target Java 21 and require a Java 21 or later runtime.
+Building the repository requires a JDK 21 toolchain; use the included Gradle wrapper.
+
 ```kotlin
 dependencies {
     implementation("io.github.yuroyami:audiokodec:0.1.0")

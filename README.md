@@ -34,6 +34,9 @@ in a WASI runtime.
 0.1.0 is unreleased and is not yet published to Maven Central. The snippet
 below shows the planned coordinates for that release.
 
+Both JVM modules target Java 21 and require a Java 21 or later runtime.
+Building the repository requires a JDK 21 toolchain; use the included Gradle wrapper.
+
 ```kotlin
 dependencies {
     implementation("io.github.yuroyami:audiokodec:0.1.0")
@@ -426,7 +429,7 @@ allocation is attempted rather than after it fails.
 
 ## Targets
 
-`audiokodec` builds for 22 targets: Android (minSdk 21), `jvm`, `iosArm64`,
+`audiokodec` builds for 22 targets: Android (minSdk 21), `jvm` (Java 21 or later), `iosArm64`,
 `iosSimulatorArm64`, `iosX64`, `macosArm64`, `tvosArm64`,
 `tvosSimulatorArm64`, `watchosArm32`, `watchosArm64`, `watchosDeviceArm64`,
 `watchosSimulatorArm64`, `androidNativeArm32`, `androidNativeArm64`,
