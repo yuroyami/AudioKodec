@@ -40,6 +40,24 @@ internal class FlacFrameReader(
         val byteLength: Int,
     )
 
+    /** Timing fields from a CRC-8-checked header, without decoding samples. */
+    class Position(val blockSize: Int, val frameNumber: Long, val sampleNumber: Long)
+
+    private val headerBuffer = ByteArray(16)
+
+    fun headerAt(at: Long): Position? {
+        reader.seek(at)
+        val available = reader.readSome(headerBuffer, 0, headerBuffer.size)
+        if (available == 0) return null
+        return packetHeader(headerBuffer, available, at)
+    }
+
+    fun packetHeader(bytes: ByteArray, length: Int, at: Long): Position {
+        val bits = BitReaderMsb(bytes, 0, length)
+        val header = checkedHeader(bits, bytes, at)
+        return Position(header.blockSize, header.frameNumber, header.sampleNumber)
+    }
+
     private var buffer = allocateInitialBuffer()
 
     /** Per-channel working space, reused across frames. */
@@ -135,24 +153,13 @@ internal class FlacFrameReader(
 
     private fun decodeFrom(frame: ByteArray, available: Int, at: Long): Frame? {
         val reading = BitReaderMsb(frame, 0, available)
-        val header = readHeader(reading, at)
-
-        // The header checksum has to be right before anything after it is
-        // believed. A frame whose header is wrong is not a frame.
-        val headerBytes = reading.bytePosition
-        val expectedCrc8 = frame[headerBytes - 1].toInt() and 0xFF
-        val actualCrc8 = FlacCrc.crc8(frame, 0, headerBytes - 1)
-        if (expectedCrc8 != actualCrc8) {
-            throw CorruptStreamException(
-                "the frame header checksum is $expectedCrc8 but the header hashes to $actualCrc8",
-                at,
-            )
-        }
+        val header = checkedHeader(reading, frame, at)
 
         val channels = header.channels
         if (channelBuffers.size < channels || channelBuffers[0].size < header.blockSize) {
             channelBuffers = allocateChannelBuffers(channels, header.blockSize)
         }
+
         if (longChannelBuffers.size < channels ||
             longChannelBuffers.isEmpty() ||
             longChannelBuffers[0].size < header.blockSize
@@ -257,6 +264,20 @@ internal class FlacFrameReader(
         val frameNumber: Long,
         val sampleNumber: Long,
     )
+
+    private fun checkedHeader(reading: BitReaderMsb, bytes: ByteArray, at: Long): Header {
+        val header = readHeader(reading, at)
+        val headerBytes = reading.bytePosition
+        val expected = bytes[headerBytes - 1].toInt() and 0xFF
+        val actual = FlacCrc.crc8(bytes, 0, headerBytes - 1)
+        if (expected != actual) {
+            throw CorruptStreamException(
+                "the frame header checksum is $expected but the header hashes to $actual",
+                at,
+            )
+        }
+        return header
+    }
 
     private fun readHeader(reading: BitReaderMsb, at: Long): Header {
         val sync = reading.readBits(14)

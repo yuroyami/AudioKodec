@@ -35,6 +35,15 @@ internal class FlacDecoder(
     private val streamInfo = parsed.streamInfo
     private val frames = FlacFrameReader(reader, streamInfo, options)
 
+    private val sourceOrigin: Long = try {
+        frames.headerAt(parsed.audioOffset)?.let { firstSampleOf(it.sampleNumber, it.frameNumber) } ?: 0L
+    } catch (_: CorruptStreamException) {
+        0L // Frame decoding retains the original typed failure.
+    } catch (_: TruncatedStreamException) {
+        0L
+    }
+    private val codedOrigin: Long = if (options.tolerant) sourceOrigin else 0L
+
     override val format: AudioFormat = AudioFormat(
         streamInfo.sampleRate,
         layoutFor(streamInfo.channels),
@@ -42,8 +51,11 @@ internal class FlacDecoder(
 
     override val bitDepth: Int = streamInfo.bitsPerSample
 
-    override val durationFrames: Long? =
-        if (streamInfo.totalSamples > 0) streamInfo.totalSamples else null
+    override val durationFrames: Long? = if (codedOrigin > 0) {
+        measureTrimmedDuration()
+    } else {
+        streamInfo.totalSamples.takeIf { it > 0 }
+    }
 
     override val info: AudioInfo = AudioInfo(
         container = AudioContainer.FLAC,
@@ -67,7 +79,7 @@ internal class FlacDecoder(
     private var pendingSkip: Long = 0
 
     /** Coded sample position expected from the next frame header. */
-    private var nextCodedPosition: Long = 0L
+    private var nextCodedPosition: Long = codedOrigin
 
     private var closed = false
     private var exhausted = false
@@ -135,6 +147,7 @@ internal class FlacDecoder(
      */
     private fun nextBlock(): Block? {
         check(!closed) { "this decoder is closed" }
+        requireSupportedOrigin()
         if (exhausted) return null
         val total = durationFrames
         if (total != null && positionFrames >= total) return null
@@ -205,7 +218,7 @@ internal class FlacDecoder(
         }
         val codedEnd = statedStart + frame.blockSize
         val total = durationFrames
-        if (total != null && codedEnd > total) {
+        if (total != null && codedEnd - codedOrigin > total) {
             throw CorruptStreamException(
                 "a FLAC frame ends at sample $codedEnd, past STREAMINFO's total of $total",
                 nextFrameOffset,
@@ -225,6 +238,7 @@ internal class FlacDecoder(
     override fun seek(frameIndex: Long): Long {
         check(!closed) { "this decoder is closed" }
         require(frameIndex >= 0) { "frameIndex must not be negative, was $frameIndex" }
+        requireSupportedOrigin()
         val total = durationFrames
         val target = if (total != null) frameIndex.coerceAtMost(total) else frameIndex
 
@@ -236,14 +250,15 @@ internal class FlacDecoder(
         if (target == 0L) {
             nextFrameOffset = parsed.audioOffset
             pendingSkip = 0L
-            nextCodedPosition = 0L
+            nextCodedPosition = codedOrigin
             positionFrames = 0
             return 0
         }
 
-        val landing = findFrameAtOrBefore(target)
+        val codedTarget = codedOrigin + target
+        val landing = findFrameAtOrBefore(codedTarget)
         nextFrameOffset = landing.byteOffset
-        pendingSkip = (target - landing.firstSample).coerceAtLeast(0L)
+        pendingSkip = (codedTarget - landing.firstSample).coerceAtLeast(0L)
         nextCodedPosition = landing.firstSample
         positionFrames = target
         return target
@@ -260,8 +275,9 @@ internal class FlacDecoder(
      * is acceptable.
      */
     private fun findFrameAtOrBefore(target: Long): Landing {
-        var best = Landing(parsed.audioOffset, 0L)
-        for (point in parsed.seekPoints) {
+        var best = Landing(parsed.audioOffset, codedOrigin)
+        // Original offsets in a stream-copy cut no longer address its bytes.
+        for (point in if (codedOrigin == 0L) parsed.seekPoints else emptyList()) {
             if (point.firstSample <= target && point.firstSample >= best.firstSample) {
                 if (parsed.audioOffset > Long.MAX_VALUE - point.byteOffset) {
                     throw CorruptStreamException(
@@ -283,11 +299,11 @@ internal class FlacDecoder(
             }
         }
         // A seek table entry inside the block we want is as close as we need.
-        if (best.firstSample > 0 && target - best.firstSample < streamInfo.maximumBlockSize) {
+        if (target - best.firstSample < streamInfo.maximumBlockSize) {
             return best
         }
         if (!options.allowSlowSeek) {
-            if (best.firstSample > 0 || target < streamInfo.maximumBlockSize) return best
+            if (best.firstSample > codedOrigin || target - codedOrigin < streamInfo.maximumBlockSize) return best
             throw UnsupportedFeatureException(
                 "seeking a FLAC stream without a useful seek table",
                 "this file has no seek point near frame $target, and slow seeking is off",
@@ -348,16 +364,50 @@ internal class FlacDecoder(
      * carry sample numbers rather than frame numbers, so this is never
      * consulted.
      */
-    private fun firstSampleOf(frame: FlacFrameReader.Frame): Long {
-        if (frame.sampleNumber >= 0) return frame.sampleNumber
-        if (frame.frameNumber < 0) {
+    private fun firstSampleOf(frame: FlacFrameReader.Frame): Long = firstSampleOf(frame.sampleNumber, frame.frameNumber)
+
+    private fun firstSampleOf(sampleNumber: Long, frameNumber: Long): Long {
+        if (sampleNumber >= 0) return sampleNumber
+        if (frameNumber < 0) {
             throw CorruptStreamException("a FLAC frame states neither a frame nor sample number")
         }
         val fixedBlockSize = streamInfo.maximumBlockSize.toLong()
-        if (frame.frameNumber > Long.MAX_VALUE / fixedBlockSize) {
+        if (frameNumber > Long.MAX_VALUE / fixedBlockSize) {
             throw CorruptStreamException("a FLAC frame number overflows its sample position")
         }
-        return frame.frameNumber * fixedBlockSize
+        return frameNumber * fixedBlockSize
+    }
+
+    private fun requireSupportedOrigin() {
+        if (!options.tolerant && sourceOrigin > 0) {
+            throw CorruptStreamException(
+                "the FLAC stream starts at sample $sourceOrigin, not 0; use tolerant mode to read a stream-copy cut",
+                parsed.audioOffset,
+            )
+        }
+    }
+
+    /** A cut's original STREAMINFO total and MD5 describe audio that is absent. */
+    private fun measureTrimmedDuration(): Long {
+        var offset = parsed.audioOffset
+        var expected = codedOrigin
+        while (true) {
+            val frame = try {
+                frames.decodeAt(offset)
+            } catch (failure: CorruptStreamException) {
+                if (expected == codedOrigin) throw failure
+                break
+            } catch (failure: TruncatedStreamException) {
+                if (expected == codedOrigin) throw failure
+                break
+            } ?: break
+            val start = firstSampleOf(frame)
+            if (start != expected || start > Long.MAX_VALUE - frame.blockSize) break
+            if (frame.byteLength <= 0 || offset > Long.MAX_VALUE - frame.byteLength) break
+            expected = start + frame.blockSize
+            offset += frame.byteLength
+        }
+        return expected - codedOrigin
     }
 
     /**
@@ -369,7 +419,7 @@ internal class FlacDecoder(
      * file states no MD5.
      */
     fun verifyMd5(): Boolean? {
-        if (!streamInfo.hasMd5) return null
+        if (!streamInfo.hasMd5 || codedOrigin > 0) return null
         seek(0)
         val hash = Md5()
         md5 = hash

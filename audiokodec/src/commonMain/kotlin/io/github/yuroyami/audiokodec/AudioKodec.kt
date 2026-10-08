@@ -228,7 +228,8 @@ public object AudioKodec {
      * FLAC records a hash of the unencoded audio in its header, which makes a
      * decoder checkable against whichever encoder wrote the file. Returns true
      * when the decoded samples hash to the stored value, false when they do
-     * not, and null when the file states no hash.
+     * not, and null when the file states no hash or tolerant mode identifies
+     * a stream-copy cut whose hash describes absent audio.
      *
      * This decodes the whole file, so it costs a full decode. It is a
      * verification tool rather than something to run before every playback.

@@ -47,12 +47,14 @@ println(info.codec.displayName)
 println(info.durationSeconds)
 ```
 
-`probe` does not decode samples. Its I/O depends on the format: Ogg walks
+`probe` reads metadata and index tables. Its I/O depends on the format: Ogg walks
 pages to the stream end and reads their payloads to verify checksums; MPEG
 without a stored Xing or VBRI frame count scans frame headers across the file
 for an exact duration. Both can read the whole file, so a folder scan is not
 bounded to a fixed header window. Other formats read their metadata and index
 tables. Opening Ogg repeats the page walk before the first decoded frame.
+Tolerant native FLAC inspection decodes frames when the first frame retains
+a nonzero origin, deriving the complete duration of a stream-copy cut.
 
 CAF ALAC packet tables from some encoders, including ffmpeg, count a short
 final packet as a full one. `probe` reports that metadata duration. `open`
@@ -217,19 +219,29 @@ back out: the format is lossless at every setting.
 
 ### Verifying a file
 
-Every FLAC file carries an MD5 of its own unencoded audio, written by whichever
-program encoded it. That makes a decoder checkable against a third party:
+FLAC can store an MD5 of its unencoded audio, written by whichever program
+encoded it. That makes a decoder checkable against a third party:
 
 ```kotlin
 when (AudioKodec.verifyFlacMd5(bytes)) {
     true -> println("the audio matches the hash the encoder stored")
     false -> println("this file has been damaged")
-    null -> println("this file states no hash")
+    null -> println("there is no hash for the complete audio in this file")
 }
 ```
 
 It costs a full decode, so it belongs in a library-integrity pass rather than
 in front of every playback.
+
+### Reading a stream-copy cut
+
+Tools such as `ffmpeg -ss T -i input.flac -c copy cut.flac` may retain original
+frame numbers, sample totals, seek points and MD5. Strict playback names the
+nonzero first-frame origin as corruption. With `DecodeOptions(tolerant = true)`,
+AudioKodec derives duration from the remaining complete, consecutive frames,
+starts positions at zero and rebases every seek. Inspection reads those frames
+too; it costs a decode. Original seek-table offsets are ignored, and MD5
+verification returns `null` because the stored hash describes absent audio.
 
 ### Seeking
 

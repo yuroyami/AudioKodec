@@ -44,7 +44,10 @@ class FlacContinuityTest {
     fun invalidFirstFramesStillFailInTolerantMode() {
         val valid = FlacContinuityFixtures.valid()
         for (bytes in listOf(
-            FlacContinuityFixtures.renumber(valid, 0, 3),
+            valid.copyOf().also {
+                val firstCrc = AudioKodec.probe(valid).dataOffset.toInt() + 9
+                it[firstCrc] = (it[firstCrc].toInt() xor 1).toByte()
+            },
             FlacContinuityFixtures.withTotal(valid, 2048),
         )) {
             for (integers in listOf(false, true)) {

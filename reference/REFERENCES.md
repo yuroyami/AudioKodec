@@ -66,7 +66,7 @@ Run as programs, never read as source.
 | Tool | Used for |
 |---|---|
 | ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write |
-| flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes |
+| flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks (#115) |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. Also reserved for the ALAC work |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio |

@@ -54,14 +54,15 @@ println("${audio.durationSeconds} seconds")
 // audio.samples is interleaved Float32, nominally -1.0 to 1.0
 ```
 
-## Read a header without decoding
+## Inspect a file
 
-`probe` does not decode samples, but its reads depend on the format. Ogg
+`probe` reads metadata and index tables. Its work depends on the format: Ogg
 walks the pages through the stream end, reading payloads to check their
 checksums. MPEG without a stored Xing or VBRI frame count scans frame headers
 across the file for an exact duration. These paths can read the whole file;
-other formats read their metadata and index tables. Opening Ogg performs the
-same page walk before playback.
+opening repeats the same page walk before playback. Tolerant native FLAC
+inspection also decodes frames when a nonzero first frame identifies a
+stream-copy cut, so its duration describes the remaining complete audio.
 
 ```kotlin
 val info = AudioKodec.probe(bytes)
@@ -147,16 +148,20 @@ val audio = AudioKodec.decode(flac)
 the reference encoder's numbered levels do. It never changes what comes back
 out, because the format is lossless at every setting.
 
-Every FLAC file carries an MD5 of its own audio, which makes a decoder
-checkable against whichever encoder wrote the file:
+FLAC can store an MD5 of its audio, which makes a decoder checkable against
+whichever encoder wrote the file:
 
 ```kotlin
 when (AudioKodec.verifyFlacMd5(bytes)) {
     true -> println("the audio matches the hash the encoder stored")
     false -> println("this file has been damaged")
-    null -> println("this file states no hash")
+    null -> println("there is no hash for the complete audio in this file")
 }
 ```
+
+Use `DecodeOptions(tolerant = true)` to read a FLAC stream-copy cut whose
+frame numbers retain a nonzero origin. Positions and seeks start at zero;
+duration covers the remaining valid frames. Its original MD5 is unavailable.
 
 Seeking works with or without a seek table. Without one the frames are scanned,
 and both checksums in every frame are verified, so a false sync word is rejected

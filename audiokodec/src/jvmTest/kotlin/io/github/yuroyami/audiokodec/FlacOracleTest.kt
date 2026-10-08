@@ -3,6 +3,8 @@ package io.github.yuroyami.audiokodec
 import io.github.yuroyami.audiokodec.tag.TagField
 import io.github.yuroyami.audiokodec.tag.TagFormat
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -26,6 +28,43 @@ import kotlin.test.assertTrue
 class FlacOracleTest {
 
     private val flac: String? by lazy { findOnPath("flac") }
+
+    @Test
+    fun aReferenceStreamCopyCutDecodesAndSeeksFromItsOwnOrigin() {
+        val ffmpeg = findOnPath("ffmpeg") ?: return skip()
+        val original = temp("stream-copy-original.flac")
+        run(listOf(ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i",
+            "sine=frequency=997:sample_rate=44100:duration=4", "-c:a", "flac", original.path))
+        val cut = temp("stream-copy-cut.flac")
+        run(listOf(ffmpeg, "-v", "error", "-y", "-ss", "1.5", "-i", original.path,
+            "-c:a", "copy", cut.path))
+        for ((file, frames) in listOf(cut to 111_888, temp("variable-origin.flac").also {
+            it.writeBytes(FlacTrimFixtures.variable())
+        } to 2_048)) {
+            val raw = temp("${file.nameWithoutExtension}.f32")
+            run(listOf(ffmpeg, "-v", "error", "-y", "-i", file.path, "-f", "f32le", raw.path))
+            val buffer = ByteBuffer.wrap(raw.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+            val expected = FloatArray(buffer.remaining() / 4) { buffer.float }
+            assertEquals(frames, expected.size)
+            val bytes = file.readBytes()
+            assertFailsWith<CorruptStreamException> { AudioKodec.decode(bytes) }
+            val options = DecodeOptions(tolerant = true)
+            assertEquals(frames.toLong(), AudioKodec.probe(bytes, options).durationFrames)
+            assertNull(AudioKodec.verifyFlacMd5(bytes, options))
+            TestSignals.assertExact(expected, AudioKodec.decode(bytes, options).samples, file.name)
+            for (knownSize in listOf(false, true)) {
+                AudioKodec.open(OggDamageFixtures.source(bytes, knownSize), options).use { decoder ->
+                    for (target in listOf(0L, 1L, frames / 3L, frames / 2L, frames - 1L)) {
+                        assertEquals(target, decoder.seek(target))
+                        val block = assertNotNull(decoder.nextFrame())
+                        assertEquals(target, block.positionFrames)
+                        TestSignals.assertExact(expected.copyOfRange(target.toInt(), target.toInt() + block.frameCount),
+                            block.samples.copyOf(block.sampleCount), file.name)
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun oversizedFrameSizeHintsPreserveTheReferenceDecodedAudio() {
