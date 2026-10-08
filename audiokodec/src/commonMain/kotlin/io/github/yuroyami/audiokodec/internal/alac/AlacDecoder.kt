@@ -7,6 +7,7 @@ package io.github.yuroyami.audiokodec.internal.alac
 
 import io.github.yuroyami.audiokodec.AudioChannel
 import io.github.yuroyami.audiokodec.CorruptStreamException
+import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 
 /**
@@ -120,7 +121,16 @@ internal class AlacConfig(
  *
  * Translated from `ALACDecoder::Decode` and the C files it calls.
  */
-internal class AlacDecoder(private val config: AlacConfig) {
+internal class AlacDecoder(private val config: AlacConfig, options: DecodeOptions) {
+
+    init {
+        // The shift buffer is the largest of the configuration-sized state
+        // arrays. Check it before allocating any of them.
+        options.checkAllocation(
+            (config.frameLength.toLong() + PREDICTOR_SLACK) * 2L * Int.SIZE_BYTES,
+            "allocating ALAC predictor state",
+        )
+    }
 
     private val capacity = config.frameLength + PREDICTOR_SLACK
     private val mixU = IntArray(capacity)
@@ -586,10 +596,21 @@ internal class AlacDecoder(private val config: AlacConfig) {
  * ALAC for [io.github.yuroyami.audiokodec.internal.PacketStreamDecoder]:
  * decodes a packet and puts its channels into AudioKodec's order.
  */
-internal class AlacPacketCodec(private val config: AlacConfig, sampleRate: Int) : io.github.yuroyami.audiokodec.internal.PacketCodec {
+internal class AlacPacketCodec(
+    private val config: AlacConfig,
+    sampleRate: Int,
+    options: DecodeOptions,
+) : io.github.yuroyami.audiokodec.internal.PacketCodec {
+
+    init {
+        options.checkAllocation(
+            (config.frameLength.toLong() + 1L) * config.channels * Int.SIZE_BYTES,
+            "allocating ALAC packet scratch storage",
+        )
+    }
 
     private val channels = config.channels
-    private val decoder = AlacDecoder(config)
+    private val decoder = AlacDecoder(config, options)
     private val stored = AlacConfig.storedOrder(channels)
     private val canonical = stored.sortedBy { it.ordinal }
 

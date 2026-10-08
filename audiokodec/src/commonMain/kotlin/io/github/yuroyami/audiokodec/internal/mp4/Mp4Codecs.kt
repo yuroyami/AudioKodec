@@ -183,8 +183,8 @@ internal object Mp4Codecs {
         val rate = if (config.sampleRate in 1..Int.MAX_VALUE.toLong()) config.sampleRate.toInt() else entry.sampleRate
         if (rate < 1) throw CorruptStreamException("an ALAC track states no sample rate", entry.offset)
         checkShape(entry, options, rate, config.channels)
-        val codec = AlacPacketCodec(config, rate)
-        return Choice(AudioCodec.ALAC, "ALAC", codec.format, config.bitDepth, 0) { _ -> AlacPacketCodec(config, rate) }
+        val codec = AlacPacketCodec(config, rate, options)
+        return Choice(AudioCodec.ALAC, "ALAC", codec.format, config.bitDepth, 0) { _ -> codec }
     }
 
     // Opus.

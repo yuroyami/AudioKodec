@@ -305,6 +305,31 @@ class Mp4Test {
     }
 
     @Test
+    fun alacStateHonoursAllocationLimitsBeforeProbeOrOpen() {
+        fun file(frameLength: Int, channels: Int): ByteArray {
+            val cookie = fullBox("alac", 0, 0, u32(frameLength),
+                byteArrayOf(0, 16, 40, 10, 14, channels.toByte()), u16(255), u32(0), u32(0), u32(RATE))
+            return build(3, channels, 3, format = "alac", sampleEntryBoxes = cookie)
+        }
+        // Isolate the interleaved scratch and the two-channel shift buffer.
+        for ((frameLength, channels, limit) in listOf(Triple(4_096, 8, 65_536L), Triple(8_192, 1, 40_960L))) {
+            val bytes = file(frameLength, channels)
+            for (tolerant in listOf(false, true)) {
+                val options = DecodeOptions(tolerant = tolerant, maxAllocationBytes = limit)
+                assertFailsWith<AllocationGuardException> { AudioKodec.probe(bytes, options) }
+                assertFailsWith<AllocationGuardException> { AudioKodec.open(bytes, options).close() }
+            }
+            assertEquals(channels, AudioKodec.probe(bytes).format.channels)
+            AudioKodec.open(bytes).close()
+        }
+        // The limit is per allocation, rather than the sum of decoder state.
+        val bytes = file(4_096, 1)
+        val options = DecodeOptions(maxAllocationBytes = 40_960)
+        assertEquals(1, AudioKodec.probe(bytes, options).format.channels)
+        AudioKodec.open(bytes, options).close()
+    }
+
+    @Test
     fun codecConfigurationCanSupplyTheResolvedStreamShape() {
         // AAC LC, 8 kHz, stereo, inside the ES and decoder configuration descriptors.
         val aac = fullBox("esds", 0, 0, byteArrayOf(3, 25, 0, 1, 0, 4, 17, 0x40, 0x15), ByteArray(11), byteArrayOf(5, 2, 0x15, 0x90.toByte(), 6, 1, 2))

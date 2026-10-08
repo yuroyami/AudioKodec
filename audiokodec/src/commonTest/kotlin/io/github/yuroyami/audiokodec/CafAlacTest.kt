@@ -9,6 +9,24 @@ import kotlin.test.assertNull
 
 class CafAlacTest {
     @Test
+    fun alacStateHonoursAllocationLimitsBeforeProbeOrOpen() {
+        for ((frameLength, channels, limit) in listOf(Triple(4_096, 2, 16_384L), Triple(8_192, 1, 40_960L))) {
+            val (bytes, _) = file(channels, frameLength = frameLength)
+            for (tolerant in listOf(false, true)) {
+                val options = DecodeOptions(tolerant = tolerant, maxAllocationBytes = limit)
+                assertFailsWith<AllocationGuardException> { AudioKodec.probe(bytes, options) }
+                assertFailsWith<AllocationGuardException> { AudioKodec.open(bytes, options).close() }
+            }
+            assertEquals(channels, AudioKodec.probe(bytes).format.channels)
+            assertEquals(81, AudioKodec.decode(bytes).frames)
+        }
+        val (small, _) = file(1)
+        val options = DecodeOptions(maxAllocationBytes = 1_024)
+        assertEquals(1, AudioKodec.probe(small, options).format.channels)
+        assertEquals(81, AudioKodec.decode(small, options).frames)
+    }
+
+    @Test
     fun aShortFinalPacketCorrectsTheDecodedLengthInBothModes() {
         for (channels in 1..2) {
             for (frames in listOf(intArrayOf(17), intArrayOf(64, 1), intArrayOf(64, 17), intArrayOf(64, 64))) {
@@ -90,6 +108,7 @@ class CafAlacTest {
         remainder: Int = 0,
         validFrames: Int = frames.size * 64 - priming - remainder,
         malformedLast: Boolean = false,
+        frameLength: Int = 64,
     ): Pair<ByteArray, IntArray> {
         val samples = IntArray(frames.sum() * channels) { (it * 173 % 8192) - 4096 }
         var sample = 0
@@ -100,7 +119,7 @@ class CafAlacTest {
         }
         val description = be(44_100.0.toRawBits(), 8) + ascii("alac") + be(1, 4) +
             be(0, 4) + be(64, 4) + be(channels.toLong(), 4) + be(0, 4)
-        val cookie = be(64, 4) + byteArrayOf(0, 16, 40, 10, 14, channels.toByte()) +
+        val cookie = be(frameLength.toLong(), 4) + byteArrayOf(0, 16, 40, 10, 14, channels.toByte()) +
             be(255, 2) + be(0, 4) + be(0, 4) + be(44_100, 4)
         val table = be(packets.size.toLong(), 8) + be(validFrames.toLong(), 8) +
             be(priming.toLong(), 4) + be(remainder.toLong(), 4) +

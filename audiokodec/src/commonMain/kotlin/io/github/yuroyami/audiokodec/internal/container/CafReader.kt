@@ -65,7 +65,7 @@ internal object CafReader {
     fun open(reader: SourceReader, options: DecodeOptions): AudioDecoder = when (val stream = read(reader, options)) {
         is Stream.Blocks -> stream.parsed.toDecoder(reader, options)
         is Stream.Alac -> {
-            val codec = AlacPacketCodec(stream.config, stream.sampleRate)
+            val codec = AlacPacketCodec(stream.config, stream.sampleRate, options)
             val validFrames = alacPlayFrames(reader, stream, codec, options)
             PacketStreamDecoder.of(
                 reader, stream.index, codec, alacInfo(reader, stream, codec.format, validFrames),
@@ -103,7 +103,7 @@ internal object CafReader {
     private fun alacInfo(
         reader: SourceReader,
         stream: Stream.Alac,
-        format: AudioFormat = AlacPacketCodec(stream.config, stream.sampleRate).format,
+        format: AudioFormat = AlacPacketCodec(stream.config, stream.sampleRate, reader.options).format,
         validFrames: Long = stream.validFrames,
     ): AudioInfo {
         val bitrate = if (validFrames > 0) {

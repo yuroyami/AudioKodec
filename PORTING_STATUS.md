@@ -165,6 +165,11 @@ then ID3v1.
 `TagBundle.raw` keeps every block exactly as it was stored, with the original
 keys, so nothing is lost by the merge and an unusual entry is still reachable.
 
+Retained RIFF INFO and AIFF text entries honour the allocation limit, including
+separate INFO lists in one form. ALAC predictor and packet scratch buffers are
+checked before allocation during probe and open, and MP4 opening reuses the
+codec constructed while resolving its format.
+
 Merged values retain first-seen order through a balanced membership index.
 Lookup and insertion use O(log n) comparisons, including colliding string
 hashes. New merged values are charged to the existing allocation limit before

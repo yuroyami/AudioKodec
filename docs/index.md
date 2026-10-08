@@ -943,6 +943,12 @@ spliced across that boundary, and a damaged first frame still throws.
 defaults to one gibibyte. The check happens before the allocation, not after
 it fails.
 
+ALAC packet scratch storage and predictor state are checked during probe and
+open. Retained RIFF INFO and AIFF text entries are charged at an estimated
+64 bytes per entry, including entries spread across separate INFO lists.
+Empty native text values do not consume retained-entry space. These checks
+bound individual buffers and collections, rather than total process memory.
+
 ## Reading and writing files
 
 The core never touches the filesystem, which is what lets it build for every

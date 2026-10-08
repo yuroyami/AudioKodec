@@ -395,8 +395,11 @@ internal object TagLocator {
             reader.seek(next)
             if (next == formEnd) break
         }
+        var retainedInfoEntries = 0L
         for (span in infoSpans) {
-            readRiffInfo(reader, span.start + 12, span.size - 4, span.start, into, codePage)
+            retainedInfoEntries = readRiffInfo(
+                reader, span.start + 12, span.size - 4, span.start, into, codePage, retainedInfoEntries,
+            )
         }
         return codePage
     }
@@ -451,9 +454,11 @@ internal object TagLocator {
         blockStart: Long,
         into: MutableList<RawTagBlock>,
         codePage: Int?,
-    ) {
-        if (from < 0 || length < 0 || length > Long.MAX_VALUE - from) return
+        alreadyRetained: Long,
+    ): Long {
+        if (from < 0 || length < 0 || length > Long.MAX_VALUE - from) return alreadyRetained
         val entries = ArrayList<RawTagEntry>()
+        var retainedEntries = alreadyRetained
         var position = from
         val end = from + length
         while (position <= end && end - position >= 8) {
@@ -476,7 +481,11 @@ internal object TagLocator {
                 break
             }
             val text = NativeTextEncoding.decode(body, codePage, reader.options).trim()
-            if (text.isNotEmpty()) entries.add(RawTagEntry(key, text = text))
+            if (text.isNotEmpty()) {
+                reader.options.checkAllocation((retainedEntries + 1L) * 64L, "remembering RIFF INFO entries")
+                entries.add(RawTagEntry(key, text = text))
+                retainedEntries++
+            }
             val padded = entrySize + (entrySize and 1L)
             if (padded > Long.MAX_VALUE - position - 8) break
             position += 8 + padded
@@ -484,6 +493,7 @@ internal object TagLocator {
         if (entries.isNotEmpty() && length <= Long.MAX_VALUE - 12) {
             into.add(RawTagBlock(TagFormat.RIFF_INFO, blockStart, length + 12, entries))
         }
+        return retainedEntries
     }
 
     /**
@@ -588,6 +598,7 @@ internal object TagLocator {
                         val body = readSizedBytes(reader, chunkSize, "reading an AIFF text chunk")
                         val text = NativeTextEncoding.decode(body, null, reader.options).trim()
                         if (text.isNotEmpty()) {
+                            reader.options.checkAllocation((entries.size.toLong() + 1L) * 64L, "remembering AIFF text entries")
                             entries.add(RawTagEntry(id, text = text))
                             if (firstChunk < 0) firstChunk = chunkStart
                             lastEnd = bodyStart + chunkSize
