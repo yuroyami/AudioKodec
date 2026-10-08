@@ -28,7 +28,7 @@ wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
 The shared hostile-input sweep covers all ten decodable containers through
-21 short fixtures, including every Ogg codec, all three MPEG layers, CAF
+22 short fixtures, including every Ogg codec, all three MPEG layers, CAF
 ALAC/IMA and fragmented MP4. It tests every truncation boundary, all eight
 individual bit flips and an inverted byte at every position, and 100 random
 bodies per fixture behind its format signature. Strict and tolerant probing,
@@ -213,7 +213,7 @@ them.
 | **CAF** | ✅ | ❌ | 64-bit chunk sizes, the description chunk, Apple's named channel-layout tags reordered from their stored speaker order into the canonical one, and packet-table valid/priming/remainder frame counts; codec priming and remainder are excluded from decode and seek output. ALAC is read through its magic cookie and its packet table of variable-size packets. Above two channels a file without a layout chunk has unknown speakers, because CAF assumes no order. Bitmap, explicit-description and unmapped layouts are named and refused rather than relabelled |
 | **Ogg** | ✅ | tags only | Pages, checksums, packet reassembly across pages, up to 256 simultaneous logical streams, chained streams, granule positions. Stream serials are indexed and retained headers count towards the allocation guard. The Vorbis, Opus, FLAC and Speex mappings are all identified and their headers and comments read; Vorbis, Opus and FLAC decode. Probe and decode share the mapping's speaker layout, including seven-channel surround and unknown speakers for ambisonic and unspecified Opus mappings. Tolerant playback stops at damaged pages or packet boundaries, with duration and seeks limited to the complete prefix. Tag reads stop at metadata packets and retain intact tags despite later setup or audio damage |
 | **MPEG audio** | ✅ | ❌ | Frame headers for MPEG-1, 2 and 2.5 in all three layers, with every reserved combination rejected. A candidate sync is confirmed against the frames that follow it. `Xing`, `Info` and `VBRI` headers, LAME gapless delay and padding, tag blocks at both ends excluded from the audio. Embedded ID3v2.2/v2.3/v2.4 tags are skipped by their declared size, including v2.4 footers, without allocating their bodies or counting embedded sync patterns as audio. Exact durations. All three layers decode, with sample-accurate seeking. A protected frame's checksum is verified in strict mode, against ffmpeg's own checker, and decoded as stored in tolerant mode |
-| **MP4, M4A, M4B, 3GP, QuickTime** | ✅ | ❌ | The box tree, with 32 and 64-bit sizes, a `moov` before or after the audio, and fragmented files read from their `moof` boxes with `trex` and `tfhd` defaults. Sample tables `stsz`, `stz2`, `stco`, `co64`, `stsc` and `stts` expanded into packets, every one at the offset and size ffprobe lists. PCM coalescing reserves index space for the resulting read packets and aggregates constant runs. Fragment offsets are checked, with defaults resolved by track. PCM and G.711 remain constant-rate across short read packets and fragment boundaries, with probe and decode metadata checked on ffmpeg files. Edit lists that play the media straight through, including an encoder's priming, with empty edits passed over; one that skips or repeats media is refused strictly. Chapters from a QuickTime chapter track or Nero's `chpl` list. ALAC, Opus, FLAC and the uncompressed QuickTime and ISO codings decode, with `chan` layouts reordered; AAC, MP3, AC-3 and AMR are named and refused |
+| **MP4, M4A, M4B, 3GP, QuickTime** | ✅ | ❌ | The box tree, with 32 and 64-bit sizes, a `moov` before or after the audio, and fragmented files read from their `moof` boxes with `trex` and `tfhd` defaults. Sample tables `stsz`, `stz2`, `stco`, `co64`, `stsc` and `stts` expanded into packets, every one at the offset and size ffprobe lists. PCM coalescing reserves index space for the resulting read packets and aggregates constant runs. Fragment offsets are checked, with defaults resolved by track. PCM and G.711 remain constant-rate across short read packets and fragment boundaries, with probe and decode metadata checked on ffmpeg files. Edit lists that play the media straight through, including an encoder's priming, with empty edits passed over; one that skips or repeats media is refused strictly. Chapters from a QuickTime chapter track or Nero's `chpl` list. ALAC, Opus, FLAC, all three MPEG layers and the uncompressed QuickTime and ISO codings decode, with `chan` layouts reordered; AAC, AC-3 and AMR are named and refused |
 | **Raw PCM** | ✅ | ✅ | Through `AudioSource` and `PcmSource` with a caller-supplied `AudioFormat` |
 | Everything else | sniff only | ❌ | See [Sniffing](#sniffing) |
 
@@ -435,6 +435,17 @@ FLAC, CAF, Ogg, MPEG audio and MP4. Ogg decodes the Vorbis, Opus and FLAC
 mappings and refuses unsupported mappings by codec name. `SnifferTest` checks
 the declared container set; that set alone does not verify every coding or
 documentation claim.
+
+MP4 MPEG tracks share the owned bare-stream frame decoders. `.mp3` and `mp4a`
+object types `0x69`/`0x6B` support Layers I, II and III, one complete MPEG frame
+per indexed packet. MP3 uses ten frames of preroll, Layers I and II two, for
+sample-accurate seeks and initial edits. Unavailable reservoir audio advances
+preroll time but is refused inside the audible recording. CRC handling matches
+the bare path. Edit lists supply start and end trims; no second LAME delay is
+applied. FFmpeg copy muxes can lose the original end-padding flag, leaving
+that coded tail in the MP4 timeline. [Caller guidance](docs/mpeg-in-mp4.md)
+explains the resulting duration. Common malformed packets and shared hostile
+sweeps cover the new path; FFmpeg float decoders provide independent samples.
 
 Opening an MP4 Opus edit uses the same 80 ms packet run-up as seeking. Its
 discarded output does not change playable positions or duration. Stateful

@@ -58,7 +58,8 @@ internal object Mp4Container {
     private fun open(reader: SourceReader, options: DecodeOptions, build: Boolean): Opened {
         val file = Mp4Reader.parse(reader, options)
         val track = file.audio
-        val choice = Mp4Codecs.choose(track.entry, reader, options)
+        val firstPacket = track.offsets.firstOrNull()?.let { it to track.sizes[0] }
+        val choice = Mp4Codecs.choose(track.entry, reader, options, firstPacket)
         options.checkStreamShape(choice.format.sampleRate, choice.format.channels, track.entry.offset)
         val rate = choice.format.sampleRate.toLong()
 

@@ -17,6 +17,7 @@ import io.github.yuroyami.audiokodec.internal.container.CafReader
 import io.github.yuroyami.audiokodec.internal.flac.FlacFrameReader
 import io.github.yuroyami.audiokodec.internal.flac.FlacMetadata
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
+import io.github.yuroyami.audiokodec.internal.mpeg.MpegPacketCodec
 import io.github.yuroyami.audiokodec.internal.opus.OpusMultistreamDecoder
 import io.github.yuroyami.audiokodec.internal.opus.OpusPacket
 import io.github.yuroyami.audiokodec.internal.vorbis.VorbisDecoder
@@ -44,7 +45,12 @@ internal object Mp4Codecs {
         val decoder: ((largestPacket: Int) -> PacketCodec)?,
     )
 
-    fun choose(entry: Mp4Reader.SampleEntry, reader: SourceReader, options: DecodeOptions): Choice {
+    fun choose(
+        entry: Mp4Reader.SampleEntry,
+        reader: SourceReader,
+        options: DecodeOptions,
+        firstPacket: Pair<Long, Int>?,
+    ): Choice {
         val channels = entry.channels
         val rate = entry.sampleRate
         fun named(codec: AudioCodec, name: String, channelCount: Int = channels, sampleRate: Int = rate): Choice {
@@ -52,8 +58,8 @@ internal object Mp4Codecs {
             return Choice(codec, name, AudioFormat(sampleRate, ChannelLayout.canonical(channelCount)), null, 0, null)
         }
         return when (entry.format) {
-            "mp4a" -> mpeg4Audio(entry, options)
-            ".mp3" -> named(AudioCodec.MP3, "MP3")
+            "mp4a" -> mpeg4Audio(entry, reader, options, firstPacket)
+            ".mp3" -> mpeg(entry, reader, options, firstPacket)
             "ac-3", "ec-3" -> named(AudioCodec.AC3, if (entry.format == "ac-3") "AC-3" else "Enhanced AC-3")
             "samr" -> named(AudioCodec.AMR_NB, "AMR-NB", 1, 8_000)
             "sawb" -> named(AudioCodec.AMR_WB, "AMR-WB", 1, 16_000)
@@ -77,13 +83,17 @@ internal object Mp4Codecs {
 
     // MPEG-4 audio, which is AAC almost always and MP3 sometimes.
 
-    private fun mpeg4Audio(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice {
+    private fun mpeg4Audio(
+        entry: Mp4Reader.SampleEntry,
+        reader: SourceReader,
+        options: DecodeOptions,
+        firstPacket: Pair<Long, Int>?,
+    ): Choice {
         val esds = entry.boxes["esds"]
         val descriptor = esds?.let { decoderConfig(it) }
         val objectType = descriptor?.first ?: 0x40
         if (objectType == 0x69 || objectType == 0x6B) {
-            checkShape(entry, options, entry.sampleRate, entry.channels)
-            return Choice(AudioCodec.MP3, "MP3", AudioFormat(entry.sampleRate, ChannelLayout.canonical(entry.channels)), null, 0, null)
+            return mpeg(entry, reader, options, firstPacket)
         }
         // The AudioSpecificConfig states the real channel count and rate,
         // which the sample entry may not: an entry is limited to 65535 Hz and
@@ -104,6 +114,37 @@ internal object Mp4Codecs {
             AudioFormat(rate, ChannelLayout.canonical(channels)),
             null, 0, null,
         )
+    }
+
+    private fun mpeg(
+        entry: Mp4Reader.SampleEntry,
+        reader: SourceReader,
+        options: DecodeOptions,
+        firstPacket: Pair<Long, Int>?,
+    ): Choice {
+        val first = firstPacket?.let { (offset, size) ->
+            reader.seek(offset)
+            val bytes = ByteArray(4)
+            val absolute = reader.absoluteOffset(offset)
+            if (size < bytes.size) throw CorruptStreamException("an MPEG packet is shorter than its frame header", absolute)
+            reader.readFully(bytes)
+            try {
+                MpegPacketCodec.headerOf(bytes, size)
+            } catch (failure: CorruptStreamException) {
+                throw CorruptStreamException(failure.message ?: "a damaged MPEG frame header", absolute)
+            }
+        }
+        val rate = first?.sampleRate ?: entry.sampleRate
+        val channels = first?.channels ?: entry.channels
+        checkShape(entry, options, rate, channels)
+        if (channels !in 1..2 || entry.channels != 0 && entry.channels != channels ||
+            entry.sampleRate != 0 && entry.sampleRate != rate
+        ) {
+            throw CorruptStreamException("the MPEG frame and sample entry disagree about rate or channels", entry.offset)
+        }
+        val format = AudioFormat(rate, ChannelLayout.canonical(channels))
+        val codec = first?.codec ?: AudioCodec.MP3
+        return Choice(codec, codec.displayName, format, null, 0) { _ -> MpegPacketCodec(format, first, options) }
     }
 
     /** The object type and decoder specific information an `esds` box carries, or null if it cannot be read. */

@@ -413,7 +413,8 @@ must fit in the supplied window; `probe` and `open` can jump over larger padding
 | FLAC | decodes, with seeking, exactly |
 | Uncompressed PCM, float, A-law and mu-law | decodes, with seeking, exactly |
 | ALAC | decodes, with seeking, exactly |
-| AAC, MP3, AC-3, AMR | named, not yet decoded |
+| MPEG Layers I, II and III | decodes, with seeking and edit-list trimming |
+| AAC, AC-3, AMR | named, not yet decoded |
 
 ```kotlin
 val info = AudioKodec.probe(m4aBytes)
@@ -432,6 +433,13 @@ Opening an Opus edit decodes up to 80 ms of preceding packets, as seeking does,
 and discards their output before reporting playable frame zero. This run-up
 restores packet state; it approximates a continuous decode rather than promising
 bit-exact Opus seeking. Independent codecs start at the first audible packet.
+
+[MPEG tracks](mpeg-in-mp4.md) use the same frame decoding as bare MPEG files.
+MP3 restores its bit reservoir and synthesis history with up to ten preceding
+frames; Layers I and II use two. Opening an edited start needs the same run-up.
+The edit list supplies gapless limits, without applying a second LAME trim.
+FFmpeg copy muxes can retain end padding when they discard the original MP3's
+final padding flag; playback follows the resulting MP4 timeline.
 
 Chapters come from a QuickTime chapter track, with start and end times, or
 failing that from Nero's `chpl` list, which states only starts: the last

@@ -72,7 +72,11 @@ internal interface PacketCodec {
      */
     val preRollFrames: Long
 
-    /** Decodes [length] bytes of [packet] into [out] and returns the frames written. */
+    /**
+     * Decodes [length] bytes of [packet] into [out] and returns the frames written.
+     * Zero means unavailable coded audio, which must lie wholly before the
+     * playable target. It still advances the indexed timeline during preroll.
+     */
     fun decode(packet: ByteArray, length: Int, out: FloatArray): Int
 
     /** Decodes into right-justified integers, when [storedBitDepth] is not null. */
@@ -226,7 +230,17 @@ internal open class PacketStreamDecoder(
      */
     private inline fun decodeChecking(length: Int, decode: (Int) -> Int): Int? {
         try {
-            return decode(length)
+            val produced = decode(length)
+            if (produced == 0) {
+                // An MPEG preroll packet can lack data from before the seek.
+                // It still occupies coded time, and none of it may be audible.
+                val unavailable = index.starts[nextPacket] - index.starts[nextPacket - 1]
+                if (unavailable > pendingSkip) {
+                    throw CorruptStreamException("a packet yields no frames inside the playable recording")
+                }
+                pendingSkip -= unavailable
+            }
+            return produced
         } catch (failure: CorruptStreamException) {
             ended = true
             if (options.tolerant && decodedAny) return null

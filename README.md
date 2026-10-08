@@ -202,8 +202,9 @@ ffmpeg finds it.
 Packet ranges are checked against media-data payloads before decoding, and
 external data references are named and refused.
 
-ALAC, Opus, FLAC and QuickTime's uncompressed codings decode, seeking
-included. AAC, MP3, AC-3 and AMR are named, with their length and chapters, and
+ALAC, Opus, FLAC, MPEG Layers I, II and III, and QuickTime's uncompressed codings
+decode, seeking included. [MPEG tracks](docs/mpeg-in-mp4.md) share the bare-stream
+frame decoder and apply the MP4 edit list. AAC, AC-3 and AMR are named, with their length and chapters, and
 `open` refuses them by name.
 
 ## Apple Lossless

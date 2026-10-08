@@ -695,44 +695,7 @@ class MpegOracleTest {
      * decoder that mixes up a width, a scalefactor or the order they are read
      * in cannot agree with another decoder by luck.
      */
-    private fun buildLayer1File(frames: Int, rate: Int): ByteArray {
-        // 448 kbps, which is bitrate index 14 and leaves room for every
-        // allocation width the test uses.
-        val bitrateIndex = 14
-        val bitrate = 448
-        // Layer I counts its frames in four-byte slots.
-        val frameBytes = (12 * bitrate * 1000 / rate) * 4
-        val out = ByteArray(frameBytes * frames)
-        for (f in 0 until frames) {
-            val frame = ByteArray(frameBytes)
-            // MPEG-1 Layer I, no CRC, 192 kbps, 44100 Hz, mono.
-            frame[0] = 0xFF.toByte()
-            frame[1] = 0xFF.toByte()
-            frame[2] = ((bitrateIndex shl 4) or (0 shl 2)).toByte()
-            frame[3] = (3 shl 6).toByte()
-
-            val writer = io.github.yuroyami.audiokodec.internal.bits.BitWriterMsb()
-            val widths = IntArray(32) { if (it < 16) (it % 14) + 1 else 0 }
-            for (sb in 0 until 32) writer.writeBits(widths[sb], 4)
-            for (sb in 0 until 32) {
-                if (widths[sb] != 0) writer.writeBits((sb * 3 + f) % 63, 6)
-            }
-            for (slot in 0 until 12) {
-                for (sb in 0 until 32) {
-                    val width = widths[sb]
-                    if (width == 0) continue
-                    val bits = width + 1
-                    val value = (slot * 37 + sb * 11 + f * 5) and ((1 shl bits) - 1)
-                    writer.writeBits(value, bits)
-                }
-            }
-            writer.alignToByte()
-            val payload = writer.toByteArray()
-            payload.copyInto(frame, 4, 0, minOf(payload.size, frameBytes - 4))
-            frame.copyInto(out, f * frameBytes)
-        }
-        return out
-    }
+    private fun buildLayer1File(frames: Int, rate: Int): ByteArray = MpegMp4Fixtures.layerOne(frames, rate)
 
     private fun encodeWith(
         ffmpeg: String,
