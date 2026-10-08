@@ -6,6 +6,7 @@ import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.AudioKodecException
 import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
+import io.github.yuroyami.audiokodec.internal.container.RiffSizeTable
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
@@ -618,19 +619,15 @@ internal object TagWriter {
         val id: String,
         val size: Long,
         var keep: Boolean = true,
-        var used: Boolean = false,
     )
 
     private class Ds64Rewrite(
         val dataSize: Long,
         val sampleCount: Long,
         val entries: List<Ds64Entry>,
+        private val index: RiffSizeTable<Ds64Entry>,
     ) {
-        fun take(id: String): Ds64Entry? {
-            val entry = entries.firstOrNull { !it.used && it.id == id } ?: return null
-            entry.used = true
-            return entry
-        }
+        fun take(id: String): Ds64Entry? = index.take(id)
     }
 
     /** Reads every field needed to rebuild an RF64 ds64 chunk after an edit. */
@@ -659,20 +656,24 @@ internal object TagWriter {
                 at,
             )
         }
-        reader.options.checkAllocation(count * 24L, "the RF64 ds64 size table")
+        reader.options.checkAllocation(count * RiffSizeTable.BYTES_PER_ENTRY, "the RF64 ds64 size table")
         val entries = ArrayList<Ds64Entry>(count.toInt())
+        val index = RiffSizeTable<Ds64Entry>(reader.options)
         repeat(count.toInt()) {
             val id = reader.readFourCc()
             val entrySize = reader.readI64Le()
             if (entrySize < 0) {
                 throw CorruptStreamException("RF64 ds64 size for '$id' is negative", at)
             }
-            entries.add(Ds64Entry(id, entrySize))
+            val entry = Ds64Entry(id, entrySize)
+            index.add(id, entry)
+            entries.add(entry)
         }
         return Ds64Rewrite(
             dataSize = dataSize,
             sampleCount = sampleCount,
             entries = entries,
+            index = index,
         )
     }
 

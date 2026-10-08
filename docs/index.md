@@ -174,6 +174,11 @@ Files above 4 GiB are written as RF64 automatically. AudioKodec reserves the
 space for the larger size fields in every WAV it writes, and uses it when the
 file turns out to need it.
 
+RF64 and BW64 size tables match repeated chunk IDs in their stored order.
+Tag edits preserve the surviving table entries in that order, together with
+the original opaque chunks and audio bytes. Table entries and their lookup
+storage count towards `DecodeOptions.maxAllocationBytes`.
+
 ## Precision and lossless round trips
 
 Decoding produces Float32, which carries 8-, 16- and 24-bit audio exactly. It

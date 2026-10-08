@@ -282,8 +282,8 @@ internal object WaveReader {
                 at,
             )
         }
-        options.checkAllocation(entryCount * 24, "the RF64 ds64 size table")
-        val entries = ArrayList<Ds64Entry>(entryCount.toInt())
+        options.checkAllocation(entryCount * RiffSizeTable.BYTES_PER_ENTRY, "the RF64 ds64 size table")
+        val entries = RiffSizeTable<Long>(options)
         repeat(entryCount.toInt()) {
             val id = reader.readFourCc()
             val size = reader.readI64Le()
@@ -293,7 +293,7 @@ internal object WaveReader {
                     at,
                 )
             }
-            entries.add(Ds64Entry(id, size))
+            entries.add(id, size)
         }
         if (riffSize < 4 || riffSize > Long.MAX_VALUE - 8L || dataSize < 0 || sampleCount < 0) {
             throw CorruptStreamException("an RF64 ds64 size exceeds the signed 64-bit range", at)
@@ -558,16 +558,10 @@ internal object WaveReader {
         val riffSize: Long,
         val dataSize: Long,
         val sampleCount: Long?,
-        private val entries: MutableList<Ds64Entry>,
+        private val entries: RiffSizeTable<Long>,
     ) {
-        fun take(id: String): Long? {
-            val index = entries.indexOfFirst { it.id == id }
-            if (index < 0) return null
-            return entries.removeAt(index).size
-        }
+        fun take(id: String): Long? = entries.take(id)
     }
-
-    private class Ds64Entry(val id: String, val size: Long)
 
     private class WaveFormat(
         val codec: AudioCodec,

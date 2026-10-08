@@ -129,7 +129,7 @@ them.
 | | ✅ | ✅ | WAVE_FORMAT_EXTENSIBLE, including the channel mask and the subformat GUID |
 | | ✅ | ✅ | Written as extensible above two channels and for custom representable mono/stereo layouts, so the speaker layout survives; layouts a target cannot represent are rejected before output |
 | | ✅ | ✅ | `LIST INFO`, `bext` and an `id3 ` chunk are read; `LIST INFO` is written |
-| **RF64 and BW64** | ✅ | ✅ | `ds64` RIFF/data sizes, sample count and additional oversized-chunk entries. A 36-byte slot is always reserved after `WAVE`, so a file that passes 4 GiB is upgraded in place; existing table entries survive tag edits |
+| **RF64 and BW64** | ✅ | ✅ | `ds64` RIFF/data sizes, sample count and additional oversized-chunk entries. Indexed FIFO size lookup is shared by probing, tag reading and rewriting, with index storage charged to the allocation guard. A 36-byte slot is always reserved after `WAVE`, so a file that passes 4 GiB is upgraded in place; existing table entries survive tag edits in their original order |
 | **Wave64** | ✅ | ❌ | GUID chunk identifiers, 64-bit sizes, 8-byte padding |
 | **AIFF** | ✅ | ✅ | `COMM`, `SSND` with its offset and block size, 80-bit extended sample rate |
 | **AIFF-C** | ✅ | ✅ | `FVER`, compression type and name. IMA duration converts packet groups to decoded frames; G.711 and IMA accept the widths observed in Apple and ffmpeg files, with length, sample and seek comparisons for mono and stereo. Reversed PCM types use `23ni` for 32-bit and `42ni` for 24-bit little-endian integers, with exact integer and seeking regressions. Apple reads `23ni` directly; its equivalent `in24` output checks the 24-bit payload but does not establish support for `42ni`. Written when the coding is not plain PCM |

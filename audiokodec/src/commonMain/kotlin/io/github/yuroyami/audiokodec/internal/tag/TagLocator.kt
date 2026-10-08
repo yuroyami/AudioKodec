@@ -4,6 +4,7 @@ import io.github.yuroyami.audiokodec.AudioContainer
 import io.github.yuroyami.audiokodec.AllocationGuardException
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.TruncatedStreamException
+import io.github.yuroyami.audiokodec.internal.container.RiffSizeTable
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.tag.RawTagBlock
 import io.github.yuroyami.audiokodec.tag.RawTagEntry
@@ -305,7 +306,7 @@ internal object TagLocator {
         var codePage: Int? = null
         val infoSpans = ArrayList<RiffInfoSpan>()
         var dataSize = -1L
-        val extraSizes = ArrayList<RiffDs64Entry>()
+        val extraSizes = RiffSizeTable<Long>(reader.options)
         reader.seek(12)
         chunkLoop@ while (true) {
             if (reader.position > formEnd || formEnd - reader.position < 8) break
@@ -325,10 +326,7 @@ internal object TagLocator {
                 if (id == "data") {
                     dataSize
                 } else {
-                    extraSizes.firstOrNull { !it.used && it.id == id }?.let {
-                        it.used = true
-                        it.size
-                    } ?: -1L
+                    extraSizes.take(id) ?: -1L
                 }
             } else {
                 storedSize
@@ -359,12 +357,12 @@ internal object TagLocator {
                         if (dataSize < 0 || count > available || count > Int.MAX_VALUE) {
                             break@chunkLoop
                         }
-                        reader.options.checkAllocation(count * 24L, "the RF64 ds64 size table")
+                        reader.options.checkAllocation(count * RiffSizeTable.BYTES_PER_ENTRY, "the RF64 ds64 size table")
                         for (index in 0 until count.toInt()) {
                             val chunkId = reader.readFourCc()
                             val declared = reader.readI64Le()
                             if (declared < 0) break@chunkLoop
-                            extraSizes.add(RiffDs64Entry(chunkId, declared))
+                            extraSizes.add(chunkId, declared)
                         }
                     }
                     "LIST" -> if (chunkSize >= 4) {
@@ -440,12 +438,6 @@ internal object TagLocator {
             null
         }
     }
-
-    private class RiffDs64Entry(
-        val id: String,
-        val size: Long,
-        var used: Boolean = false,
-    )
 
     private fun readRiffInfo(
         reader: SourceReader,
