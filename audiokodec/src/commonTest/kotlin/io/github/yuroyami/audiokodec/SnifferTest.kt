@@ -249,7 +249,7 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these eleven.
+        // The README's read and write tables name exactly these twelve.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -263,6 +263,7 @@ class SnifferTest {
                 AudioContainer.MPEG_AUDIO,
                 AudioContainer.MP4,
                 AudioContainer.ADTS,
+                AudioContainer.WAVPACK,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -289,6 +290,7 @@ class SnifferTest {
         // Raw AAC decodes in ADTS framing; ADIF states no frame lengths and is probed only.
         assertTrue(AudioContainer.ADTS.isDecodable)
         assertTrue(!AudioContainer.ADIF.isDecodable)
+        assertTrue(AudioContainer.WAVPACK.isDecodable)
         assertTrue(!AudioContainer.MATROSKA.isDecodable)
     }
 }

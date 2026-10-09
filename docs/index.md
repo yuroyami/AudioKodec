@@ -495,6 +495,16 @@ Tags live in the item list inside `moov`, and writing them rebuilds only that
 box. See [MP4 metadata](mp4-tags.md) for where each field goes, the artwork
 the cover atom can hold, and when the audio moves.
 
+## WavPack
+
+WavPack files decode in every mode the encoder has, at 8 to 32 bits and as
+32-bit floats, with exact integers through `IntPcmAccess` for lossless files.
+Multichannel audio comes out in AudioKodec's speaker order by the file's
+channel mask. Every block's checksum is verified, and seeking is exact
+because blocks stand alone. Hybrid files decode to their lossy stream,
+without the correction file. APEv2 tags are read as for any file. See
+[WavPack](wavpack.md).
+
 ## MPEG audio
 
 An MP3 has no file header. It is a run of frames, each one carrying its own

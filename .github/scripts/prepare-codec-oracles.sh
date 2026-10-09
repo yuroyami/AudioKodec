@@ -72,6 +72,11 @@ c++ -O3 -I reference/alac/codec reference/alac/convert-utility/main.cpp \
     reference/alac/convert-utility/CAFFileALAC.cpp reference/alac/codec/libalac.a \
     -o reference/alac/convert-utility/alacconvert
 
+reference_checkout reference/wavpack/src https://github.com/dbry/WavPack.git 5803634a030e2a11dba602ba057b89cc34486c67
+cmake -S reference/wavpack/src -B reference/wavpack/build -DCMAKE_BUILD_TYPE=Release \
+    -DWAVPACK_BUILD_DOCS=OFF -DWAVPACK_ENABLE_LIBCRYPTO=OFF -DBUILD_TESTING=OFF
+cmake --build reference/wavpack/build --target wavpackapp wvunpack -j4
+
 vectors=reference/opus_testvectors-rfc8251.tar.gz
 if [[ ! -f "$vectors" ]]; then
     curl --fail --show-error --location --retry 2 --max-time 180 \

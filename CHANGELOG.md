@@ -62,6 +62,11 @@ audio and Ogg.
   sample-exact seeking. Written from ISO/IEC 14496-3 in floating point and
   agreeing with ffmpeg's decoder to within float rounding. HE-AAC, AAC Main,
   SSR and LTP, 960-sample frames and coupling channels are refused by name.
+- WavPack, decoded: every encoding mode at 8 to 32 bits and 32-bit float,
+  mono to multichannel in AudioKodec's speaker order, exact integers through
+  `IntPcmAccess`, block checksums verified, and exact seeking. Hybrid files
+  decode to their lossy stream. Translated from WavPack 5.9.0 and identical
+  to `wvunpack`. DSD inside WavPack is refused by name.
 - Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
   to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames

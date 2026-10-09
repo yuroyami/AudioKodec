@@ -21,6 +21,7 @@ import io.github.yuroyami.audiokodec.internal.ogg.OggChain
 import io.github.yuroyami.audiokodec.internal.tag.TagAssembler
 import io.github.yuroyami.audiokodec.internal.tag.TagLocator
 import io.github.yuroyami.audiokodec.internal.tag.TagWriter
+import io.github.yuroyami.audiokodec.internal.wavpack.WavPackFile
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagWriteOptions
 
@@ -82,6 +83,7 @@ public object AudioKodec {
             AudioContainer.CAF -> CafReader.info(reader, options)
             AudioContainer.ADTS -> AdtsStream.parse(reader, options).info(reader)
             AudioContainer.ADIF -> AdifReader.info(reader, options)
+            AudioContainer.WAVPACK -> WavPackFile.open(reader, options).info
             else -> parse(reader, options, detected.container).toInfo(reader)
         }
     }
@@ -116,6 +118,7 @@ public object AudioKodec {
             AudioContainer.MP4 -> Mp4Container.decoder(reader, options)
             AudioContainer.CAF -> CafReader.open(reader, options)
             AudioContainer.ADTS -> AacPacketCodec.openAdts(reader, options)
+            AudioContainer.WAVPACK -> WavPackFile.open(reader, options).decoder(reader, options)
             AudioContainer.ADIF -> {
                 // The header is read so that damage is reported as damage;
                 // only then is the framing refused.

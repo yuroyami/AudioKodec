@@ -75,6 +75,7 @@ Run as programs, never read as source.
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks (#115). `FlacBinarySeekTest` measures source bytes at 10%, 50% and 90% of an unindexed recording, and exercises CRC-8-valid fake headers embedded in RFC 9639 verbatim samples; the oracle suite repeats the read bounds on reference FLAC output and verifies the embedded-header PCM with FFmpeg (#116) |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, encodes the files that check the iTunes gapless record, and encodes and decodes the AAC files that check AudioKodec's AAC decoder against Apple's |
+| wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -91,7 +92,6 @@ exact commit that gets ported, and its licence recorded here at that point.
 | libopus | BSD-3-Clause | Opus |
 | libFLAC | BSD-3-Clause | FLAC, alongside RFC 9639 |
 | Apple ALAC | Apache-2.0 | ALAC, both directions |
-| WavPack | BSD-3-Clause | WavPack |
 | opencore-amr | Apache-2.0 | AMR-NB and AMR-WB |
 | libebur128 | MIT | Loudness measurement |
 | libsamplerate | BSD-2-Clause | Resampling |
@@ -564,6 +564,30 @@ exercise prediction and escape coding. The JVM tests require exact input
 integers through `IntPcmAccess`, including extrema, low bits, short final
 packets and packet-boundary seeks. The 5.1 expectation uses the channel
 order declared in Apple's public header independently of the Kotlin decoder.
+
+## WavPack
+
+WavPack's format is documented in prose (`doc/WavPack5FileFormat.pdf`) for
+its blocks and metadata, and by its source for everything inside them. The
+decoder is a translation of the reference library's decoding half, recorded
+here before the first line was written.
+
+| Field | Value |
+|---|---|
+| Repository | https://github.com/dbry/WavPack |
+| Tag | `5.9.0`, commit `5803634a030e2a11dba602ba057b89cc34486c67` |
+| Licence | BSD 3-Clause, the `COPYING` file at that commit, reproduced in `NOTICE` |
+| Files | `src/unpack.c`, `src/read_words.c`, `src/entropy_utils.c`, `src/decorr_utils.c`, `src/unpack_floats.c`, the block and metadata handling in `src/open_utils.c` and `src/unpack_utils.c`, `src/wavpack_local.h`, `include/wavpack.h`, and `doc/WavPack5FileFormat.pdf` |
+| Not ported | Pre-4.0 files (`unpack3.c`), DSD (`unpack_dsd.c`), the correction file of hybrid lossless mode, the encoder, and the assembly versions of the decorrelation loops, which compute the same as the C |
+
+The arithmetic is the reference's: 32-bit and wrapping where it wraps, with
+its unsigned quantities kept in signed integers and compared and divided
+unsigned. The logarithm and exponent tables were extracted from
+`entropy_utils.c` by script. Where the reference reads past the end of a
+damaged bitstream it starts again from the beginning and lets the block
+checksum catch the result; the translation reads zeros there, which the
+checksum catches the same way, and a block the reference would mute is an
+error instead.
 
 ## AAC constant tables
 

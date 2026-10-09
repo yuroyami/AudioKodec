@@ -17,6 +17,8 @@ internal object HostileInputFixtures {
             "Ogg chained FLAC" to OggChainFixtures.hostile(),
             "CAF ALAC" to CafAlacTest().hostileFixture(),
             "CAF IMA" to CafImaTest().file(1, 4),
+            "ADTS AAC" to AacTest().hostileFixture(),
+            "WavPack" to WavPackTest().hostileFixture(),
             "MP4 MPEG" to MpegMp4Fixtures.file(MpegMp4Fixtures.packets(MpegTest().silentFrames(3, count = 2, compact = true))),
         ) + HandBuiltFileTest().hostileFixtures() + Mp4Test().hostileFixtures() +
             (1..3).map { "MPEG Layer $it" to MpegTest().silentFrames(it, count = 2, compact = true) } +

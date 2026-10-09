@@ -273,6 +273,26 @@ implicit signalling in the stream. AAC Main, SSR and LTP, the 960-sample
 frame and coupling channel elements are refused by name too. See
 [AAC](docs/aac.md).
 
+## WavPack
+
+WavPack decodes in every mode its encoder has, from fast to very high with
+the extra filter searches, at 8 to 32 bits including 20-bit audio and
+32-bit float. Multichannel audio comes from its runs of mono and stereo
+blocks into AudioKodec's speaker order, by the file's channel mask. Lossless
+files give exact integers through `IntPcmAccess`, and every block's checksum
+is verified. Hybrid files decode to their lossy stream; the correction file
+that would make them lossless is not read. Blocks stand alone, so seeking is
+exact and needs no run-up. The decoder is translated from the reference
+library, WavPack 5.9.0, BSD-licensed.
+
+Every file the reference encoder writes in the test suite decodes to exactly
+the integers that went in, and to exactly what `wvunpack` gives. The suite
+covers each mode and depth, mono to 7.1, false stereo and silence, and
+ffmpeg's own WavPack files. Hybrid files must match `wvunpack` integer for
+integer too. DSD audio inside WavPack is refused by name, and files from
+before version 4.0, which begin as WAV files, are not read. See
+[WavPack](docs/wavpack.md).
+
 ## MPEG audio
 
 MP3 and its two older layers have no file header at all: a file is a run of
@@ -466,6 +486,7 @@ and `42ni` is 24-bit.
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
 | MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AC-3 and AMR are named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 | ADTS | AAC-LC, with sample-accurate seeking |
+| WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
 
 ### Probed but not decoded
 
@@ -476,7 +497,7 @@ decoding the whole stream. `open` refuses it by name.
 ### Named but not decoded
 
 Matroska and WebM, Monkey's
-Audio, WavPack, Musepack, True Audio, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA,
+Audio, Musepack, True Audio, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA,
 MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw

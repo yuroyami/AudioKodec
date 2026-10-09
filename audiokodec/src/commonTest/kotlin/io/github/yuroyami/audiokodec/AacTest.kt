@@ -258,6 +258,14 @@ class AacTest {
 
     private fun fixture(): ByteArray = Base64.decodeOrNull(FIXTURE)!!
 
+    /** The fixture's first three ADTS frames, for the shared hostile-input sweep. */
+    internal fun hostileFixture(): ByteArray {
+        val file = fixture()
+        var end = 0
+        repeat(3) { end += ((file[end + 3].toInt() and 0x03) shl 11) or ((file[end + 4].toInt() and 0xFF) shl 3) or ((file[end + 5].toInt() and 0xFF) ushr 5) }
+        return file.copyOf(end)
+    }
+
     private companion object {
         /**
          * 0.3 seconds of stereo at 22.05 kHz from ffmpeg 6.1's AAC encoder at
