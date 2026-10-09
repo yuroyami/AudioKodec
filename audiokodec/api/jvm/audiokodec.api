@@ -388,6 +388,7 @@ public final class io/github/yuroyami/audiokodec/IntPcmSourceKt {
 
 public final class io/github/yuroyami/audiokodec/Pcm {
 	public static final field INSTANCE Lio/github/yuroyami/audiokodec/Pcm;
+	public final fun applyChannelGains ([FI[F)[F
 	public final fun clampInPlace ([FI)[F
 	public static synthetic fun clampInPlace$default (Lio/github/yuroyami/audiokodec/Pcm;[FIILjava/lang/Object;)[F
 	public final fun deinterleave ([FII)[[F
@@ -398,12 +399,19 @@ public final class io/github/yuroyami/audiokodec/Pcm {
 	public final fun interleave ([[FI[F)[F
 	public static synthetic fun interleave$default (Lio/github/yuroyami/audiokodec/Pcm;[[FI[FILjava/lang/Object;)[F
 	public final fun maxValueOf (I)I
+	public final fun midSideToStereo ([FI[F)[F
+	public static synthetic fun midSideToStereo$default (Lio/github/yuroyami/audiokodec/Pcm;[FI[FILjava/lang/Object;)[F
 	public final fun minValueOf (I)I
+	public final fun mixChannels ([FILio/github/yuroyami/audiokodec/ChannelLayout;Lio/github/yuroyami/audiokodec/ChannelLayout;[F)[F
+	public static synthetic fun mixChannels$default (Lio/github/yuroyami/audiokodec/Pcm;[FILio/github/yuroyami/audiokodec/ChannelLayout;Lio/github/yuroyami/audiokodec/ChannelLayout;[FILjava/lang/Object;)[F
+	public final fun mixMatrix (Lio/github/yuroyami/audiokodec/ChannelLayout;Lio/github/yuroyami/audiokodec/ChannelLayout;)[[F
 	public final fun remapChannels ([FILio/github/yuroyami/audiokodec/ChannelLayout;Lio/github/yuroyami/audiokodec/ChannelLayout;[F)[F
 	public static synthetic fun remapChannels$default (Lio/github/yuroyami/audiokodec/Pcm;[FILio/github/yuroyami/audiokodec/ChannelLayout;Lio/github/yuroyami/audiokodec/ChannelLayout;[FILjava/lang/Object;)[F
 	public final fun resample ([FIIILio/github/yuroyami/audiokodec/ResampleQuality;)[F
 	public static synthetic fun resample$default (Lio/github/yuroyami/audiokodec/Pcm;[FIIILio/github/yuroyami/audiokodec/ResampleQuality;ILjava/lang/Object;)[F
 	public final fun scaleOf (I)D
+	public final fun stereoToMidSide ([FI[F)[F
+	public static synthetic fun stereoToMidSide$default (Lio/github/yuroyami/audiokodec/Pcm;[FI[FILjava/lang/Object;)[F
 }
 
 public abstract interface class io/github/yuroyami/audiokodec/PcmSource {

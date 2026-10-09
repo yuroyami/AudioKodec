@@ -79,6 +79,10 @@ audio and Ogg.
   of RFC 3952 and from CAF and QuickTime, translated from WebRTC in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with exact seeking.
+- Channel mixing between layouts, `Pcm.mixChannels`, with the downmix
+  coefficients of ITU-R BS.775 and ffmpeg's rules for the positions BS.775
+  leaves out, refusing a conversion with no defined answer; per-channel gain
+  and mid-side conversion.
 - Sample rate conversion: `Resampler`, streaming and allocation-free, and
   `Pcm.resample` for a whole buffer. The default mode is speexdsp 1.2.1's
   windowed sinc resampler at quality 10, translated sample for sample, with

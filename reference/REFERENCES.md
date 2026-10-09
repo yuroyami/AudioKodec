@@ -37,6 +37,7 @@ can hold checkouts without them ever reaching the repository.
 | G.726 | ITU-T Recommendation G.726 (12/90), section 4; see [G.722 and G.726](#g722-and-g726) |
 | DSF | Sony DSF File Format Specification, version 1.01; see [DSD](#dsd) |
 | DSDIFF | Philips DSDIFF File Format Specification, version 1.5; see [DSD](#dsd) |
+| Channel mixing | Recommendation ITU-R BS.775-3, Annex 4, Table 2; see [Channel mixing](#channel-mixing) |
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
 | Microsoft ADPCM | [Microsoft Multimedia Data Standards Update, 15 April 1994](https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/RIFFNEW.pdf), pages 22 to 26 |
 | QuickTime IMA (`ima4`) | Apple QuickTime File Format documentation |
@@ -87,6 +88,7 @@ Run as programs, never read as source.
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
 | libilbc 3.0.4 | iLBC: `ilbc_oracle.c`, a few lines over libilbc's public interface built from the pinned sources under `reference/ilbc`, encodes speech, silence, clipping, noise and bursts in both frame sizes and decodes them; the test wraps the frames in the storage format of RFC 3952 and ffmpeg copies them into CAF and QuickTime files. Every sample must be libilbc's integer, also for runs of random frames, which exercise concealment, and for frames altered to state the codebook index libilbc refuses, which must be refused at the same frame |
+| ffmpeg's channel mixing | `ChannelMixOracleTest` mixes a different tone in every channel through 24 layout conversions, from 7.1, 6.1, 5.1, 5.0, quad, 3.0 and stereo down, and mono and stereo up, which `Pcm.mixChannels` must match sample for sample within float rounding. Only run |
 | speexdsp 1.2.1 and ffmpeg's soxr | Resampling: `resample_oracle.c` over speexdsp's resampler, built from the pinned sources under `reference/speexdsp` in its float build without SIMD or fused multiply-adds, converts tones and noise at twelve rate pairs, mono and stereo, which `Resampler` must reproduce sample for sample however its input is split into blocks. ffmpeg's `aresample` with soxr at 28 bits converts the same tones, whose level and phase must agree within speexdsp's passband ripple; it is only run |
 | ffmpeg and ffprobe, for DSD | DSF and DSDIFF files the test writes from a sigma delta modulator: ffprobe's rate, channels and duration, and ffmpeg's conversion to PCM, tone by tone in level and phase, within the bound its filter's difference from AudioKodec's sets; the suite also measures ffmpeg's filter itself, from single flipped bits, to confirm its delay. ffmpeg's source is not read |
 | ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
@@ -806,6 +808,21 @@ checks each stage's passband ripple and the attenuation of every band that
 would alias, and prints the taps as Kotlin; they are pasted unedited. The
 `ID3 ` chunk in DSDIFF is not in the specification but is what every writer
 of DSDIFF tags uses.
+
+## Channel mixing
+
+The downmix coefficients come from the Recommendation; no implementation was
+read.
+
+| Field | Value |
+|---|---|
+| Specification | Recommendation ITU-R BS.775-3 (08/2012), Annex 4, Table 2, `R-REC-BS.775-3-201208-S`, SHA-256 `61d3baba8cab389e69cd41c86e97054d82127281af5e1f5b5edeb7633ac8e3c1` |
+| Never opened | ffmpeg's source, whose mixing for positions BS.775 does not cover was measured by running it |
+
+BS.775 covers 3/2 material without a low-frequency channel. The rules for
+the side, back centre, front centre pair and top front positions were
+measured from ffmpeg's float mixing with a different tone in every input
+channel, and the oracle suite holds AudioKodec to them.
 
 ## Resampling
 

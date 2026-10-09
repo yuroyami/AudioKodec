@@ -1,5 +1,6 @@
 package io.github.yuroyami.audiokodec
 
+import io.github.yuroyami.audiokodec.internal.dsp.ChannelMixing
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -291,6 +292,104 @@ public object Pcm {
         val written = resampler.process(samples, 0, frames, out, 0)
         val total = written + resampler.flush(out, written)
         return if (total * channels == out.size) out else out.copyOf(total * channels)
+    }
+
+    /**
+     * The coefficients [mixChannels] uses to carry [from] into [to], by
+     * output channel and then input channel.
+     *
+     * The downmix is ITU-R BS.775's: centre and surrounds into the front
+     * pair at -3 dB, the low-frequency channel left out, and for mono the
+     * front pair at -3 dB, the centre whole and the surrounds at -6 dB. A
+     * channel the output has keeps its place, so nothing is invented when
+     * mixing up: stereo into 5.1 fills the front pair alone, and mono into
+     * stereo puts the centre on both sides at -3 dB. Side and back pairs,
+     * a back centre, the front pair either side of centre and the top front
+     * pair follow the rules ffmpeg applies; see the mixing guide.
+     *
+     * @throws UnsupportedFeatureException when a channel has no defined
+     *   place in [to], such as one of unknown position or a height channel
+     *   other than the top front pair, rather than guessing at one.
+     */
+    public fun mixMatrix(from: ChannelLayout, to: ChannelLayout): Array<FloatArray> =
+        ChannelMixing.matrix(from, to).map { row -> FloatArray(row.size) { row[it].toFloat() } }.toTypedArray()
+
+    /**
+     * Mixes interleaved [samples] in [from] into [to], with the coefficients
+     * [mixMatrix] gives. Nothing is clipped: a downmix of loud channels can
+     * pass full scale, as it does in ffmpeg.
+     */
+    public fun mixChannels(
+        samples: FloatArray,
+        frameCount: Int,
+        from: ChannelLayout,
+        to: ChannelLayout,
+        into: FloatArray? = null,
+    ): FloatArray {
+        val needed = checkedSampleCount(frameCount, from.count)
+        require(samples.size >= needed) { "samples holds ${samples.size} entries, which is short of $needed" }
+        val outNeeded = checkedSampleCount(frameCount, to.count)
+        val out = if (into != null && into !== samples && into.size >= outNeeded) into else FloatArray(outNeeded)
+        val matrix = ChannelMixing.matrix(from, to)
+        val inputs = from.count
+        for (f in 0 until frameCount) {
+            val base = f * inputs
+            for (o in matrix.indices) {
+                val row = matrix[o]
+                var sum = 0.0
+                for (i in 0 until inputs) if (row[i] != 0.0) sum += row[i] * samples[base + i]
+                out[f * to.count + o] = sum.toFloat()
+            }
+        }
+        return out
+    }
+
+    /**
+     * Multiplies each channel of interleaved [samples] by its own linear
+     * gain in [gains], in place, and returns [samples].
+     */
+    public fun applyChannelGains(samples: FloatArray, frameCount: Int, gains: FloatArray): FloatArray {
+        val channels = gains.size
+        require(channels > 0) { "gains must not be empty" }
+        val needed = checkedSampleCount(frameCount, channels)
+        require(samples.size >= needed) { "samples holds ${samples.size} entries, which is short of $needed" }
+        for (i in 0 until needed) samples[i] *= gains[i % channels]
+        return samples
+    }
+
+    /**
+     * Turns interleaved left and right [samples] into mid and side: mid is
+     * half their sum and side half their difference. [midSideToStereo]
+     * undoes it exactly for audio of up to 23 bits, whose sums a float holds
+     * exactly, and to within float rounding otherwise.
+     */
+    public fun stereoToMidSide(samples: FloatArray, frameCount: Int, into: FloatArray? = null): FloatArray {
+        val out = pairOutput(samples, frameCount, into)
+        for (f in 0 until frameCount) {
+            val l = samples[2 * f].toDouble()
+            val r = samples[2 * f + 1].toDouble()
+            out[2 * f] = ((l + r) * 0.5).toFloat()
+            out[2 * f + 1] = ((l - r) * 0.5).toFloat()
+        }
+        return out
+    }
+
+    /** Turns interleaved mid and side [samples] back into left and right: their sum and their difference. */
+    public fun midSideToStereo(samples: FloatArray, frameCount: Int, into: FloatArray? = null): FloatArray {
+        val out = pairOutput(samples, frameCount, into)
+        for (f in 0 until frameCount) {
+            val m = samples[2 * f].toDouble()
+            val s = samples[2 * f + 1].toDouble()
+            out[2 * f] = (m + s).toFloat()
+            out[2 * f + 1] = (m - s).toFloat()
+        }
+        return out
+    }
+
+    private fun pairOutput(samples: FloatArray, frameCount: Int, into: FloatArray?): FloatArray {
+        val needed = checkedSampleCount(frameCount, 2)
+        require(samples.size >= needed) { "samples holds ${samples.size} entries, which is short of $needed" }
+        return if (into != null && into.size >= needed) into else FloatArray(needed)
     }
 
     /** Clamps every sample into -1.0 .. 1.0, in place. */

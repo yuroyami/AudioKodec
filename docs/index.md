@@ -1192,7 +1192,10 @@ println(format.channelLayout.channels)  // [FRONT_LEFT, FRONT_RIGHT, ...]
 ```
 
 `Pcm.remapChannels` reorders samples between two layouts that name the same
-channels.
+channels. `Pcm.mixChannels` converts between layouts that do not, mixing down
+with the coefficients of ITU-R BS.775 and refusing a conversion with no
+defined answer; `Pcm.applyChannelGains` and the mid-side pair sit beside it.
+See [Mix channels](mix.md).
 
 ## Changing the sample rate
 

@@ -632,6 +632,18 @@ with no delay. See [Change the sample rate](docs/resample.md).
 val at48k = Pcm.resample(decoded.samples, channels = 2, inputRate = 44_100, outputRate = 48_000)
 ```
 
+## Mix channels
+
+`Pcm.mixChannels` converts float PCM between channel layouts: 5.1 down to
+stereo or mono with the coefficients of ITU-R BS.775, which is what ffmpeg
+gives too, and mono or stereo up without inventing anything. A conversion
+with no defined answer is refused by name. Per-channel gain and mid-side
+conversion sit beside it. See [Mix channels](docs/mix.md).
+
+```kotlin
+val stereo = Pcm.mixChannels(samples, frames, ChannelLayout.SURROUND_5_1, ChannelLayout.STEREO)
+```
+
 ## Precision
 
 Decoding produces Float32, which carries 8-, 16- and 24-bit audio exactly. It
