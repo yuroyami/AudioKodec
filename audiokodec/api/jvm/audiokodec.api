@@ -490,6 +490,24 @@ public final class io/github/yuroyami/audiokodec/UnsupportedFormatException : io
 	public final fun getFormat ()Lio/github/yuroyami/audiokodec/AudioContainer;
 }
 
+public final class io/github/yuroyami/audiokodec/WaveformReducer {
+	public static final field Companion Lio/github/yuroyami/audiokodec/WaveformReducer$Companion;
+	public fun <init> (II)V
+	public final fun finish ()V
+	public final fun getAvailableBuckets ()I
+	public final fun getChannels ()I
+	public final fun getFramesPerBucket ()I
+	public final fun pull ([F[F[FII)I
+	public static synthetic fun pull$default (Lio/github/yuroyami/audiokodec/WaveformReducer;[F[F[FIIILjava/lang/Object;)I
+	public final fun push ([FII)V
+	public static synthetic fun push$default (Lio/github/yuroyami/audiokodec/WaveformReducer;[FIIILjava/lang/Object;)V
+	public final fun reset ()V
+}
+
+public final class io/github/yuroyami/audiokodec/WaveformReducer$Companion {
+	public final fun bucketCount (JI)J
+}
+
 public final class io/github/yuroyami/audiokodec/tag/PictureType : java/lang/Enum {
 	public static final field ARTIST Lio/github/yuroyami/audiokodec/tag/PictureType;
 	public static final field BACK_COVER Lio/github/yuroyami/audiokodec/tag/PictureType;

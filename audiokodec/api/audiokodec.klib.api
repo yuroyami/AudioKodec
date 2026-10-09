@@ -796,6 +796,26 @@ final class io.github.yuroyami.audiokodec/UnsupportedFormatException : io.github
         final fun <get-format>(): io.github.yuroyami.audiokodec/AudioContainer? // io.github.yuroyami.audiokodec/UnsupportedFormatException.format.<get-format>|<get-format>(){}[0]
 }
 
+final class io.github.yuroyami.audiokodec/WaveformReducer { // io.github.yuroyami.audiokodec/WaveformReducer|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int) // io.github.yuroyami.audiokodec/WaveformReducer.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+    final val availableBuckets // io.github.yuroyami.audiokodec/WaveformReducer.availableBuckets|{}availableBuckets[0]
+        final fun <get-availableBuckets>(): kotlin/Int // io.github.yuroyami.audiokodec/WaveformReducer.availableBuckets.<get-availableBuckets>|<get-availableBuckets>(){}[0]
+    final val channels // io.github.yuroyami.audiokodec/WaveformReducer.channels|{}channels[0]
+        final fun <get-channels>(): kotlin/Int // io.github.yuroyami.audiokodec/WaveformReducer.channels.<get-channels>|<get-channels>(){}[0]
+    final val framesPerBucket // io.github.yuroyami.audiokodec/WaveformReducer.framesPerBucket|{}framesPerBucket[0]
+        final fun <get-framesPerBucket>(): kotlin/Int // io.github.yuroyami.audiokodec/WaveformReducer.framesPerBucket.<get-framesPerBucket>|<get-framesPerBucket>(){}[0]
+
+    final fun finish() // io.github.yuroyami.audiokodec/WaveformReducer.finish|finish(){}[0]
+    final fun pull(kotlin/FloatArray, kotlin/FloatArray, kotlin/FloatArray, kotlin/Int = ..., kotlin/Int = ...): kotlin/Int // io.github.yuroyami.audiokodec/WaveformReducer.pull|pull(kotlin.FloatArray;kotlin.FloatArray;kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+    final fun push(kotlin/FloatArray, kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.audiokodec/WaveformReducer.push|push(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+    final fun reset() // io.github.yuroyami.audiokodec/WaveformReducer.reset|reset(){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec/WaveformReducer.Companion|null[0]
+        final fun bucketCount(kotlin/Long, kotlin/Int): kotlin/Long // io.github.yuroyami.audiokodec/WaveformReducer.Companion.bucketCount|bucketCount(kotlin.Long;kotlin.Int){}[0]
+    }
+}
+
 open class io.github.yuroyami.audiokodec/AudioKodecException : kotlin/Exception { // io.github.yuroyami.audiokodec/AudioKodecException|null[0]
     constructor <init>(kotlin/String, kotlin/Throwable? = ...) // io.github.yuroyami.audiokodec/AudioKodecException.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
 }

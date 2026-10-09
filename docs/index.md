@@ -1212,6 +1212,12 @@ loudness range and true peak of EBU R 128, translated from libebur128, and
 turns them into ReplayGain values for the tag writers. See
 [Measure loudness](loudness.md).
 
+## Drawing a waveform
+
+`WaveformReducer` turns decoded blocks into per-bucket minimum, maximum and
+RMS for drawing, in bounded memory, with the bucket count known up front. See
+[Draw a waveform](waveform.md).
+
 ## Handling bad input
 
 Every failure AudioKodec reports is an `AudioKodecException`:

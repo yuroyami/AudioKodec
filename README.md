@@ -659,6 +659,13 @@ meter.finish()
 val tags = AudioKodec.readTags(bytes).edit { setReplayGain(meter.replayGain()) }
 ```
 
+## Draw a waveform
+
+`WaveformReducer` reduces decoded audio to the minimum, maximum and root
+mean square of each channel per bucket of frames, a block at a time, so a
+long file streams through in bounded memory, and says how many buckets a
+file gives before any audio is read. See [Draw a waveform](docs/waveform.md).
+
 ## Precision
 
 Decoding produces Float32, which carries 8-, 16- and 24-bit audio exactly. It
