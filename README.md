@@ -201,8 +201,9 @@ libopus, sample for sample.
 MP4, M4A, M4B, 3GP and QuickTime files are read: the audio track's packets
 from its sample tables, wherever the `moov` box sits and in fragmented files
 too, the edit list that says which part of the track plays, and chapters from
-either a chapter track or a Nero `chpl` list. Every packet is found where
-ffmpeg finds it.
+either a chapter track or a Nero `chpl` list. Without an edit list that trims
+the track, the iTunes `iTunSMPB` gapless record is applied. Every packet is
+found where ffmpeg finds it.
 
 Packet ranges are checked against media-data payloads before decoding, and
 external data references are named and refused.

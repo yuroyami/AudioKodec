@@ -50,6 +50,49 @@ internal object Mp4Metadata {
         return Mp4Ilst.parse(body, ilst, base, reader.options)
     }
 
+    /**
+     * The gapless record iTunes keeps in its `iTunSMPB` freeform item: the
+     * encoder delay before the recording starts, the padding after it ends,
+     * and the recording's length, all in decoded frames.
+     */
+    class ItunesGapless(val delay: Long, val padding: Long, val frames: Long)
+
+    /**
+     * The `iTunSMPB` record in the item list of a `moov` box whose children
+     * are [children], or null when there is none or it cannot be read. A
+     * damaged item list costs the trim, never the audio.
+     */
+    fun itunesGapless(body: ByteArray, children: List<Mp4Box>, base: Long, options: DecodeOptions): ItunesGapless? = try {
+        children.firstOrNull { it.type == "udta" }
+            ?.let { ItunesMeta.find(body, it, base) }
+            ?.children?.firstOrNull { it.type == "ilst" }
+            ?.let { Mp4Ilst.parse(body, it, base, options) }
+            ?.entries?.firstOrNull { it.key.equals(SMPB_KEY, ignoreCase = true) && it.text != null }
+            ?.let { parseSmpb(it.text!!) }
+    } catch (_: AudioKodecException) {
+        null
+    }
+
+    private const val SMPB_KEY = "----:com.apple.iTunes:iTunSMPB"
+
+    /**
+     * Reads the space-separated hexadecimal fields of `iTunSMPB`: a reserved
+     * word, the delay, the padding and a 64-bit frame count, followed by
+     * words that are not used here.
+     */
+    internal fun parseSmpb(text: String): ItunesGapless? {
+        val words = text.trim().split(' ', '\t').filter { it.isNotEmpty() }
+        if (words.size < 4) return null
+        fun hex(word: String, digits: Int): Long? {
+            if (word.length > digits || word.any { it !in '0'..'9' && it !in 'a'..'f' && it !in 'A'..'F' }) return null
+            return word.toULongOrNull(16)?.takeIf { it <= Long.MAX_VALUE.toULong() }?.toLong()
+        }
+        val delay = hex(words[1], 8) ?: return null
+        val padding = hex(words[2], 8) ?: return null
+        val frames = hex(words[3], 16) ?: return null
+        return ItunesGapless(delay, padding, frames)
+    }
+
     /** A rewrite worked out in full, so that a refusal comes before any output. */
     class Prepared internal constructor(
         private val reader: SourceReader,

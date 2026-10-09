@@ -49,6 +49,8 @@ audio and Ogg.
   track, disc, tempo and compilation numbers, ReplayGain and cover art, with
   unmodelled items kept and only the `moov` box rebuilt. Changed chapters are
   written as a Nero `chpl` list.
+- The iTunes `iTunSMPB` gapless record applied when decoding an MP4 file
+  whose edit list does not trim it.
 - Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
   to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames

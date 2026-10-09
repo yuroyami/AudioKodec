@@ -70,14 +70,26 @@ internal object Mp4Container {
         val index = PacketIndex(track.offsets, track.sizes, starts)
         val total = index.totalFrames
         val hasEdit = track.editStart != 0L || track.editDuration != null
-        val trimStart = if (hasEdit) Mp4Reader.rescale(track.editStart, rate, track.timescale) else choice.defaultTrimStart
+        var trimStart = if (hasEdit) Mp4Reader.rescale(track.editStart, rate, track.timescale) else choice.defaultTrimStart
         if (trimStart > total && total > 0) {
             if (!options.tolerant) throw CorruptStreamException("the edit list starts after the track's last packet", file.moov.offset)
         }
         val available = (total - trimStart).coerceAtLeast(0L)
         // An edit list's length is rounded to the movie's coarser timescale,
         // so it can overshoot the packets by a fraction of a millisecond.
-        val playFrames = track.editDuration?.let { minOf(Mp4Reader.rescale(it, rate, track.timescale), available) } ?: available
+        var playFrames = track.editDuration?.let { minOf(Mp4Reader.rescale(it, rate, track.timescale), available) } ?: available
+
+        // iTunes states the delay and padding in its own record. The edit
+        // list is the container's timeline and wins when it trims anything;
+        // the record applies when there is no edit list, or one that plays
+        // every frame, and only for a coding with no trim of its own.
+        val gapless = file.itunesGapless
+        if (gapless != null && trimStart == 0L && playFrames == total && choice.defaultTrimStart == 0L && gapless.delay <= total) {
+            val after = total - gapless.delay
+            val stated = if (gapless.frames > 0) gapless.frames else after - minOf(gapless.padding, after)
+            trimStart = gapless.delay
+            playFrames = minOf(stated, after)
+        }
 
         val bitrate = if (playFrames > 0 && file.audioBytes > 0) {
             (file.audioBytes.toDouble() * 8.0 * rate / playFrames).coerceIn(0.0, Int.MAX_VALUE.toDouble()).toInt()

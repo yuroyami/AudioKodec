@@ -80,6 +80,8 @@ internal object Mp4Reader {
         /** Where the `moov` box is. */
         val moov: Mp4Box,
         val fragmented: Boolean,
+        /** The gapless record iTunes stores among the tags, or null. */
+        val itunesGapless: Mp4Metadata.ItunesGapless? = null,
     )
 
     fun parse(reader: SourceReader, options: DecodeOptions): Mp4File {
@@ -161,7 +163,8 @@ internal object Mp4Reader {
             editStart = chosen.edit?.start ?: 0L,
             editDuration = chosen.edit?.duration,
         )
-        return Mp4File(brand, track, chapters, samples.totalBytes, moov, fragmented)
+        val gapless = Mp4Metadata.itunesGapless(body, children, base, options)
+        return Mp4File(brand, track, chapters, samples.totalBytes, moov, fragmented, gapless)
     }
 
     /**

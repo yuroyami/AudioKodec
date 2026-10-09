@@ -46,6 +46,22 @@ internal object Mp4TagFixtures {
         ),
     )
 
+    /** A `udta` box whose item list holds only an iTunes gapless record. */
+    fun gaplessUdta(record: String): ByteArray = box(
+        "udta",
+        fullBox(
+            "meta",
+            box("hdlr", ByteArray(8), ascii("mdirappl"), ByteArray(9)),
+            box("ilst", freeform("iTunSMPB", data(1, utf8(record)))),
+        ),
+    )
+
+    /** The `iTunSMPB` text for a delay, padding and frame count. */
+    fun smpb(delay: Int, padding: Int, frames: Long): String =
+        " 00000000 ${hex(delay.toLong(), 8)} ${hex(padding.toLong(), 8)} ${hex(frames, 16)} 00000000 00000000 00000000"
+
+    private fun hex(value: Long, digits: Int): String = value.toString(16).uppercase().padStart(digits, '0')
+
     /** A small QuickTime file with the item list above and its index first. */
     fun tagged(test: Mp4Test = Mp4Test(), moovFirst: Boolean = true, frames: Int = 600): ByteArray =
         test.build(frames = frames, channels = 2, chunkFrames = 128, moovFirst = moovFirst, moovExtra = udta())

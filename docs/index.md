@@ -434,6 +434,13 @@ repeats parts of it is refused, and in tolerant mode only its first part is
 played. A file without an edit list plays all of its media, except Opus,
 whose pre-skip is dropped either way.
 
+iTunes also records the encoder delay, the end padding and the real length in
+an `iTunSMPB` item among the tags. When the file has no edit list, or one that
+plays every frame, decoding applies that record: the length is the stated one,
+the delay is dropped, and seeking counts from the first real frame. An edit
+list that trims anything takes precedence, and a record that cannot be read or
+starts past the last frame is ignored.
+
 Opening an Opus edit decodes up to 80 ms of preceding packets, as seeking does,
 and discards their output before reporting playable frame zero. This run-up
 restores packet state; it approximates a continuous decode rather than promising
