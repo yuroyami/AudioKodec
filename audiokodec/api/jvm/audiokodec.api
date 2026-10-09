@@ -749,6 +749,7 @@ public final class io/github/yuroyami/audiokodec/tag/TagFormat : java/lang/Enum 
 	public static final field ID3V2_3 Lio/github/yuroyami/audiokodec/tag/TagFormat;
 	public static final field ID3V2_4 Lio/github/yuroyami/audiokodec/tag/TagFormat;
 	public static final field LYRICS3 Lio/github/yuroyami/audiokodec/tag/TagFormat;
+	public static final field MATROSKA Lio/github/yuroyami/audiokodec/tag/TagFormat;
 	public static final field MP4_ILST Lio/github/yuroyami/audiokodec/tag/TagFormat;
 	public static final field RIFF_INFO Lio/github/yuroyami/audiokodec/tag/TagFormat;
 	public static final field VORBIS_COMMENT Lio/github/yuroyami/audiokodec/tag/TagFormat;

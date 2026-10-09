@@ -50,6 +50,9 @@ internal object TagLocator {
             AudioContainer.MP4 -> readMp4Ilst(containerReader, embedded)
             AudioContainer.DSF -> readDsfMetadata(containerReader, embedded)
             AudioContainer.DFF -> readDffId3(containerReader, embedded)
+            AudioContainer.MATROSKA -> embedded.addAll(
+                io.github.yuroyami.audiokodec.internal.container.MatroskaContainer.tags(containerReader, containerReader.options),
+            )
             else -> Unit
         }
         for (block in embedded) {

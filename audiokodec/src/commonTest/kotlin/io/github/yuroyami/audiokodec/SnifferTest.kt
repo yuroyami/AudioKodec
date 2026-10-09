@@ -249,7 +249,7 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these twenty.
+        // The README's read and write tables name exactly these twenty-one.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -272,6 +272,7 @@ class SnifferTest {
                 AudioContainer.ILBC,
                 AudioContainer.DSF,
                 AudioContainer.DFF,
+                AudioContainer.MATROSKA,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -308,7 +309,8 @@ class SnifferTest {
         // DSD is converted to PCM, from either of its containers.
         assertTrue(AudioContainer.DSF.isDecodable)
         assertTrue(AudioContainer.DFF.isDecodable)
-        assertTrue(!AudioContainer.MATROSKA.isDecodable)
+        // Matroska and WebM decode the codings AudioKodec has, as MP4 does.
+        assertTrue(AudioContainer.MATROSKA.isDecodable)
     }
 }
 

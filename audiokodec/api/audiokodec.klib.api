@@ -109,6 +109,7 @@ final enum class io.github.yuroyami.audiokodec.tag/TagFormat : kotlin/Enum<io.gi
     enum entry ID3V2_3 // io.github.yuroyami.audiokodec.tag/TagFormat.ID3V2_3|null[0]
     enum entry ID3V2_4 // io.github.yuroyami.audiokodec.tag/TagFormat.ID3V2_4|null[0]
     enum entry LYRICS3 // io.github.yuroyami.audiokodec.tag/TagFormat.LYRICS3|null[0]
+    enum entry MATROSKA // io.github.yuroyami.audiokodec.tag/TagFormat.MATROSKA|null[0]
     enum entry MP4_ILST // io.github.yuroyami.audiokodec.tag/TagFormat.MP4_ILST|null[0]
     enum entry RIFF_INFO // io.github.yuroyami.audiokodec.tag/TagFormat.RIFF_INFO|null[0]
     enum entry VORBIS_COMMENT // io.github.yuroyami.audiokodec.tag/TagFormat.VORBIS_COMMENT|null[0]

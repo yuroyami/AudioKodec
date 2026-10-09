@@ -4,6 +4,7 @@ import io.github.yuroyami.audiokodec.internal.Sniffer
 import io.github.yuroyami.audiokodec.internal.container.AiffReader
 import io.github.yuroyami.audiokodec.internal.container.AuReader
 import io.github.yuroyami.audiokodec.internal.container.DsdFile
+import io.github.yuroyami.audiokodec.internal.container.MatroskaContainer
 import io.github.yuroyami.audiokodec.internal.container.IlbcFileReader
 import io.github.yuroyami.audiokodec.internal.container.CafReader
 import io.github.yuroyami.audiokodec.internal.container.ContainerWriter
@@ -95,6 +96,7 @@ public object AudioKodec {
             AudioContainer.MUSEPACK -> MusepackFile.open(reader, options).info
             AudioContainer.AMR_NB, AudioContainer.AMR_WB -> AmrFile.open(reader, options).info
             AudioContainer.DSF, AudioContainer.DFF -> DsdFile.open(reader, options, detected.container).info
+            AudioContainer.MATROSKA -> MatroskaContainer.info(reader, options)
             else -> parse(reader, options, detected.container).toInfo(reader)
         }
     }
@@ -135,6 +137,7 @@ public object AudioKodec {
             AudioContainer.MUSEPACK -> MusepackFile.open(reader, options).decoder(reader, options)
             AudioContainer.AMR_NB, AudioContainer.AMR_WB -> AmrFile.open(reader, options).decoder(reader, options)
             AudioContainer.DSF, AudioContainer.DFF -> DsdFile.open(reader, options, detected.container).decoder(reader, options)
+            AudioContainer.MATROSKA -> MatroskaContainer.decoder(reader, options)
             AudioContainer.ADIF -> {
                 // The header is read so that damage is reported as damage;
                 // only then is the framing refused.
@@ -314,9 +317,14 @@ public object AudioKodec {
             null
         }
         val container = detected?.container
-        // MP4 keeps chapters in a track of their own rather than in a tag
-        // block, so they are read from the file's structure.
-        val chapters = if (container == AudioContainer.MP4) Mp4Container.chapters(detected.reader, options) else emptyList()
+        // MP4 keeps chapters in a track of their own and Matroska in an
+        // element of its own, rather than in a tag block, so they are read
+        // from the file's structure.
+        val chapters = when (container) {
+            AudioContainer.MP4 -> Mp4Container.chapters(detected.reader, options)
+            AudioContainer.MATROSKA -> MatroskaContainer.chapters(detected.reader, options)
+            else -> emptyList()
+        }
         return TagAssembler.assemble(TagLocator.findAll(reader, container), options, chapters)
     }
 

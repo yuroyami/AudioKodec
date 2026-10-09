@@ -46,6 +46,9 @@ public enum class TagFormat(
     /** The metadata atoms of an MP4 file. */
     MP4_ILST("MP4 ilst", 90),
 
+    /** The SimpleTags of a Matroska or WebM file, with its segment title. */
+    MATROSKA("Matroska tags", 90),
+
     /** The `LIST INFO` chunk of a RIFF file. */
     RIFF_INFO("RIFF INFO", 60),
 

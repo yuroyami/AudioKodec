@@ -218,6 +218,17 @@ The iTunes item list inside `moov` is read and written, cover art included,
 whatever the coding. A rewrite rebuilds only the `moov` box and copies the
 audio byte for byte. See [MP4 metadata](docs/mp4-tags.md).
 
+## Matroska and WebM
+
+Matroska and WebM files decode from their first audio track: Opus, Vorbis,
+FLAC, MPEG audio, AAC-LC and PCM, through the same decoders as in their own
+containers. The length is counted frame by frame, with Opus's pre-skip and
+end trim applied from CodecDelay and DiscardPadding, and agrees with ffmpeg's
+decode of the same file; seeking is exact. Live files of unknown size, all
+three lacing schemes, and zlib and header-stripped frames are read. Tags map
+from the Matroska tag names and chapters come from the first edition. See
+[Matroska and WebM](docs/matroska.md).
+
 ## Apple Lossless
 
 ALAC decodes from MP4 and from CAF, at 16, 20, 24 and 32 bits and with one to
@@ -499,7 +510,8 @@ new fields after `clear()` to create a fresh tag without preserving previous ent
 Tags are read from ID3v2.2, 2.3 and 2.4, ID3v1 and v1.1, APEv1 and APEv2,
 Vorbis comments in both FLAC and Ogg, FLAC picture blocks, Lyrics3v2, the
 `LIST INFO` and `bext` chunks of a WAV, the text chunks of an AIFF, and an
-`id3 ` chunk inside either, and the item list of an MP4 file. Writing produces
+`id3 ` chunk inside either, the item list of an MP4 file, and the tags and
+chapters of a Matroska or WebM file. Writing produces
 ID3v2.3 or 2.4, Vorbis comments and pictures in FLAC and Ogg, MP4 items and
 cover art, an updated ID3v1 block where the file already had one, and the
 metadata chunks of RIFF and AIFF. MP4 chapters are read from a chapter track or
@@ -596,6 +608,7 @@ and `42ni` is 24-bit.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit, iLBC |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
+| Matroska and WebM | Opus, Vorbis, FLAC, MPEG Layers I, II and III, AAC-LC, PCM 8 to 32-bit in both byte orders, IEEE float 32/64-bit, from the first audio track, with zlib and header-stripped frames. Tags and chapters are read. AC-3 is named and not decoded yet |
 | MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB, GSM 06.10, iLBC. AC-3 is named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 | ADTS | AAC-LC, with sample-accurate seeking |
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
@@ -614,8 +627,7 @@ decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 
-Matroska and WebM, AC-3, DTS, ASF and WMA, MPEG-TS, MIDI, Shorten,
-OptimFROG and TAK.
+AC-3, DTS, ASF and WMA, MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw
 `UnsupportedFormatException` for all of these, and the message names the

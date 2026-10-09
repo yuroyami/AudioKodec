@@ -106,6 +106,12 @@ audio and Ogg.
   both containers read, and exact seeking. Agrees with ffmpeg's conversion
   tone by tone within the filters' difference. DST compression is refused
   by name.
+- Matroska and WebM, read from RFC 9559: Opus, Vorbis, FLAC, MPEG audio,
+  AAC-LC and PCM from the first audio track, with a length counted from the
+  frames and trimmed by CodecDelay and DiscardPadding that agrees with
+  ffmpeg's decode, exact seeking, elements of unknown size, all three lacing
+  schemes, zlib-compressed and header-stripped frames, tags and chapters.
+  AC-3 is named and refused, and encrypted tracks are refused by name.
 - G.722 and G.726, decoded from WAV and AU files, written from the ITU
   Recommendations and exact on every one of the ITU's test sequences, with
   exact seeking. `DecodeOptions.g722Mode` selects G.722's mode 2 or 3.

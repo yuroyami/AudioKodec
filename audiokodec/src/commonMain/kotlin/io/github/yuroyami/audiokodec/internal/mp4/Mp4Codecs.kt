@@ -312,7 +312,7 @@ internal object Mp4Codecs {
         }
     }
 
-    private class OpusPackets(
+    internal class OpusPackets(
         override val format: AudioFormat,
         private val decoder: OpusMultistreamDecoder,
         private val order: IntArray,
@@ -351,7 +351,7 @@ internal object Mp4Codecs {
         }
     }
 
-    private class FlacPackets(
+    internal class FlacPackets(
         override val format: AudioFormat,
         private val frames: FlacFrameReader,
         private val bits: Int,
@@ -487,7 +487,7 @@ internal object Mp4Codecs {
         return named
     }
 
-    private class PcmPackets(
+    internal class PcmPackets(
         override val format: AudioFormat,
         private val inner: SampleCodec,
         /** Which stored channel each output channel comes from, or null when they agree. */

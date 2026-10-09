@@ -180,6 +180,24 @@ internal object TagMapping {
         "ISRC" to TagField.ISRC,
     )
 
+    /**
+     * Matroska's tag names, from the Matroska tags specification, over the
+     * Vorbis names, which ffmpeg also writes for fields Matroska names
+     * differently, such as ALBUM.
+     */
+    private val MATROSKA: Map<String, TagField> = VORBIS + mapOf(
+        "LEAD_PERFORMER" to TagField.PERFORMER,
+        "ALBUM_ARTIST" to TagField.ALBUM_ARTIST,
+        "PART_NUMBER" to TagField.TRACK_NUMBER,
+        "TOTAL_PARTS" to TagField.TRACK_TOTAL,
+        "DATE_RELEASED" to TagField.DATE,
+        "DATE_RECORDED" to TagField.DATE,
+        "ENCODER_SETTINGS" to TagField.ENCODING_SETTINGS,
+        "INITIAL_KEY" to TagField.KEY,
+        "REMIXED_BY" to TagField.REMIXER,
+        "CATALOG_NUMBER" to TagField.CATALOG_NUMBER,
+    )
+
     /** APE keys, which are written as words with capitals. */
     private val APE: Map<String, TagField> = VORBIS + mapOf(
         "TITLE" to TagField.TITLE,
@@ -301,6 +319,7 @@ internal object TagMapping {
                 }
             }
             TagFormat.VORBIS_COMMENT -> VORBIS[key.uppercase()]
+            TagFormat.MATROSKA -> MATROSKA[key.uppercase()]
             TagFormat.APEV1, TagFormat.APEV2 -> APE[key.uppercase()]
             TagFormat.RIFF_INFO -> RIFF_INFO[key]
             TagFormat.AIFF_TEXT -> AIFF_TEXT[key]

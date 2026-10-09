@@ -37,6 +37,8 @@ can hold checkouts without them ever reaching the repository.
 | G.726 | ITU-T Recommendation G.726 (12/90), section 4; see [G.722 and G.726](#g722-and-g726) |
 | DSF | Sony DSF File Format Specification, version 1.01; see [DSD](#dsd) |
 | DSDIFF | Philips DSDIFF File Format Specification, version 1.5; see [DSD](#dsd) |
+| Matroska and WebM | IETF RFC 9559 (Matroska), RFC 8794 (EBML), and the cellar drafts for codec mappings and tag names; see [Matroska](#matroska) |
+| zlib inflate | IETF RFC 1950 and RFC 1951; see [Matroska](#matroska) |
 | Channel mixing | Recommendation ITU-R BS.775-3, Annex 4, Table 2; see [Channel mixing](#channel-mixing) |
 | Loudness | ITU-R BS.1770 through libebur128, with the test signals of EBU Tech 3341 and 3342; see [Loudness](#loudness) |
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
@@ -94,6 +96,7 @@ Run as programs, never read as source.
 | ffmpeg's channel mixing | `ChannelMixOracleTest` mixes a different tone in every channel through 24 layout conversions, from 7.1, 6.1, 5.1, 5.0, quad, 3.0 and stereo down, and mono and stereo up, which `Pcm.mixChannels` must match sample for sample within float rounding. Only run |
 | speexdsp 1.2.1 and ffmpeg's soxr | Resampling: `resample_oracle.c` over speexdsp's resampler, built from the pinned sources under `reference/speexdsp` in its float build without SIMD or fused multiply-adds, converts tones and noise at twelve rate pairs, mono and stereo, which `Resampler` must reproduce sample for sample however its input is split into blocks. ffmpeg's `aresample` with soxr at 28 bits converts the same tones, whose level and phase must agree within speexdsp's passband ripple; it is only run |
 | ffmpeg and ffprobe, for DSD | DSF and DSDIFF files the test writes from a sigma delta modulator: ffprobe's rate, channels and duration, and ffmpeg's conversion to PCM, tone by tone in level and phase, within the bound its filter's difference from AudioKodec's sets; the suite also measures ffmpeg's filter itself, from single flipped bits, to confirm its delay. ffmpeg's source is not read |
+| ffmpeg and ffprobe, for Matroska | For each of Opus 2 and 6 channels, Vorbis, FLAC 16 and 24-bit, MP3, AAC and PCM 16, 24 and float: ffmpeg's stream copy of a file it encodes into Matroska or WebM must decode to the length ffmpeg decodes from it and hold the native file's samples whole, and agree with ffprobe's rate, channels and duration to within a packet. A live WebM written to a pipe, whose Segment has no size, must decode as the same audio written to a file, and tags and chapters ffmpeg writes must read back. ffmpeg's source is not read |
 | ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
 | ffmpeg's G.722 and G.726 | G.722: every sample of the WAV and AU files ffmpeg writes, in all three modes through `-bits_per_codeword`, must equal ffmpeg's. G.726: ffmpeg's encoder writes the WAV and AU files, whose code words must decode to exactly the samples of the decoder `G726ConformanceTest` checks; ffmpeg's own G.726 decoder does not follow the Recommendation, so at 16 to 32 kbit/s its samples only bound the result, and at 40 kbit/s not even that |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
@@ -812,6 +815,31 @@ would alias, and prints the taps as Kotlin; they are pasted unedited. The
 `ID3 ` chunk in DSDIFF is not in the specification but is what every writer
 of DSDIFF tags uses.
 
+## Matroska
+
+The reader is written from the specifications alone; no Matroska or EBML
+implementation was opened, nor any inflate implementation.
+
+| Field | Value |
+|---|---|
+| Matroska | IETF RFC 9559, Matroska Media Container Format Specification, https://www.rfc-editor.org/rfc/rfc9559.txt, SHA-256 `f251c1e9b6879bb308000fbd9b2359de9472160c56d121b9345b6433afb00cb7` |
+| EBML | IETF RFC 8794, Extensible Binary Meta Language, https://www.rfc-editor.org/rfc/rfc8794.txt, SHA-256 `3b39e9f494f040e3b7b91d9bbe2441af5f4b4e2ae4a374b8dcf917ab9aecd409` |
+| Codec mappings | draft-ietf-cellar-codec-15 (29 June 2025), https://www.ietf.org/archive/id/draft-ietf-cellar-codec-15.txt, SHA-256 `9f4fcca8a66da5ac1a88619986d2bf2e9c45235af65c3a99a63ac3661f1824c9` |
+| Tag names | draft-ietf-cellar-tags-16 (27 April 2025), https://www.ietf.org/archive/id/draft-ietf-cellar-tags-16.txt, SHA-256 `4ae74077bf30cd0c8fee0c01ebfe007102a5603ff47a7bde536179026fb03591` |
+| zlib | IETF RFC 1950, https://www.rfc-editor.org/rfc/rfc1950.txt, SHA-256 `8f0475a5c984657bf26277f73df9456c9b97f175084f0c1748f1eb1f0b9b10b9` |
+| DEFLATE | IETF RFC 1951, https://www.rfc-editor.org/rfc/rfc1951.txt, SHA-256 `5ebf4b5b7fe1c3a0c0ab9aa3ac8c0f3853a7dc484905e76e03b0b0f301350009` |
+| Never opened | libebml, libmatroska, mkvtoolnix, ffmpeg's Matroska demuxer, zlib's source and every other inflate |
+
+The element IDs in `MatroskaIds.kt` were extracted from the text of RFC 9559
+by `reference/matroska/gen_ids.py`, so none was typed. The length and
+distance tables of the inflate are computed from the rules of RFC 1951,
+section 3.2.5, rather than written out.
+
+Matroska has no field for an encoder delay other than CodecDelay, which the
+codec mappings use for Opus's pre-skip alone. An MP3 or AAC stream copied
+into Matroska therefore keeps the priming its own container trimmed, and
+both ffmpeg and AudioKodec play it.
+
 ## Channel mixing
 
 The downmix coefficients come from the Recommendation; no implementation was
@@ -939,9 +967,9 @@ These are copyleft or otherwise incompatible with an Apache-2.0 release. The
 list is here to be checked against, not to be worked around.
 
 ffmpeg and libav source, libmad, mpg123, LAME, Shine, TwoLAME, FAAD2,
-FDK-AAC, liba52, libdca, taglib, mutagen, jaudiotagger, JLayer, FluidSynth,
-libopenmpt, the sox source tree, spandsp, and the ITU-T Software Tool
-Library.
+FDK-AAC, liba52, libdca, libebml, libmatroska, mkvtoolnix, taglib, mutagen,
+jaudiotagger, JLayer, FluidSynth, libopenmpt, the sox source tree, spandsp,
+and the ITU-T Software Tool Library.
 
 If a search result shows code from any of them, stop at the licence header.
 

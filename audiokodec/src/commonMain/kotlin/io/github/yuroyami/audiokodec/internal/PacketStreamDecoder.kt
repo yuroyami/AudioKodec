@@ -38,7 +38,13 @@ internal class PacketIndex(
     /** The largest packet, which is the size of buffer reading needs. */
     val largestPacket: Int = sizes.maxOrNull() ?: 0
 
-    /** The packet whose output contains [frame], or the last packet for a frame at or past the end. */
+    /**
+     * The packet whose output contains [frame], or the last packet for a
+     * frame at or past the end. Packets that yield nothing share their start
+     * with the packet after them, and the first of them is the answer: a
+     * Vorbis stream's first packet yields nothing but primes the overlap the
+     * next one needs.
+     */
     fun packetAt(frame: Long): Int {
         var low = 0
         var high = count - 1
@@ -46,6 +52,7 @@ internal class PacketIndex(
             val middle = (low + high + 1) ushr 1
             if (starts[middle] <= frame) low = middle else high = middle - 1
         }
+        while (low > 0 && starts[low - 1] == starts[low]) low--
         return low
     }
 }

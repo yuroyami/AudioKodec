@@ -498,6 +498,16 @@ Tags live in the item list inside `moov`, and writing them rebuilds only that
 box. See [MP4 metadata](mp4-tags.md) for where each field goes, the artwork
 the cover atom can hold, and when the audio moves.
 
+## Matroska and WebM
+
+Matroska and WebM files decode from their first audio track: Opus, Vorbis,
+FLAC, MPEG audio, AAC-LC and PCM. The length is counted from the frames
+themselves, with CodecDelay and DiscardPadding trimming the ends, and agrees
+with ffmpeg's decode of the same file; seeking is exact. Elements of unknown
+size, all three lacing schemes, and zlib and header-stripped frames are read,
+as are tags and the first edition's chapters. AC-3 is named and refused, and
+tags cannot be written yet. See [Matroska and WebM](matroska.md).
+
 ## WavPack
 
 WavPack files decode in every mode the encoder has, at 8 to 32 bits and as
@@ -676,7 +686,7 @@ merges them so that the richer format wins:
 | Format | Beaten by |
 |---|---|
 | ID3v2 | nothing |
-| Vorbis comments, MP4 items | ID3v2 |
+| Vorbis comments, MP4 items, Matroska tags | ID3v2 |
 | APEv2 | the above |
 | APEv1 | APEv2 |
 | RIFF `INFO`, AIFF text chunks | the above |
