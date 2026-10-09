@@ -8,6 +8,7 @@ import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.container.RiffSizeTable
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
+import io.github.yuroyami.audiokodec.internal.mp4.Mp4Metadata
 import io.github.yuroyami.audiokodec.internal.ogg.OggTagWriter
 import io.github.yuroyami.audiokodec.tag.TagBundle
 import io.github.yuroyami.audiokodec.tag.TagField
@@ -51,7 +52,8 @@ internal object TagWriter {
             container == AudioContainer.RF64 ||
             container == AudioContainer.AIFF ||
             container == AudioContainer.FLAC ||
-            container == AudioContainer.OGG
+            container == AudioContainer.OGG ||
+            container == AudioContainer.MP4
         val existing = TagLocator.findAll(reader, container)
         val declaredEnd = if (container == AudioContainer.WAV ||
             container == AudioContainer.RF64 ||
@@ -126,7 +128,7 @@ internal object TagWriter {
                 ?: existing.any { it.format == TagFormat.APEV1 || it.format == TagFormat.APEV2 }
         }
         val picturesPreservedElsewhere = if (containerHasSeparateMetadata) {
-            container == AudioContainer.FLAC || container == AudioContainer.OGG ||
+            container == AudioContainer.FLAC || container == AudioContainer.OGG || container == AudioContainer.MP4 ||
                 willWriteId3
         } else {
             options.formats == null || options.formats.any { isId3v2(it) }
@@ -160,7 +162,6 @@ internal object TagWriter {
             BextTagWriter.build(artworkTags, reader.options)
         } else null
         val prefixId3 = if (externalId3) Id3v2Writer.withPadding(id3!!, options.padding) else null
-        if (prefixId3 != null) sink.write(prefixId3)
         // FLAC and Ogg writers use -1 to mean "copy to EOF". Chunked
         // containers have their own finite declared end even when the source
         // cannot report a total size.
@@ -168,6 +169,18 @@ internal object TagWriter {
         val containerEnd = declaredEnd
             ?: externalTrailing.firstOrNull()?.offset
             ?: writerSourceEnd
+        // The MP4 rewrite is worked out in full first, so that a refusal
+        // leaves the sink untouched.
+        val preparedMp4 = if (container == AudioContainer.MP4) {
+            Mp4Metadata.prepare(
+                reader,
+                artworkTags,
+                includeTags = options.formats == null || TagFormat.MP4_ILST in options.formats,
+                padding = options.padding,
+                sourceEnd = containerEnd,
+            )
+        } else null
+        if (prefixId3 != null) sink.write(prefixId3)
         when (container) {
             AudioContainer.WAV ->
                 writeRiff(
@@ -199,6 +212,7 @@ internal object TagWriter {
                 chaptersPreservedElsewhere = willWriteId3,
                 prepared = preparedOgg,
             )
+            AudioContainer.MP4 -> preparedMp4!!.writeTo(sink)
             null,
             AudioContainer.MPEG_AUDIO,
             AudioContainer.ADTS,
@@ -955,6 +969,7 @@ internal object TagWriter {
                 setOf(TagFormat.AIFF_TEXT, TagFormat.ID3V2_3, TagFormat.ID3V2_4)
             AudioContainer.FLAC, AudioContainer.OGG ->
                 setOf(TagFormat.VORBIS_COMMENT)
+            AudioContainer.MP4 -> setOf(TagFormat.MP4_ILST)
             null,
             AudioContainer.MPEG_AUDIO,
             AudioContainer.ADTS,

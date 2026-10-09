@@ -273,7 +273,7 @@ internal object TagAssembler {
     private fun mp4PicturesOf(block: RawTagBlock): List<TagPicture> {
         val pictures = ArrayList<TagPicture>()
         for (entry in block.entries) {
-            if (entry.key != "covr") continue
+            if (entry.key != "covr" || entry.isOpaqueMp4Item) continue
             val data = entry.binary ?: continue
             if (data.isEmpty()) continue
             pictures.add(
@@ -340,6 +340,8 @@ internal class ReplayGainReader {
         val key = when (format) {
             TagFormat.ID3V2_2, TagFormat.ID3V2_3, TagFormat.ID3V2_4 ->
                 entry.description?.uppercase() ?: return
+            // MP4 keeps loudness in freeform items named after the comments.
+            TagFormat.MP4_ILST -> TagMapping.mp4FreeformName(entry.key)?.uppercase() ?: return
             else -> entry.key.uppercase()
         }
         val text = entry.text ?: return

@@ -305,7 +305,11 @@ internal object TagMapping {
             TagFormat.RIFF_INFO -> RIFF_INFO[key]
             TagFormat.AIFF_TEXT -> AIFF_TEXT[key]
             TagFormat.ID3V1 -> ID3V1[key]
-            TagFormat.MP4_ILST -> MP4_ILST[key]
+            TagFormat.MP4_ILST -> {
+                if (entry.isOpaqueMp4Item) return null
+                val name = mp4FreeformName(key)
+                if (name != null) mp4FreeformField(name) else MP4_ILST[key]
+            }
             else -> null
         }
     }
@@ -342,6 +346,93 @@ internal object TagMapping {
         "catg" to TagField.GROUPING,
         "©con" to TagField.CONDUCTOR,
     )
+
+    /** The mean every conventional freeform MP4 item uses. */
+    const val MP4_FREEFORM_MEAN: String = "com.apple.iTunes"
+
+    /**
+     * The name of a freeform MP4 item, from the key the reader gives it, or
+     * null when [key] is not a freeform item.
+     *
+     * A freeform item is stored as a `----` atom holding a `mean` and a
+     * `name`, and is read under the key `----:mean:name`. The mean is a
+     * reverse domain name and holds no colon; the name may.
+     */
+    fun mp4FreeformName(key: String): String? {
+        if (!key.startsWith("----:")) return null
+        val separator = key.indexOf(':', 5)
+        if (separator < 0) return null
+        return key.substring(separator + 1)
+    }
+
+    /** The mean of a freeform MP4 item key, or null when it is not one. */
+    fun mp4FreeformMean(key: String): String? {
+        if (!key.startsWith("----:")) return null
+        val separator = key.indexOf(':', 5)
+        if (separator < 0) return null
+        return key.substring(5, separator)
+    }
+
+    /**
+     * The field a freeform MP4 item carries, from its name.
+     *
+     * Taggers name these after the Vorbis comment or the ID3 `TXXX`
+     * description of the same field, and MusicBrainz Picard writes its
+     * recording identifier as `MusicBrainz Track Id`, which in a `TXXX`
+     * would be a different identifier.
+     */
+    private fun mp4FreeformField(name: String): TagField? {
+        val upper = name.trim().uppercase()
+        return MP4_FREEFORM[upper] ?: USER_TEXT[upper] ?: VORBIS[upper]
+    }
+
+    private val MP4_FREEFORM: Map<String, TagField> = mapOf(
+        "MUSICBRAINZ TRACK ID" to TagField.MUSICBRAINZ_RECORDING_ID,
+        "MUSICBRAINZ RELEASE TRACK ID" to TagField.MUSICBRAINZ_TRACK_ID,
+    )
+
+    /**
+     * The standard MP4 atom that holds [field] as text, or null when the
+     * field has none and is written as a freeform item.
+     *
+     * The numeric atoms, `trkn`, `disk`, `tmpo` and `cpil`, are not here:
+     * they hold binary integers, so the writer decides whether a value fits.
+     */
+    fun mp4AtomFor(field: TagField): String? = when (field) {
+        TagField.TITLE -> "©nam"
+        TagField.ARTIST -> "©ART"
+        TagField.ALBUM -> "©alb"
+        TagField.ALBUM_ARTIST -> "aART"
+        TagField.DATE -> "©day"
+        TagField.GENRE -> "©gen"
+        TagField.COMMENT -> "©cmt"
+        TagField.COMPOSER -> "©wrt"
+        TagField.LYRICS -> "©lyr"
+        TagField.ENCODER -> "©too"
+        TagField.GROUPING -> "©grp"
+        TagField.COPYRIGHT -> "cprt"
+        TagField.DESCRIPTION -> "desc"
+        TagField.SORT_TITLE -> "sonm"
+        TagField.SORT_ARTIST -> "soar"
+        TagField.SORT_ALBUM -> "soal"
+        TagField.SORT_ALBUM_ARTIST -> "soaa"
+        TagField.SORT_COMPOSER -> "soco"
+        else -> null
+    }
+
+    /** The freeform item name that holds [field] when no standard atom does. */
+    fun mp4FreeformNameFor(field: TagField): String = when (field) {
+        TagField.MUSICBRAINZ_RECORDING_ID -> "MusicBrainz Track Id"
+        TagField.MUSICBRAINZ_TRACK_ID -> "MusicBrainz Release Track Id"
+        TagField.MUSICBRAINZ_RELEASE_ID -> "MusicBrainz Album Id"
+        TagField.MUSICBRAINZ_RELEASE_GROUP_ID -> "MusicBrainz Release Group Id"
+        TagField.MUSICBRAINZ_ARTIST_ID -> "MusicBrainz Artist Id"
+        TagField.MUSICBRAINZ_RELEASE_ARTIST_ID -> "MusicBrainz Album Artist Id"
+        TagField.ACOUSTID_ID -> "Acoustid Id"
+        TagField.PUBLISHER -> "LABEL"
+        TagField.KEY -> "initialkey"
+        else -> vorbisKeyFor(field) ?: field.name
+    }
 
     /**
      * The field a `TXXX` frame carries, from its description.

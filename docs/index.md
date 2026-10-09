@@ -450,6 +450,10 @@ Chapters come from a QuickTime chapter track, with start and end times, or
 failing that from Nero's `chpl` list, which states only starts: the last
 chapter's end is reported as -1.
 
+Tags live in the item list inside `moov`, and writing them rebuilds only that
+box. See [MP4 metadata](mp4-tags.md) for where each field goes, the artwork
+the cover atom can hold, and when the audio moves.
+
 ## MPEG audio
 
 An MP3 has no file header. It is a run of frames, each one carrying its own
@@ -550,7 +554,7 @@ merges them so that the richer format wins:
 | Format | Beaten by |
 |---|---|
 | ID3v2 | nothing |
-| Vorbis comments | ID3v2 |
+| Vorbis comments, MP4 items | ID3v2 |
 | APEv2 | the above |
 | APEv1 | APEv2 |
 | RIFF `INFO`, AIFF text chunks | the above |

@@ -45,6 +45,10 @@ audio and Ogg.
   chapters from a chapter track or a Nero `chpl` list. ALAC, Opus, FLAC and
   uncompressed audio inside decode and seek; AAC, MP3, AC-3 and AMR are named
   with their length and refused.
+- MP4 item lists, read and written: the standard atoms, freeform items,
+  track, disc, tempo and compilation numbers, ReplayGain and cover art, with
+  unmodelled items kept and only the `moov` box rebuilt. Changed chapters are
+  written as a Nero `chpl` list.
 - Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
   to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames

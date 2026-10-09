@@ -951,11 +951,11 @@ class TagTest {
 
     @Test
     fun writingIntoAFormatWithNoWriterSaysSoRatherThanCorruptingIt() {
-        // An MP4 file: AudioKodec names the format, and cannot yet write its
-        // tags, because that needs the box layer.
-        val mp4 = ByteArray(4) + "ftypM4A ".encodeToByteArray() + ByteArray(100)
+        // A CAF file: AudioKodec reads the format, and has no writer for the
+        // information chunks it keeps tags in.
+        val caf = "caff".encodeToByteArray() + byteArrayOf(0, 1, 0, 0) + ByteArray(100)
         val failure = kotlin.runCatching {
-            AudioKodec.writeTags(mp4, TagBundle(mapOf(TagField.TITLE to listOf("x"))))
+            AudioKodec.writeTags(caf, TagBundle(mapOf(TagField.TITLE to listOf("x"))))
         }.exceptionOrNull()
         assertTrue(
             failure is UnsupportedFeatureException,

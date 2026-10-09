@@ -294,6 +294,27 @@ public class RawTagEntry(
         return this
     }
 
+    /** The well-known MP4 data type a stored `ilst` value declared, so a rewrite keeps it. */
+    internal var mp4DataType: Int? = null
+        private set
+
+    internal fun withMp4DataType(type: Int): RawTagEntry {
+        mp4DataType = type
+        return this
+    }
+
+    /**
+     * An MP4 metadata item whose structure was not understood. [binary] then
+     * holds the item's complete body, which a rewrite copies unchanged.
+     */
+    internal var isOpaqueMp4Item: Boolean = false
+        private set
+
+    internal fun markOpaqueMp4Item(): RawTagEntry {
+        isOpaqueMp4Item = true
+        return this
+    }
+
     override fun toString(): String = "RawTagEntry($key=${text ?: "${binary?.size ?: 0} bytes"})"
 }
 

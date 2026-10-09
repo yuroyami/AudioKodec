@@ -291,7 +291,7 @@ inspected and edited.
 | **Vorbis comments** | ✅ | ✅ | In FLAC, and in Ogg for every mapping it carries |
 | **FLAC metadata blocks** | ✅ | ✅ | Comment and picture blocks are rewritten; seek tables, cue sheets and application blocks are carried across untouched; padding is regenerated so the next edit need not move the audio |
 | **Ogg comment headers** | ✅ | ✅ | Vorbis, Opus, FLAC and Speex. Writing rebuilds the header pages and renumbers the pages after them, leaving the audio packets untouched. Interleaved logical streams and a final header sharing its page with audio are refused before output, including in tolerant mode |
-| MP4 `ilst` | ❌ | ❌ | #8, once the container in #7 is read |
+| **MP4 `ilst`** | ✅ | ✅ | Standard atoms, several values in one item, UTF-16 text, `trkn`, `disk`, `tmpo`, `cpil` and the numbered `gnre`, freeform `----` items with the conventional names, ReplayGain, and JPEG, PNG, GIF and BMP front covers. Unmodelled and unreadable items are carried across unchanged. Only `moov` is rebuilt: padding absorbs a size change, and growth moves every chunk offset with the audio. Changed chapters are written as Nero `chpl`; chapter tracks are kept but not edited. ffmpeg writes and AudioKodec reads, AudioKodec writes and ffprobe reads, with unchanged PCM |
 | Matroska tags | ❌ | ❌ | #41 |
 
 ### The merged view
@@ -611,9 +611,9 @@ last bits of that through a long filter, so the default build drifts from its
 own plain build by tens of steps in concealed frames. The plain build is the one
 to compare a port against. Speex stays further out, at #18.
 
-MP4 and ALAC, #6, are under way: the container reads and ALAC decodes. The tags
-inside an MP4, its gapless trim and the ALAC encoder remain, and the first of
-those closes the last tag gap.
+MP4 and ALAC, #6, are under way: the container reads, ALAC decodes, and the
+item list inside an MP4 reads and writes, which closes the last tag gap. Its
+gapless trim, #9, and the ALAC encoder, #11, remain.
 
 Writing tags into an Ogg file that interleaves several logical streams remains
 at #44. Vorbis floor type 0 and free-format MPEG audio now decode, with their

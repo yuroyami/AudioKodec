@@ -47,6 +47,7 @@ internal object TagLocator {
             AudioContainer.AIFF -> readAiffChunks(containerReader, embedded)
             AudioContainer.FLAC -> readFlacBlocks(containerReader, embedded)
             AudioContainer.OGG -> readOggBlocks(containerReader, embedded)
+            AudioContainer.MP4 -> readMp4Ilst(containerReader, embedded)
             else -> Unit
         }
         for (block in embedded) blocks.add(shift(block, containerReader.baseOffset))
@@ -567,6 +568,20 @@ internal object TagLocator {
             return
         }
         into.addAll(blocks)
+    }
+
+    /**
+     * Reads the iTunes item list of an MP4 file, which sits inside the
+     * `moov` box wherever that is in the file. Only that box is read, and a
+     * structure that cannot be followed yields no tags rather than an error.
+     */
+    private fun readMp4Ilst(reader: SourceReader, into: MutableList<RawTagBlock>) {
+        val block = try {
+            io.github.yuroyami.audiokodec.internal.mp4.Mp4Metadata.readIlst(reader)
+        } catch (_: io.github.yuroyami.audiokodec.AudioKodecException) {
+            return
+        }
+        if (block != null) into.add(block)
     }
 
     /** Walks an AIFF file for its text chunks and any ID3 chunk. */

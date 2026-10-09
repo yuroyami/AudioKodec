@@ -29,6 +29,7 @@ class Mp4Test {
         "MP4 indexed" to build(16, 1, 4),
         "MP4 indexed first" to build(16, 1, 4, moovFirst = true, useCo64 = true),
         "MP4 fragmented" to buildFragmented(16, 1, 4),
+        "MP4 tagged" to Mp4TagFixtures.tagged(this, frames = 16),
     )
 
     @Test
@@ -769,7 +770,7 @@ class Mp4Test {
 
     // Checking.
 
-    private fun sample(frame: Int, channel: Int): Int = ((frame * 37 + channel * 1_001) % 30_001) - 15_000
+    internal fun sample(frame: Int, channel: Int): Int = ((frame * 37 + channel * 1_001) % 30_001) - 15_000
 
     private fun assertSamples(file: ByteArray, channels: Int, firstFrame: Int, frames: Int, what: String, options: DecodeOptions = DecodeOptions.DEFAULT) {
         AudioKodec.open(file, options).use { decoder ->
@@ -818,7 +819,7 @@ class Mp4Test {
      * [chunkFrames], with [gap] unrelated bytes between chunks, and the
      * `stsz` table stating one byte per frame as QuickTime's own writers do.
      */
-    private fun build(
+    internal fun build(
         frames: Int,
         channels: Int,
         chunkFrames: Int,
@@ -841,6 +842,7 @@ class Mp4Test {
         useCo64: Boolean = false,
         dataReferences: ByteArray? = null,
         dataReferenceIndex: Int = 1,
+        moovExtra: ByteArray = ByteArray(0),
     ): ByteArray {
         val chunkCount = (frames + chunkFrames - 1) / chunkFrames
         require(!singlePacket || chunkCount == 1)
@@ -910,7 +912,7 @@ class Mp4Test {
             } else {
                 fullBox("mvhd", 0, 0, u32(0), u32(0), u32(movieTimescale), u32(0), ByteArray(80))
             }
-            return box("moov", *listOfNotNull(mvhd, trak, udta).toTypedArray())
+            return box("moov", *listOfNotNull(mvhd, trak, udta, moovExtra).toTypedArray())
         }
         return if (moovFirst) {
             val size = moov(0).size
@@ -923,7 +925,7 @@ class Mp4Test {
     }
 
     /** A fragmented file: an empty `moov` with defaults in `trex`, then one `moof` and `mdat` per fragment. */
-    private fun buildFragmented(
+    internal fun buildFragmented(
         frames: Int,
         channels: Int,
         fragmentFrames: Int,
@@ -931,6 +933,7 @@ class Mp4Test {
         otherPayload: ByteArray = ByteArray(0),
         implicitAudioBase: Boolean = false,
         audioDescriptionIndex: Int? = null,
+        moovExtra: ByteArray = ByteArray(0),
         otherTraf: ((Int) -> ByteArray)? = null,
     ): ByteArray {
         val frameBytes = channels * 2
@@ -961,6 +964,7 @@ class Mp4Test {
                     fullBox("hdlr", 0, 0, u32(0), ascii("meta"), ByteArray(12), byteArrayOf(0)))) else ByteArray(0),
             box("mvex", fullBox("trex", 0, 0, u32(1), u32(1), u32(1), u32(frameBytes), u32(0)),
                 if (otherTraf != null) fullBox("trex", 0, 0, u32(2), u32(1), u32(1), u32(otherTrexSize), u32(0)) else ByteArray(0)),
+            moovExtra,
         )
         var out = box("ftyp", ascii("iso6"), u32(0), ascii("iso6")) + moov
         var at = 0

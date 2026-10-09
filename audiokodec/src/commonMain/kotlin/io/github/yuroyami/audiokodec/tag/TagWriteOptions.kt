@@ -56,6 +56,9 @@ public class TagWriteOptions(
      * lists, pictures, chapters or ReplayGain and refuse before output.
      * FLAC and Ogg use Vorbis comments and pictures. Their chapter output,
      * and APE chapter output, requires an existing or selected ID3 carrier.
+     * MP4 uses its item list, [TagFormat.MP4_ILST], with front-cover art and
+     * changed chapters written as a Nero `chpl` list; an empty set removes
+     * the item list.
      * A non-null set selects every writable format to keep. For example, use
      * `setOf(RIFF_INFO, ID3V2_4)` to put both kinds in a WAV file, or an empty
      * set to remove its native text and ID3 chunks. Broadcast Wave is opt-in:

@@ -212,6 +212,10 @@ decode, seeking included. [MPEG tracks](docs/mpeg-in-mp4.md) share the bare-stre
 frame decoder and apply the MP4 edit list. AAC, AC-3 and AMR are named, with their length and chapters, and
 `open` refuses them by name.
 
+The iTunes item list inside `moov` is read and written, cover art included,
+whatever the coding. A rewrite rebuilds only the `moov` box and copies the
+audio byte for byte. See [MP4 metadata](docs/mp4-tags.md).
+
 ## Apple Lossless
 
 ALAC decodes from MP4 and from CAF, at 16, 20, 24 and 32 bits and with one to
@@ -336,11 +340,12 @@ new fields after `clear()` to create a fresh tag without preserving previous ent
 Tags are read from ID3v2.2, 2.3 and 2.4, ID3v1 and v1.1, APEv1 and APEv2,
 Vorbis comments in both FLAC and Ogg, FLAC picture blocks, Lyrics3v2, the
 `LIST INFO` and `bext` chunks of a WAV, the text chunks of an AIFF, and an
-`id3 ` chunk inside either. Writing produces ID3v2.3 or 2.4, Vorbis comments and
-pictures in FLAC and Ogg, an updated ID3v1 block where the file already had one,
-and the metadata chunks of RIFF and AIFF. MP4 `ilst` tags are not read or
-written yet; that work is tracked in [#8](https://github.com/yuroyami/AudioKodec/issues/8).
-MP4 chapters are read separately from the container.
+`id3 ` chunk inside either, and the item list of an MP4 file. Writing produces
+ID3v2.3 or 2.4, Vorbis comments and pictures in FLAC and Ogg, MP4 items and
+cover art, an updated ID3v1 block where the file already had one, and the
+metadata chunks of RIFF and AIFF. MP4 chapters are read from a chapter track or
+a Nero `chpl` list, and changed chapters are written as `chpl`. See
+[MP4 metadata](docs/mp4-tags.md).
 
 Broadcast Wave writing is opt-in through `TagFormat.BWF_BEXT`. Its fixed fields
 and unsigned 64-bit time reference use the raw tag view; ordinary edits preserve
@@ -431,7 +436,7 @@ and `42ni` is 24-bit.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| MP4, M4A, M4B, 3GP and QuickTime | ALAC 16/20/24/32-bit, Opus, FLAC, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, MP3, AC-3 and AMR are named and not decoded yet |
+| MP4, M4A, M4B, 3GP and QuickTime | ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, AC-3 and AMR are named and not decoded yet. Tags can be rewritten; audio encoding is not implemented |
 
 ### Named but not decoded
 
