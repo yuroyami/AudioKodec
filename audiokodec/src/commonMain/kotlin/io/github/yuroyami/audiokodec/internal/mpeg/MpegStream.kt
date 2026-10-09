@@ -3,7 +3,6 @@ package io.github.yuroyami.audiokodec.internal.mpeg
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.TruncatedStreamException
-import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.tag.Id3v2Reader
 
@@ -73,6 +72,7 @@ internal class MpegStream(
             // The first frame may be a silent one holding the file's own
             // bookkeeping. If it is, it is not audio and the audio starts after
             // it, but its numbers describe everything that follows.
+            options.checkAllocation(found.header.frameBytes.toLong(), "reading the first MPEG frame")
             val frameBytes = ByteArray(found.header.frameBytes)
             reader.seek(found.offset)
             reader.readFully(frameBytes)
@@ -87,7 +87,7 @@ internal class MpegStream(
                 found.offset
             }
             val header = if (vbr != null) {
-                findFirstFrame(reader, audioOffset, declaredEnd)?.header ?: found.header
+                findFirstFrame(reader, audioOffset, declaredEnd, found.header)?.header ?: found.header
             } else {
                 found.header
             }
@@ -96,7 +96,7 @@ internal class MpegStream(
             // A Xing or VBRI header may leave its frame count out, and then
             // only walking the frames can say how long the stream is.
             val countedByHeader = vbr != null && vbr.frameCount > 0
-            val scan = if (!countedByHeader || size < 0) {
+            val scan = if (!countedByHeader || size < 0 || header.isFreeFormat) {
                 scanFrames(reader, audioOffset, declaredEnd, header)
             } else {
                 null
@@ -105,7 +105,7 @@ internal class MpegStream(
             val frames: Long
             val constant: Boolean
             when {
-                countedByHeader -> {
+                countedByHeader && !header.isFreeFormat -> {
                     frames = vbr.frameCount.toLong()
                     constant = vbr.isConstantBitrate
                 }
@@ -147,7 +147,7 @@ internal class MpegStream(
                 duration = if (trimmed > 0) trimmed else null
             }
 
-            val bitrate = if (duration != null && duration > 0) {
+            val bitrate = if (header.isFreeFormat) header.bitrateKbps else if (duration != null && duration > 0) {
                 val seconds = duration.toDouble() / header.sampleRate
                 if (seconds > 0) {
                     (audioBytes.toDouble() * 8.0 / seconds / 1000.0)
@@ -222,17 +222,27 @@ internal class MpegStream(
                     continue
                 }
                 if (bytes.all { it == 0.toByte() }) {
+                    if (shape.isFreeFormat && count > 0 && !zeroPaddingToEnd(reader, at, to)) {
+                        if (!reader.options.tolerant) throw CorruptStreamException("a free-format MPEG frame changes its measured spacing", at)
+                        break
+                    }
                     // Padding can be longer than the damaged-gap search limit.
                     // Keep confirming any frame found on its far side.
                     at += bytes.size
                     resynchronising = true
                     continue
                 }
-                val header = MpegFrameHeader.parse(bytes, 0)
+                val header = MpegFrameHeader.parse(bytes, 0, shape.freeFormatFrameBytes)
                 val accepted = header != null &&
                     header.matches(shape) &&
                     (!resynchronising || confirms(reader, at, header, to))
                 if (!accepted) {
+                    if (shape.isFreeFormat && !resynchronising && count > 0L) {
+                        if (!reader.options.tolerant) {
+                            throw CorruptStreamException("a free-format MPEG frame changes its measured spacing", at)
+                        }
+                        break
+                    }
                     at++
                     resynchronising = true
                     skipped++
@@ -280,7 +290,7 @@ internal class MpegStream(
          * A frame is believed when the bytes at its stated length are another
          * frame of the same shape, three times over or until the file ends.
          */
-        fun findFirstFrame(reader: SourceReader, from: Long, to: Long): Found? {
+        fun findFirstFrame(reader: SourceReader, from: Long, to: Long, shape: MpegFrameHeader? = null): Found? {
             val window = ByteArray(64 * 1024)
             var at = from
             var scanned = 0L
@@ -292,15 +302,17 @@ internal class MpegStream(
                 if (got < 4) break
                 var index = 0
                 while (index <= got - 4) {
-                    val header = MpegFrameHeader.parse(window, index)
-                    if (header == null) {
-                        if (MpegFrameHeader.isFreeFormat(window, index)) sawFreeFormat = true
-                        index++
-                        continue
-                    }
                     if (at > Long.MAX_VALUE - index) return null
                     val offset = at + index
-                    if (confirms(reader, offset, header, to)) return Found(offset, header)
+                    var header = MpegFrameHeader.parse(window, index, shape?.freeFormatFrameBytes ?: 0)
+                    if (header == null) {
+                        if (MpegFrameHeader.isFreeFormat(window, index)) {
+                            sawFreeFormat = true
+                            if (shape == null) header = measureFreeFrame(reader, offset, window, index, to)
+                        }
+                        if (header == null) { index++; continue }
+                    }
+                    if ((shape == null || header.matches(shape)) && confirms(reader, offset, header, to)) return Found(offset, header)
                     index++
                 }
                 scanned += got
@@ -311,12 +323,52 @@ internal class MpegStream(
                 at += advance
             }
 
-            if (sawFreeFormat) {
-                throw UnsupportedFeatureException(
-                    "free format MPEG audio",
-                    "this MPEG audio stream uses the free format, whose frames state no " +
-                        "length and have to be measured by looking for the next one",
-                )
+            if (sawFreeFormat && shape == null) {
+                throw CorruptStreamException("free-format MPEG frame spacing cannot be confirmed from following headers", from)
+            }
+            return null
+        }
+
+        /** Measure the unpadded slot count, then reject sync-shaped words in the payload. */
+        private fun measureFreeFrame(reader: SourceReader, offset: Long, bytes: ByteArray, index: Int, to: Long): MpegFrameHeader? {
+            val template = MpegFrameHeader.parse(bytes, index, 4) ?: return null
+            val minimum = 4 + (if (template.hasCrc) 2 else 0) + template.sideInfoBytes
+            val limit = minOf(SEARCH_BYTES.toLong(), to - offset - 4)
+            if (limit < minimum) return null
+            val window = ByteArray(64 * 1024)
+            val prefix = ByteArray(4)
+            var distance = minimum.toLong()
+            while (distance <= limit) {
+                reader.seek(offset + distance)
+                val wanted = minOf(window.size.toLong(), limit - distance + 4).toInt()
+                val got = reader.readSome(window, 0, wanted)
+                if (got < 4) return null
+                for (at in 0..got - 4) {
+                    // Embedded ID3 is outside the codec frame. Trying its
+                    // start as a boundary keeps its bytes out of the measured
+                    // size and out of the Layer III reservoir.
+                    if (matches(window, at, "ID3")) {
+                        window.copyInto(prefix, 0, at, at + 4)
+                        val tagEnd = try {
+                            embeddedTagEnd(reader, offset + distance + at, prefix, to)
+                        } catch (_: TruncatedStreamException) { null }
+                        if (tagEnd != null) {
+                            val base = (distance + at - template.paddingBytes).toInt()
+                            if (base >= minimum && (template.layer != 1 || base % 4 == 0)) {
+                                val measured = MpegFrameHeader.parse(bytes, index, base) ?: continue
+                                if (confirms(reader, offset, measured, to)) return measured
+                            }
+                        }
+                    }
+                    if (!MpegFrameHeader.isFreeFormat(window, at)) continue
+                    val following = MpegFrameHeader.parse(window, at, 4) ?: continue
+                    if (!following.matches(template)) continue
+                    val base = (distance + at - template.paddingBytes).toInt()
+                    if (base < minimum || template.layer == 1 && base % 4 != 0) continue
+                    val measured = MpegFrameHeader.parse(bytes, index, base) ?: continue
+                    if (confirms(reader, offset, measured, to)) return measured
+                }
+                distance += got - 3
             }
             return null
         }
@@ -331,7 +383,11 @@ internal class MpegStream(
             val probe = ByteArray(4)
             var at = offset
             var current = header
-            for (i in 0 until CONFIRMATIONS) {
+            // Two equal intervals identify free-format size. Later damaged
+            // boundaries belong to the full walk, rather than making a larger
+            // multiple of the real size look like another possible answer.
+            val confirmations = if (header.isFreeFormat) CONFIRMATIONS - 1 else CONFIRMATIONS
+            for (i in 0 until confirmations) {
                 if (at > to || current.frameBytes.toLong() > to - at) return false
                 if (!framePayloadExists(reader, at, current.frameBytes)) return false
                 var next = at + current.frameBytes
@@ -352,7 +408,7 @@ internal class MpegStream(
                     if (next > to || to - next < 4) return true
                 }
                 if (probe.all { it == 0.toByte() } && zeroPaddingToEnd(reader, next, to)) return true
-                val following = MpegFrameHeader.parse(probe, 0) ?: return false
+                val following = MpegFrameHeader.parse(probe, 0, header.freeFormatFrameBytes) ?: return false
                 if (!following.matches(current)) return false
                 at = next
                 current = following

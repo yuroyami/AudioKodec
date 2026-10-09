@@ -268,8 +268,10 @@ than the whole preceding audio. See [MPEG seeking](docs/index.md#mpeg-audio)
 for refinement costs, optional counts and invalid-table handling.
 
 A sync word turns up in ordinary audio data every couple of kilobytes, so a
-candidate frame is only believed once the frames after it agree with it. Files
-using the free format, whose frames state no length, are named and refused.
+candidate frame is only believed once the frames after it agree with it.
+[Free-format audio](docs/mpeg-free-format.md), whose headers omit the bitrate,
+uses confirmed frame spacing and each frame's padding bit. All three layers
+decode and report the implied bitrate.
 
 All three layers decode. Layer III is the one people mean by MP3, and it is the
 awkward one: a frame's audio is not inside that frame but scattered up to 511
@@ -289,6 +291,8 @@ The oracle tests compare with ffmpeg's floating-point decoders. They enforce
 a maximum sample difference below 1e-4 for Layers I and III, and below 1e-5
 for Layer II. FFmpeg also ships fixed-point decoders for the older layers;
 these comparisons use its float decoders.
+Free-format comparisons use libmpg123's public float API because the installed
+FFmpeg rejects these files, with the same bounds and exact duration checks.
 
 ## Read and edit tags
 

@@ -108,6 +108,9 @@ internal object Layer12Tables {
      */
     fun tableFor(header: MpegFrameHeader): Allocation {
         if (header.version != 1) return LSF
+        // MPEG-1 free format uses Table 3-B.2a. Its measured byte rate
+        // must not select one of the tables for a declared bitrate index.
+        if (header.isFreeFormat) return TABLE_A
 
         val perChannel = if (header.channelMode == MpegFrameHeader.MODE_SINGLE) {
             header.bitrateKbps

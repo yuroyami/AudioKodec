@@ -161,3 +161,10 @@ AUDIOKODEC_MUTAGEN_PYTHON=/tmp/audiokodec-tag-oracle/bin/python ./gradlew :audio
 ```
 
 Only its public API is used. No implementation source is read.
+
+Free-format MPEG comparisons also use libmpg123's documented float output and
+length APIs through Python. Install `libmpg123-dev` on Ubuntu or
+`brew install mpg123` on macOS. `AUDIOKODEC_MPG123_LIBRARY` can supply the shared
+library path; a configured library that cannot load fails the test. The fixture
+generator records its binary SHA-256, and reproduction checks require that
+identity to match. Its implementation source stays unopened.

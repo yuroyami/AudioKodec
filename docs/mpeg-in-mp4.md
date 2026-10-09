@@ -21,7 +21,9 @@ object type is `0x69` or `0x6B`. Each indexed sample must contain one complete
 MPEG frame. MPEG-1, MPEG-2 and the MPEG-2.5 extension use the same frame decoder
 as bare MPEG files. Bitrate, padding and stereo mode may change between
 packets; the layer, version, rate and channel count must stay consistent.
-Free-format audio is currently named and refused.
+[Free-format audio](mpeg-free-format.md) uses each indexed packet's size. Its
+unpadded frame size must stay constant, including across seeks; it cannot
+switch between free format and an indexed bitrate within the same track.
 
 Ordinary and fragmented MP4 files use their sample tables for seeking. MP3
 opening and seeking decode up to ten preceding MPEG frames to restore the

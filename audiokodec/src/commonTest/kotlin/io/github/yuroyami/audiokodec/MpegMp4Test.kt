@@ -124,8 +124,7 @@ class MpegMp4Test {
         val invalid = valid.copyOf().also { it[offset] = 0 }
         assertFailsWith<CorruptStreamException> { AudioKodec.probe(invalid) }
         val free = valid.copyOf().also { it[offset + 2] = (it[offset + 2].toInt() and 0x0F).toByte() }
-        val failure = assertFailsWith<UnsupportedFeatureException> { AudioKodec.open(free).close() }
-        assertEquals("free-format MPEG audio", failure.feature)
+        assertFailsWith<CorruptStreamException> { AudioKodec.decode(free) }
     }
 
     @Test
@@ -199,10 +198,10 @@ internal object MpegMp4Fixtures {
         entry: String = ".mp3",
         objectType: Int = 0x6B,
         edit: Pair<Long, Long>? = null,
-        channels: Int = requireNotNull(MpegFrameHeader.parse(packets[0], 0)).channels,
-        rate: Int = requireNotNull(MpegFrameHeader.parse(packets[0], 0)).sampleRate,
+        channels: Int = packetHeader(packets[0]).channels,
+        rate: Int = packetHeader(packets[0]).sampleRate,
     ): ByteArray {
-        val header = requireNotNull(MpegFrameHeader.parse(packets[0], 0))
+        val header = packetHeader(packets[0])
         val total = packets.size * header.samplesPerFrame
         val ftyp = box("ftyp", "isom".encodeToByteArray(), u32(0), "isom".encodeToByteArray())
         val payload = ByteArray(packets.sumOf { it.size })
@@ -226,6 +225,11 @@ internal object MpegMp4Fixtures {
         val trak = box("trak", full("tkhd", u32(0), u32(0), u32(1), u32(0), u32(total), ByteArray(60)), edts, mdia)
         val moov = box("moov", full("mvhd", u32(0), u32(0), u32(header.sampleRate), u32(total), ByteArray(80)), trak)
         return ftyp + box("mdat", payload) + moov
+    }
+
+    private fun packetHeader(packet: ByteArray): MpegFrameHeader {
+        val fields = requireNotNull(MpegFrameHeader.parse(packet, 0, 4))
+        return requireNotNull(MpegFrameHeader.parse(packet, 0, packet.size - fields.paddingBytes))
     }
 
     /** Nonzero ISO Layer I allocations, originally checked in MpegOracleTest. */

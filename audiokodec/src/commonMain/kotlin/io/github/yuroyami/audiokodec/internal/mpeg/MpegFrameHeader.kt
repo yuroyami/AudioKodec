@@ -34,7 +34,15 @@ internal class MpegFrameHeader(
     val copyrighted: Boolean,
     val original: Boolean,
     val emphasis: Int,
+    /** Unpadded bytes measured between free-format headers, or zero for a table bitrate. */
+    val freeFormatFrameBytes: Int = 0,
 ) {
+
+    val isFreeFormat: Boolean get() = freeFormatFrameBytes > 0
+
+    /** Padding occupies a four-byte slot in Layer I and one byte in the other layers. */
+    val paddingSlot: Int get() = if (layer == 1) 4 else 1
+    val paddingBytes: Int get() = if (padded) paddingSlot else 0
 
     val channels: Int get() = if (channelMode == MODE_SINGLE) 1 else 2
 
@@ -52,6 +60,7 @@ internal class MpegFrameHeader(
     /** Bytes this frame occupies, header included. */
     val frameBytes: Int
         get() {
+            if (isFreeFormat) return freeFormatFrameBytes + paddingBytes
             val padding = if (padded) 1 else 0
             return if (layer == 1) {
                 (12 * bitrateKbps * 1000 / sampleRate + padding) * 4
@@ -80,7 +89,8 @@ internal class MpegFrameHeader(
         version == other.version &&
             layer == other.layer &&
             sampleRate == other.sampleRate &&
-            channels == other.channels
+            channels == other.channels &&
+            isFreeFormat == other.isFreeFormat
 
     /** A short description, for an error message. */
     val description: String
@@ -109,7 +119,7 @@ internal class MpegFrameHeader(
          * kilobytes, and the rest of the header is what tells a real frame from
          * a coincidence.
          */
-        fun parse(bytes: ByteArray, at: Int): MpegFrameHeader? {
+        fun parse(bytes: ByteArray, at: Int, freeFormatFrameBytes: Int = 0): MpegFrameHeader? {
             if (at + 4 > bytes.size) return null
             val b0 = bytes[at].toInt() and 0xFF
             val b1 = bytes[at + 1].toInt() and 0xFF
@@ -134,18 +144,26 @@ internal class MpegFrameHeader(
             if (sampleRateIndex == 3) return null
             if (bitrateIndex == 15) return null
 
-            // Index 0 is the free format: the frame states no length, and a
-            // decoder has to measure the distance to the next sync instead.
-            // It is not a frame this can build, so the scanner is told about it
-            // separately rather than being handed a header with no length.
-            val bitrate = bitrateOf(version, layer, bitrateIndex)
-            if (bitrate <= 0) return null
+            // Do not expose a zero-length frame to a walker. Free format needs
+            // the size the scanner measured, or the enclosing packet supplies.
+            if (bitrateIndex == 0 && freeFormatFrameBytes <= 0) return null
 
             val sampleRate = SAMPLE_RATES[sampleRateIndex] / when (version) {
                 1 -> 1
                 2 -> 2
                 else -> 4
             }
+            val samples = when {
+                layer == 1 -> 384
+                layer == 2 || version == 1 -> 1152
+                else -> 576
+            }
+            val bitrate = if (bitrateIndex == 0) {
+                // Slot rounding makes the exact original bitrate unknowable.
+                // Report the implied rate rounded to the nearest kbit/s.
+                ((freeFormatFrameBytes.toLong() * 8 * sampleRate + samples * 500L) / (samples * 1000L))
+                    .coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+            } else bitrateOf(version, layer, bitrateIndex)
 
             return MpegFrameHeader(
                 version = version,
@@ -160,6 +178,7 @@ internal class MpegFrameHeader(
                 copyrighted = (b3 and 0x08) != 0,
                 original = (b3 and 0x04) != 0,
                 emphasis = b3 and 0x3,
+                freeFormatFrameBytes = if (bitrateIndex == 0) freeFormatFrameBytes else 0,
             )
         }
 
@@ -167,9 +186,8 @@ internal class MpegFrameHeader(
          * True when these four bytes are a frame header using the free format.
          *
          * Free format frames carry no length, so the distance to the next sync
-         * word is the only thing that gives it. AudioKodec does not decode them,
-         * and this exists so that a file made of them is named for what it is
-         * rather than reported as having no frames at all.
+         * word gives it. This recognises the fields before that measurement,
+         * without handing the frame walker an unresolved zero-byte frame.
          */
         fun isFreeFormat(bytes: ByteArray, at: Int): Boolean {
             if (at + 4 > bytes.size) return false
@@ -191,7 +209,7 @@ internal class MpegFrameHeader(
             if (((b1 ushr 1) and 0x3) == 0) return false
             val b2 = bytes[at + 2].toInt() and 0xFF
             val bitrateIndex = (b2 ushr 4) and 0xF
-            if (bitrateIndex == 15 || bitrateIndex == 0) return false
+            if (bitrateIndex == 15) return false
             return ((b2 ushr 2) and 0x3) != 3
         }
 

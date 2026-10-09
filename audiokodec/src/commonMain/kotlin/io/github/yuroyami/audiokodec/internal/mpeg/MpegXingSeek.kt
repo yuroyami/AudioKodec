@@ -55,7 +55,7 @@ internal class MpegXingSeek(private val reader: SourceReader, private val stream
             if (bucket == 0) return null
             val hint = (stream.vbrFrameOffset + (table[bucket].toInt() and 255) * byteCount / 256)
                 .coerceAtLeast(stream.audioOffset)
-            val found = MpegStream.findFirstFrame(reader, hint, end)
+            val found = MpegStream.findFirstFrame(reader, hint, end, stream.first)
             if (found != null && found.header.matches(stream.first)) {
                 val suffix = walk(Landing(0, found.offset), Long.MAX_VALUE)
                 if (suffix != null && suffix.offset == end) {
@@ -86,7 +86,7 @@ internal class MpegXingSeek(private val reader: SourceReader, private val stream
                 offset = tagEnd
                 continue
             }
-            val header = MpegFrameHeader.parse(probe, 0) ?: return if (probe.all { it == 0.toByte() } &&
+            val header = MpegFrameHeader.parse(probe, 0, stream.first.freeFormatFrameBytes) ?: return if (probe.all { it == 0.toByte() } &&
                 verifyPadding(offset)
             ) Landing(number, end) else null
             if (!header.matches(stream.first) || header.frameBytes > end - offset ||

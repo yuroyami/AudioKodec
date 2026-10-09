@@ -7,7 +7,7 @@ reports = Path("audiokodec/build/test-results/jvmTest")
 required = {
     "AiffCOracleTest", "AlacOracleTest", "BextOracleTest", "CafOracleTest", "FfmpegOracleTest",
     "FfmpegTagOracleTest", "FlacEncodeOracleTest", "FlacOracleTest", "FlacConformanceTest",
-    "IntegerEncodingOracleTest", "Mp4OracleTest", "MpegMp4OracleTest", "MpegCrcOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
+    "IntegerEncodingOracleTest", "Mp4OracleTest", "MpegMp4OracleTest", "MpegCrcOracleTest", "MpegFreeFormatOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
     "OggOracleTest", "OggChainOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
     "OpusJoinOracleTest", "OpusMultistreamOracleTest", "OpusOracleTest",
     "SilkDecodeOracleTest", "VorbisOracleTest", "MutagenTagOracleTest",

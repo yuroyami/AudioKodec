@@ -502,8 +502,11 @@ unrecognised bytes. A recognised tag extending past the input raises
 audio prefix. Stored `Xing` and `VBRI` frame counts remain authoritative, so
 joining separately indexed files does not extend the reported duration.
 
-Files using the free format, whose frames state no length at all, are named and
-refused rather than measured by guesswork.
+[Free-format MPEG](mpeg-free-format.md) measures constant unpadded frame size
+from confirming headers. Its padding bit still applies per frame. Opening
+walks the complete recording to check that spacing and determine duration,
+including when a Xing count is present. Single frames without enough evidence
+to determine their size raise a typed error.
 
 All three layers decode. Layer III, usually called MP3, can draw a frame's
 audio data from a bit reservoir extending into earlier frames. Seeking starts

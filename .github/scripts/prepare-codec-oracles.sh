@@ -8,6 +8,20 @@ done
 if [[ "$(uname -s)" == Darwin ]]; then
     command -v afconvert >/dev/null
     export AUDIOKODEC_OPUSFILE_LIBRARY="$(brew --prefix opusfile)/lib/libopusfile.0.dylib"
+    export AUDIOKODEC_MPG123_LIBRARY="$(brew --prefix mpg123)/lib/libmpg123.0.dylib"
+else
+    AUDIOKODEC_MPG123_LIBRARY=$(python3 - <<'PY'
+import ctypes.util, pathlib, subprocess
+name = ctypes.util.find_library('mpg123')
+assert name, 'libmpg123 is required for free-format MPEG checks'
+for line in subprocess.check_output(['ldconfig', '-p'], text=True).splitlines():
+    if line.strip().startswith(name + ' '):
+        print(pathlib.Path(line.split('=>', 1)[1].strip()).resolve())
+        break
+else: raise SystemExit('libmpg123 must have a resolvable binary path')
+PY
+)
+    export AUDIOKODEC_MPG123_LIBRARY
 fi
 
 oracle_venv=${AUDIOKODEC_ORACLE_VENV:-${RUNNER_TEMP:-/tmp}/audiokodec-tag-oracle}
@@ -19,14 +33,16 @@ import ctypes, ctypes.util, os, mutagen
 library = os.environ.get('AUDIOKODEC_OPUSFILE_LIBRARY') or ctypes.util.find_library('opusfile')
 assert library, 'libopusfile is required for R128 oracle checks'
 ctypes.CDLL(library)
+ctypes.CDLL(os.environ['AUDIOKODEC_MPG123_LIBRARY'])
 assert mutagen.version_string == '1.47.0'
-print('Mutagen and libopusfile are available')
+print('Mutagen, libopusfile and libmpg123 are available')
 PY
 if [[ -n "${GITHUB_ENV:-}" ]]; then
     printf 'AUDIOKODEC_MUTAGEN_PYTHON=%s\n' "$AUDIOKODEC_MUTAGEN_PYTHON" >> "$GITHUB_ENV"
     if [[ -n "${AUDIOKODEC_OPUSFILE_LIBRARY:-}" ]]; then
         printf 'AUDIOKODEC_OPUSFILE_LIBRARY=%s\n' "$AUDIOKODEC_OPUSFILE_LIBRARY" >> "$GITHUB_ENV"
     fi
+    printf 'AUDIOKODEC_MPG123_LIBRARY=%s\n' "$AUDIOKODEC_MPG123_LIBRARY" >> "$GITHUB_ENV"
 fi
 
 # Only the permissively licensed references pinned in REFERENCES.md are built.

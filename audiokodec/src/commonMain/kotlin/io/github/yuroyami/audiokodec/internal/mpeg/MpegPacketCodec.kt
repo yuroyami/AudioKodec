@@ -3,7 +3,6 @@ package io.github.yuroyami.audiokodec.internal.mpeg
 import io.github.yuroyami.audiokodec.AudioFormat
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
-import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.PacketCodec
 
 /** One complete MPEG audio frame per indexed packet, retaining synthesis and reservoir state. */
@@ -25,7 +24,7 @@ internal class MpegPacketCodec(
     override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int {
         val header = headerOf(packet, length)
         if (header.sampleRate != format.sampleRate || header.channels != format.channels ||
-            first != null && !header.matches(first)
+            first != null && (!header.matches(first) || first.isFreeFormat && header.freeFormatFrameBytes != first.freeFormatFrameBytes)
         ) {
             throw CorruptStreamException("an MPEG packet changes the track's layer, version, sample rate or channels")
         }
@@ -52,7 +51,13 @@ internal class MpegPacketCodec(
             if (length < 4) throw CorruptStreamException("an MPEG packet is shorter than its frame header")
             val header = MpegFrameHeader.parse(packet, 0) ?: run {
                 if (MpegFrameHeader.isFreeFormat(packet, 0)) {
-                    throw UnsupportedFeatureException("free-format MPEG audio", "the packet's header states no bitrate")
+                    val fields = MpegFrameHeader.parse(packet, 0, 4)!!
+                    val base = length - fields.paddingBytes
+                    val minimum = 4 + (if (fields.hasCrc) 2 else 0) + fields.sideInfoBytes
+                    if (base < minimum || fields.layer == 1 && base % 4 != 0) {
+                        throw CorruptStreamException("an MPEG packet has an invalid free-format frame size")
+                    }
+                    return MpegFrameHeader.parse(packet, 0, base)!!
                 }
                 throw CorruptStreamException("an MPEG packet has no valid frame header")
             }

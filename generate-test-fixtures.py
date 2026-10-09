@@ -200,10 +200,12 @@ def main():
                "argv": argv, "temporaryDirectory": str(temporary), "flacDirectory": str(flac_directory),
                "referenceBuildRecipe": ".github/scripts/prepare-codec-oracles.sh",
                "referenceBuilds": reference_builds(), "corpora": corpus_inputs()}
-        configured_library = environment.get("AUDIOKODEC_OPUSFILE_LIBRARY")
-        if configured_library and Path(configured_library).is_file():
-            library = Path(configured_library)
-            run["opusfileLibrary"] = {"path": str(library), "bytes": library.stat().st_size, "sha256": checksum(library)}
+        for variable, key in (("AUDIOKODEC_OPUSFILE_LIBRARY", "opusfileLibrary"),
+                              ("AUDIOKODEC_MPG123_LIBRARY", "mpg123Library")):
+            configured_library = environment.get(variable)
+            if configured_library and Path(configured_library).is_file():
+                library = Path(configured_library)
+                run[key] = {"path": str(library), "bytes": library.stat().st_size, "sha256": checksum(library)}
         if sys.platform == "darwin":
             run["macOSBuild"] = subprocess.check_output(["sw_vers", "-buildVersion"], text=True).strip()
         save(output / "run.json", run)
@@ -227,6 +229,9 @@ def main():
         prior = args.compare.resolve()
         previous_calls = json.loads((prior / "commands.json").read_text())
         previous_run = json.loads((prior / "run.json").read_text())
+        for key in ("opusfileLibrary", "mpg123Library"):
+            if run.get(key, {}).get("sha256") != previous_run.get(key, {}).get("sha256"):
+                raise SystemExit(f"Fixture reproduction uses a different {key} binary")
         if normalise_calls(calls, run) != normalise_calls(previous_calls, previous_run):
             save(output / "comparison-current.json", normalise_calls(calls, run))
             save(output / "comparison-previous.json", normalise_calls(previous_calls, previous_run))
@@ -245,6 +250,7 @@ def main():
                                   "skipped": sum(report["skipped"] for report in summary["testReports"]),
                                   "referenceBuilds": run["referenceBuilds"],
                                   "opusfileLibrarySha256": run.get("opusfileLibrary", {}).get("sha256"),
+                                  "mpg123LibrarySha256": run.get("mpg123Library", {}).get("sha256"),
                                   "referenceBuildRecipeSha256": run["sourceFiles"][".github/scripts/prepare-codec-oracles.sh"]["sha256"]})
 
 

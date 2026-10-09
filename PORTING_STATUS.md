@@ -1,6 +1,6 @@
 # AudioKodec format status
 
-Updated 2026-10-08. This file lists the support level for every format and
+Updated 2026-10-09. This file lists the support level for every format and
 feature, and what comes next. For install instructions, targets and limits,
 read the [README](README.md).
 
@@ -28,7 +28,8 @@ wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
 The shared hostile-input sweep covers all ten decodable containers through
-23 short fixtures, including every Ogg codec, chained Ogg FLAC, all three MPEG layers, CAF
+26 short fixtures, including every Ogg codec, chained Ogg FLAC, all three MPEG
+layers in both ordinary and free format, CAF
 ALAC/IMA and fragmented MP4. It tests every truncation boundary, all eight
 individual bit flips and an inverted byte at every position, and 100 random
 bodies per fixture behind its format signature. Strict and tolerant probing,
@@ -62,7 +63,7 @@ own issues; completion of this group does not qualify untested hosts.
 
 Missing oracle tools and unavailable encoder cases produce explicit JUnit
 skips. CI is configured to install ffmpeg, FLAC, LAME, ExifTool, Mutagen and
-libopusfile and to build the pinned Opus and Apple ALAC reference executables.
+libopusfile and libmpg123 and to build the pinned Opus and Apple ALAC reference executables.
 The Linux and macOS jobs run the JVM comparisons and reject missing suite
 reports, failed tests and unexpected skips. Linux permits only the five
 `afconvert` comparisons that require macOS; macOS permits no skips. The Opus
@@ -183,6 +184,15 @@ subject to runner availability, including account billing. Within the suites:
 - MPEG audio frame headers, durations and data offsets agree with `ffprobe`
   across five sample rates, three bitrates and both channel counts, and a LAME
   variable bitrate file reports the length that went into the encoder.
+- Free-format MPEG measures confirmed unpadded spacing, honours one-byte or
+  four-byte padding slots and rejects changing spacing. LAME recordings at
+  all nine rates in mono/stereo agree with libmpg123's public float API in
+  duration and PCM within the existing MPEG bounds. Nonzero Layer I/II
+  comparisons cover MPEG-1 and low-rate Layer II, including the MPEG-2.5
+  extension. CRCs, missing Xing metadata, large frames, unknown source sizes,
+  embedded tags, exact tag payloads, allocation guards and sample seeks have
+  regressions. Xing refinement supports far seeks with slow seeking disabled;
+  MP4 packet sizes also supply free-format lengths and preserve gapless PCM.
 - Hand-built MP3 comparisons with FFmpeg cover all nine sample rates, the four
   switched block shapes and normal-block controls, with varied scalefactors.
   They check the mixed-block Huffman boundary and the short windows inside the

@@ -460,7 +460,7 @@ class MpegTest {
     }
 
     @Test
-    fun aFreeFormatFileIsNamedRatherThanGuessedAt() {
+    fun aFreeFormatFileMeasuresItsFramesAndDecodes() {
         // A free format frame states no bitrate, so its length is whatever the
         // distance to the next sync word turns out to be. This one is 800
         // bytes, which nothing in the file says.
@@ -472,11 +472,12 @@ class MpegTest {
             bytes[at + 2] = 0x00
             bytes[at + 3] = 0x00
         }
-        val failure = assertFailsWith<UnsupportedFeatureException> { AudioKodec.probe(bytes) }
-        assertTrue(
-            failure.message!!.contains("free format"),
-            "the error should name the feature: ${failure.message}",
-        )
+        val info = AudioKodec.probe(bytes)
+        assertEquals(6L * 1152, info.durationFrames)
+        assertEquals(245_000, info.bitrate)
+        val decoded = AudioKodec.decode(bytes)
+        assertEquals(6 * 1152, decoded.frames)
+        assertTrue(decoded.samples.all { it == 0f })
     }
 
     @Test

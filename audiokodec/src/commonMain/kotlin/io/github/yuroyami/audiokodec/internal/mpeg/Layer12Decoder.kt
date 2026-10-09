@@ -53,7 +53,9 @@ internal class Layer12Decoder(
 
     private val frames = Layer12FrameDecoder(channels, layer, options)
 
-    private val frameBytes = ByteArray(MAX_FRAME_BYTES)
+    private val frameBytes = ByteArray(maxOf(MAX_FRAME_BYTES, header0.frameBytes + header0.paddingSlot).also {
+        options.checkAllocation(it.toLong(), "buffering an MPEG frame")
+    })
     private var output = FloatArray(header0.samplesPerFrame * channels)
 
     private var at: Long = stream.audioOffset
@@ -148,8 +150,12 @@ internal class Layer12Decoder(
                 at = tagEnd
                 continue
             }
-            val header = MpegFrameHeader.parse(frameBytes, 0)
+            val header = MpegFrameHeader.parse(frameBytes, 0, header0.freeFormatFrameBytes)
             if (header == null || !header.matches(header0)) {
+                if (header0.isFreeFormat && scanned == 0L) {
+                    if (!options.tolerant || !decodedAny) throw CorruptStreamException("a free-format MPEG frame changes its measured spacing", at)
+                    return null
+                }
                 at++
                 scanned++
                 if (scanned > RESYNC_BYTES) {
@@ -259,7 +265,7 @@ internal class Layer12Decoder(
         while (counted < target && offset + 4 <= stream.audioEnd) {
             reader.seek(offset)
             if (reader.readSome(probe, 0, 4) < 4) break
-            val header = MpegFrameHeader.parse(probe, 0)
+            val header = MpegFrameHeader.parse(probe, 0, header0.freeFormatFrameBytes)
             if (header == null || !header.matches(header0)) {
                 offset++
                 continue

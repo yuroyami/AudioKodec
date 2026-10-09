@@ -9,10 +9,11 @@
     }
   ],
   "macOSBuild": null,
+  "mpg123LibrarySha256": "b5963c5d72f19d4c86010150277a9630a13ce784b4f8af27659b66b69b25b3b8",
   "opusfileLibrarySha256": "cbb2d87dc3a07096fb942b6baf9d78be10bad59702cabc87d708d0c18bb560aa",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
-  "qualifiedAt": "2026-10-09T00:02:27.127344+00:00",
-  "referenceBuildRecipeSha256": "a5bff48e71460bb01746ac8a2451089f64c510dea9b78fc20d4f6cd7f3279670",
+  "qualifiedAt": "2026-10-09T00:54:24.034562+00:00",
+  "referenceBuildRecipeSha256": "648d6455878fea80468ad69454a98c51487fa14aa5a55fe9bc2fa1d7c3031ff0",
   "referenceBuilds": {
     "alac": {
       "commit": "c38887c5c5e64a4b31108733bd79ca9b2496d987",
@@ -24,7 +25,7 @@
     }
   },
   "skipped": 5,
-  "testCount": 1013,
+  "testCount": 1024,
   "tools": [
     {
       "path": "ffmpeg",
