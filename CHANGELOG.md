@@ -79,6 +79,10 @@ audio and Ogg.
   of RFC 3952 and from CAF and QuickTime, translated from WebRTC in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with exact seeking.
+- Sample rate conversion: `Resampler`, streaming and allocation-free, and
+  `Pcm.resample` for a whole buffer. The default mode is speexdsp 1.2.1's
+  windowed sinc resampler at quality 10, translated sample for sample, with
+  the output aligned to the input; a straight-line mode serves previews.
 - DSD, read from DSF and DSDIFF files and converted to PCM at a
   thirty-second of its rate through three linear-phase decimating filters,
   stated in full, with channels in AudioKodec's order, the ID3v2 tags of

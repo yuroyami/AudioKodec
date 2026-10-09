@@ -401,6 +401,8 @@ public final class io/github/yuroyami/audiokodec/Pcm {
 	public final fun minValueOf (I)I
 	public final fun remapChannels ([FILio/github/yuroyami/audiokodec/ChannelLayout;Lio/github/yuroyami/audiokodec/ChannelLayout;[F)[F
 	public static synthetic fun remapChannels$default (Lio/github/yuroyami/audiokodec/Pcm;[FILio/github/yuroyami/audiokodec/ChannelLayout;Lio/github/yuroyami/audiokodec/ChannelLayout;[FILjava/lang/Object;)[F
+	public final fun resample ([FIIILio/github/yuroyami/audiokodec/ResampleQuality;)[F
+	public static synthetic fun resample$default (Lio/github/yuroyami/audiokodec/Pcm;[FIIILio/github/yuroyami/audiokodec/ResampleQuality;ILjava/lang/Object;)[F
 	public final fun scaleOf (I)D
 }
 
@@ -413,6 +415,29 @@ public abstract interface class io/github/yuroyami/audiokodec/PcmSource {
 public final class io/github/yuroyami/audiokodec/PcmSourceKt {
 	public static final fun asPcmSource ([FLio/github/yuroyami/audiokodec/AudioFormat;I)Lio/github/yuroyami/audiokodec/PcmSource;
 	public static synthetic fun asPcmSource$default ([FLio/github/yuroyami/audiokodec/AudioFormat;IILjava/lang/Object;)Lio/github/yuroyami/audiokodec/PcmSource;
+}
+
+public final class io/github/yuroyami/audiokodec/ResampleQuality : java/lang/Enum {
+	public static final field LINEAR Lio/github/yuroyami/audiokodec/ResampleQuality;
+	public static final field SINC Lio/github/yuroyami/audiokodec/ResampleQuality;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/yuroyami/audiokodec/ResampleQuality;
+	public static fun values ()[Lio/github/yuroyami/audiokodec/ResampleQuality;
+}
+
+public final class io/github/yuroyami/audiokodec/Resampler {
+	public fun <init> (IIILio/github/yuroyami/audiokodec/ResampleQuality;)V
+	public synthetic fun <init> (IIILio/github/yuroyami/audiokodec/ResampleQuality;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun flush ([FI)I
+	public static synthetic fun flush$default (Lio/github/yuroyami/audiokodec/Resampler;[FIILjava/lang/Object;)I
+	public final fun getChannels ()I
+	public final fun getInputRate ()I
+	public final fun getOutputRate ()I
+	public final fun getPendingOutputFrames ()I
+	public final fun getQuality ()Lio/github/yuroyami/audiokodec/ResampleQuality;
+	public final fun maxOutputFrames (I)I
+	public final fun process ([FII[FI)I
+	public final fun reset ()V
 }
 
 public final class io/github/yuroyami/audiokodec/TruncatedStreamException : io/github/yuroyami/audiokodec/AudioKodecException {

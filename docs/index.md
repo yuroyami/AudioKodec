@@ -1194,6 +1194,14 @@ println(format.channelLayout.channels)  // [FRONT_LEFT, FRONT_RIGHT, ...]
 `Pcm.remapChannels` reorders samples between two layouts that name the same
 channels.
 
+## Changing the sample rate
+
+`Resampler` converts float PCM between rates a block at a time without
+allocating, and `Pcm.resample` converts a whole buffer. The default is
+speexdsp's windowed sinc resampler at quality 10, sample for sample; a
+straight-line mode is there for previews. See
+[Change the sample rate](resample.md).
+
 ## Handling bad input
 
 Every failure AudioKodec reports is an `AudioKodecException`:

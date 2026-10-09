@@ -1,0 +1,21 @@
+Mix PCM between channel layouts
+
+Add Pcm.mixChannels, which converts interleaved float PCM between any two
+channel layouts, and Pcm.mixMatrix, which shows the coefficients. Mixing
+down from 3/2 follows every row of ITU-R BS.775-3's Table 2, and the
+low-frequency channel is left out of a mix without one. A channel the
+output has keeps its place, so mixing up invents nothing. Side and back
+pairs, a back centre, the front pair either side of centre and the top
+front pair follow the rules ffmpeg applies. A conversion with no defined
+answer, a channel of unknown position or a height channel other than the
+top front pair, is refused by name.
+
+Add per-channel gain, and mid-side conversion in both directions, exact
+for audio of up to 23 bits.
+
+The common tests check a 5.1 signal with a different tone in each channel
+against the levels BS.775 predicts, every row of its table, and the
+mid-side round trip; the oracle suite checks 24 conversions against
+ffmpeg's float mixing, sample for sample within float rounding.
+
+Fixes #26

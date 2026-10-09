@@ -172,6 +172,10 @@ reference_checkout reference/ilbc/src https://github.com/TimothyGu/libilbc.git c
 git -C reference/ilbc/src submodule update --init --depth 1 abseil-cpp
 test "$(git -C reference/ilbc/src/abseil-cpp rev-parse HEAD)" = 1bae23e32ba1f1af7c7d1488a69a351ec96dc98d
 
+# speexdsp's resampler, BSD 3-Clause, is what AudioKodec's sinc resampler
+# translates; the resampler oracle test builds resample.c on its own.
+reference_checkout reference/speexdsp https://github.com/xiph/speexdsp.git 1b28a0f61bc31162979e1f26f3981fc3637095c8
+
 # The ITU's digital test sequences for G.726 and G.722, Appendix II to each
 # Recommendation: test data, checked by the conformance tests and never committed.
 itu_sequences() {

@@ -437,7 +437,8 @@ A 13 MiB image also checks streaming allocations and an exact metaflac export.
 | Interleave and split | ✅ |
 | Channel remapping between layouts | ✅ |
 | WAV channel mask to layout and back | ✅ |
-| Resampling, mixdown, loudness, peaks | ❌ #25, #26, #27 and #28 |
+| Sample rate conversion, streaming and allocation-free | ✅ windowed sinc translated from speexdsp 1.2.1 at quality 10, sample for sample against its float build at twelve rate pairs; distortion and noise on a 1 kHz tone between -134.8 and -169.3 dB, against -150.5 to -161.4 dB for ffmpeg's soxr at 28 bits, with level and phase agreeing within speexdsp's passband ripple. A straight-line mode for previews |
+| Mixdown, loudness, peaks | ❌ #26, #27 and #28 |
 
 ## Decoding
 

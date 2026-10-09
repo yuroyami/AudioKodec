@@ -269,6 +269,30 @@ public object Pcm {
         return out
     }
 
+    /**
+     * Converts a whole buffer of interleaved [samples] from [inputRate] to
+     * [outputRate], returning exactly `ceil(frames * outputRate / inputRate)`
+     * frames, aligned with the input.
+     *
+     * This allocates its result; to convert a stream a block at a time
+     * without allocating, use a [Resampler].
+     */
+    public fun resample(
+        samples: FloatArray,
+        channels: Int,
+        inputRate: Int,
+        outputRate: Int,
+        quality: ResampleQuality = ResampleQuality.SINC,
+    ): FloatArray {
+        val resampler = Resampler(inputRate, outputRate, channels, quality)
+        require(samples.size % channels == 0) { "samples holds ${samples.size} entries, not a whole number of $channels-channel frames" }
+        val frames = samples.size / channels
+        val out = FloatArray(resampler.maxOutputFrames(frames) * channels)
+        val written = resampler.process(samples, 0, frames, out, 0)
+        val total = written + resampler.flush(out, written)
+        return if (total * channels == out.size) out else out.copyOf(total * channels)
+    }
+
     /** Clamps every sample into -1.0 .. 1.0, in place. */
     public fun clampInPlace(samples: FloatArray, count: Int = samples.size): FloatArray {
         require(count in 0..samples.size) {

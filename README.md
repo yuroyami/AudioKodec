@@ -618,6 +618,20 @@ Sniffing is not decoding. `probe` and `open` throw
 `UnsupportedFormatException` for all of these, and the message names the
 format.
 
+## Change the sample rate
+
+`Resampler` converts float PCM from one rate to another a block at a time,
+with no allocation after it is built, and `Pcm.resample` converts a whole
+buffer. The default mode is speexdsp's windowed sinc resampler at its
+highest quality, translated sample for sample: on a 1 kHz tone it adds
+distortion and noise at least 134.8 dB below it. A straight-line mode trades
+that for speed, for drawing previews. The output is aligned with the input,
+with no delay. See [Change the sample rate](docs/resample.md).
+
+```kotlin
+val at48k = Pcm.resample(decoded.samples, channels = 2, inputRate = 44_100, outputRate = 48_000)
+```
+
 ## Precision
 
 Decoding produces Float32, which carries 8-, 16- and 24-bit audio exactly. It

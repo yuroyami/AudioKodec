@@ -87,6 +87,7 @@ Run as programs, never read as source.
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
 | libilbc 3.0.4 | iLBC: `ilbc_oracle.c`, a few lines over libilbc's public interface built from the pinned sources under `reference/ilbc`, encodes speech, silence, clipping, noise and bursts in both frame sizes and decodes them; the test wraps the frames in the storage format of RFC 3952 and ffmpeg copies them into CAF and QuickTime files. Every sample must be libilbc's integer, also for runs of random frames, which exercise concealment, and for frames altered to state the codebook index libilbc refuses, which must be refused at the same frame |
+| speexdsp 1.2.1 and ffmpeg's soxr | Resampling: `resample_oracle.c` over speexdsp's resampler, built from the pinned sources under `reference/speexdsp` in its float build without SIMD or fused multiply-adds, converts tones and noise at twelve rate pairs, mono and stereo, which `Resampler` must reproduce sample for sample however its input is split into blocks. ffmpeg's `aresample` with soxr at 28 bits converts the same tones, whose level and phase must agree within speexdsp's passband ripple; it is only run |
 | ffmpeg and ffprobe, for DSD | DSF and DSDIFF files the test writes from a sigma delta modulator: ffprobe's rate, channels and duration, and ffmpeg's conversion to PCM, tone by tone in level and phase, within the bound its filter's difference from AudioKodec's sets; the suite also measures ffmpeg's filter itself, from single flipped bits, to confirm its delay. ffmpeg's source is not read |
 | ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
 | ffmpeg's G.722 and G.726 | G.722: every sample of the WAV and AU files ffmpeg writes, in all three modes through `-bits_per_codeword`, must equal ffmpeg's. G.726: ffmpeg's encoder writes the WAV and AU files, whose code words must decode to exactly the samples of the decoder `G726ConformanceTest` checks; ffmpeg's own G.726 decoder does not follow the Recommendation, so at 16 to 32 kbit/s its samples only bound the result, and at 40 kbit/s not even that |
@@ -107,8 +108,6 @@ exact commit that gets ported, and its licence recorded here at that point.
 | libFLAC | BSD-3-Clause | FLAC, alongside RFC 9639 |
 | Apple ALAC | Apache-2.0 | ALAC, both directions |
 | libebur128 | MIT | Loudness measurement |
-| libsamplerate | BSD-2-Clause | Resampling |
-| speexdsp | BSD-3-Clause | Resampling, as an alternative |
 | libgsm | MIT-style | GSM 06.10 |
 
 ## Layer III constant tables
@@ -807,6 +806,27 @@ checks each stage's passband ripple and the attenuation of every band that
 would alias, and prints the taps as Kotlin; they are pasted unedited. The
 `ID3 ` chunk in DSDIFF is not in the specification but is what every writer
 of DSDIFF tags uses.
+
+## Resampling
+
+The sinc resampler is a translation of speexdsp's, recorded here before the
+first line was written. speexdsp is the signal processing half of Speex, and
+its resampler stands on its own in one file.
+
+| Field | Value |
+|---|---|
+| Source | https://github.com/xiph/speexdsp, tag SpeexDSP-1.2.1, commit `1b28a0f61bc31162979e1f26f3981fc3637095c8` |
+| Licence | BSD 3-Clause, in `COPYING`, which is the same text as libspeex's, and the notice at the head of `resample.c`; both reproduced in `NOTICE` |
+| Files | `libspeexdsp/resample.c`, in its floating-point build without SIMD, with `libspeexdsp/arch.h` for the float forms of its arithmetic macros and `include/speex/speex_resampler.h` for its interface |
+| Never opened | `libspeexdsp/fftwrap.c` and `configure.ac`, which mention the GPL as a build option, and everything else outside the resampler |
+| Not translated | The fixed-point build, the SSE and NEON inner loops, and the handling of a rate or quality change mid-stream; none changes a sample of a stream at a fixed rate |
+
+libsamplerate, BSD 2-Clause since 2016, was the other candidate. speexdsp was
+chosen because its resampler is one self-contained file that computes its
+filter per stream, where libsamplerate's best converter carries large
+precomputed coefficient tables, and because the Speex decoder already
+translates code from the same authors under the same licence. The
+straight-line mode is AudioKodec's own and follows no reference.
 
 ## True Audio
 
