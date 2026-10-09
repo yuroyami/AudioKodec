@@ -644,6 +644,21 @@ conversion sit beside it. See [Mix channels](docs/mix.md).
 val stereo = Pcm.mixChannels(samples, frames, ChannelLayout.SURROUND_5_1, ChannelLayout.STEREO)
 ```
 
+## Measure loudness
+
+`LoudnessMeter` measures loudness as EBU R 128 defines it: integrated,
+momentary and short-term loudness, loudness range, and sample and true peak,
+a block at a time. It is a translation of libebur128 and matches it, and it
+produces ReplayGain values the tag writers take, so a library scan and its
+tag writes are one step. See [Measure loudness](docs/loudness.md).
+
+```kotlin
+val meter = LoudnessMeter(format.sampleRate, format.channelLayout)
+meter.add(samples)
+meter.finish()
+val tags = AudioKodec.readTags(bytes).edit { setReplayGain(meter.replayGain()) }
+```
+
 ## Precision
 
 Decoding produces Float32, which carries 8-, 16- and 24-bit audio exactly. It

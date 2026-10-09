@@ -725,6 +725,36 @@ final class io.github.yuroyami.audiokodec/IntAudioFrame { // io.github.yuroyami.
         final fun <get-samples>(): kotlin/IntArray // io.github.yuroyami.audiokodec/IntAudioFrame.samples.<get-samples>|<get-samples>(){}[0]
 }
 
+final class io.github.yuroyami.audiokodec/LoudnessMeter { // io.github.yuroyami.audiokodec/LoudnessMeter|null[0]
+    constructor <init>(kotlin/Int, io.github.yuroyami.audiokodec/ChannelLayout, kotlin/Boolean = ...) // io.github.yuroyami.audiokodec/LoudnessMeter.<init>|<init>(kotlin.Int;io.github.yuroyami.audiokodec.ChannelLayout;kotlin.Boolean){}[0]
+    constructor <init>(kotlin/Int, kotlin/Int, kotlin/Boolean = ...) // io.github.yuroyami.audiokodec/LoudnessMeter.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Boolean){}[0]
+
+    final val integratedLoudness // io.github.yuroyami.audiokodec/LoudnessMeter.integratedLoudness|{}integratedLoudness[0]
+        final fun <get-integratedLoudness>(): kotlin/Double // io.github.yuroyami.audiokodec/LoudnessMeter.integratedLoudness.<get-integratedLoudness>|<get-integratedLoudness>(){}[0]
+    final val layout // io.github.yuroyami.audiokodec/LoudnessMeter.layout|{}layout[0]
+        final fun <get-layout>(): io.github.yuroyami.audiokodec/ChannelLayout // io.github.yuroyami.audiokodec/LoudnessMeter.layout.<get-layout>|<get-layout>(){}[0]
+    final val loudnessRange // io.github.yuroyami.audiokodec/LoudnessMeter.loudnessRange|{}loudnessRange[0]
+        final fun <get-loudnessRange>(): kotlin/Double // io.github.yuroyami.audiokodec/LoudnessMeter.loudnessRange.<get-loudnessRange>|<get-loudnessRange>(){}[0]
+    final val measureTruePeak // io.github.yuroyami.audiokodec/LoudnessMeter.measureTruePeak|{}measureTruePeak[0]
+        final fun <get-measureTruePeak>(): kotlin/Boolean // io.github.yuroyami.audiokodec/LoudnessMeter.measureTruePeak.<get-measureTruePeak>|<get-measureTruePeak>(){}[0]
+    final val momentaryLoudness // io.github.yuroyami.audiokodec/LoudnessMeter.momentaryLoudness|{}momentaryLoudness[0]
+        final fun <get-momentaryLoudness>(): kotlin/Double // io.github.yuroyami.audiokodec/LoudnessMeter.momentaryLoudness.<get-momentaryLoudness>|<get-momentaryLoudness>(){}[0]
+    final val sampleRate // io.github.yuroyami.audiokodec/LoudnessMeter.sampleRate|{}sampleRate[0]
+        final fun <get-sampleRate>(): kotlin/Int // io.github.yuroyami.audiokodec/LoudnessMeter.sampleRate.<get-sampleRate>|<get-sampleRate>(){}[0]
+    final val shortTermLoudness // io.github.yuroyami.audiokodec/LoudnessMeter.shortTermLoudness|{}shortTermLoudness[0]
+        final fun <get-shortTermLoudness>(): kotlin/Double // io.github.yuroyami.audiokodec/LoudnessMeter.shortTermLoudness.<get-shortTermLoudness>|<get-shortTermLoudness>(){}[0]
+
+    final fun add(kotlin/FloatArray, kotlin/Int = ..., kotlin/Int = ...) // io.github.yuroyami.audiokodec/LoudnessMeter.add|add(kotlin.FloatArray;kotlin.Int;kotlin.Int){}[0]
+    final fun finish() // io.github.yuroyami.audiokodec/LoudnessMeter.finish|finish(){}[0]
+    final fun replayGain(): io.github.yuroyami.audiokodec.tag/ReplayGain? // io.github.yuroyami.audiokodec/LoudnessMeter.replayGain|replayGain(){}[0]
+    final fun samplePeak(kotlin/Int): kotlin/Double // io.github.yuroyami.audiokodec/LoudnessMeter.samplePeak|samplePeak(kotlin.Int){}[0]
+    final fun truePeak(kotlin/Int): kotlin/Double // io.github.yuroyami.audiokodec/LoudnessMeter.truePeak|truePeak(kotlin.Int){}[0]
+
+    final object Companion { // io.github.yuroyami.audiokodec/LoudnessMeter.Companion|null[0]
+        final fun albumReplayGain(kotlin.collections/List<io.github.yuroyami.audiokodec/LoudnessMeter>): kotlin.collections/List<io.github.yuroyami.audiokodec.tag/ReplayGain?> // io.github.yuroyami.audiokodec/LoudnessMeter.Companion.albumReplayGain|albumReplayGain(kotlin.collections.List<io.github.yuroyami.audiokodec.LoudnessMeter>){}[0]
+    }
+}
+
 final class io.github.yuroyami.audiokodec/Resampler { // io.github.yuroyami.audiokodec/Resampler|null[0]
     constructor <init>(kotlin/Int, kotlin/Int, kotlin/Int, io.github.yuroyami.audiokodec/ResampleQuality = ...) // io.github.yuroyami.audiokodec/Resampler.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int;io.github.yuroyami.audiokodec.ResampleQuality){}[0]
 

@@ -1205,6 +1205,13 @@ speexdsp's windowed sinc resampler at quality 10, sample for sample; a
 straight-line mode is there for previews. See
 [Change the sample rate](resample.md).
 
+## Measuring loudness
+
+`LoudnessMeter` gives the integrated, momentary and short-term loudness,
+loudness range and true peak of EBU R 128, translated from libebur128, and
+turns them into ReplayGain values for the tag writers. See
+[Measure loudness](loudness.md).
+
 ## Handling bad input
 
 Every failure AudioKodec reports is an `AudioKodecException`:

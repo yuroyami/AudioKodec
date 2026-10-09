@@ -176,6 +176,10 @@ test "$(git -C reference/ilbc/src/abseil-cpp rev-parse HEAD)" = 1bae23e32ba1f1af
 # translates; the resampler oracle test builds resample.c on its own.
 reference_checkout reference/speexdsp https://github.com/xiph/speexdsp.git 1b28a0f61bc31162979e1f26f3981fc3637095c8
 
+# libebur128, MIT, is what the loudness meter translates; the loudness oracle
+# test builds ebur128.c on its own.
+reference_checkout reference/ebur128 https://github.com/jiixyj/libebur128.git 67b33abe1558160ed76ada1322329b0e9e058b02
+
 # The ITU's digital test sequences for G.726 and G.722, Appendix II to each
 # Recommendation: test data, checked by the conformance tests and never committed.
 itu_sequences() {

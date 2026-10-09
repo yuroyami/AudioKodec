@@ -439,7 +439,8 @@ A 13 MiB image also checks streaming allocations and an exact metaflac export.
 | WAV channel mask to layout and back | ✅ |
 | Sample rate conversion, streaming and allocation-free | ✅ windowed sinc translated from speexdsp 1.2.1 at quality 10, sample for sample against its float build at twelve rate pairs; distortion and noise on a 1 kHz tone between -134.8 and -169.3 dB, against -150.5 to -161.4 dB for ffmpeg's soxr at 28 bits, with level and phase agreeing within speexdsp's passband ripple. A straight-line mode for previews |
 | Mixing between channel layouts | ✅ ITU-R BS.775-3 Table 2 for every 3/2 downmix, ffmpeg's rules for side, back centre, front centre pair and top front positions, refusal of a conversion with no defined answer; 24 conversions agree with ffmpeg's float mixing sample for sample. Per-channel gain and mid-side, exact up to 23 bits |
-| Loudness, peaks | ❌ #27 and #28 |
+| Loudness measurement and ReplayGain | ✅ translated from libebur128 1.2.6: integrated, momentary and short-term loudness and loudness range equal to libebur128's within double rounding, integrated loudness within 0.1 LU of ffmpeg's `ebur128`, EBU Tech 3341 cases 1, 2, 3 and 6 and Tech 3342 case 1; true peak by sinc oversampling. ReplayGain 2 track and album values compose with the tag writers |
+| Waveform peaks | ❌ #28 |
 
 ## Decoding
 

@@ -38,6 +38,7 @@ can hold checkouts without them ever reaching the repository.
 | DSF | Sony DSF File Format Specification, version 1.01; see [DSD](#dsd) |
 | DSDIFF | Philips DSDIFF File Format Specification, version 1.5; see [DSD](#dsd) |
 | Channel mixing | Recommendation ITU-R BS.775-3, Annex 4, Table 2; see [Channel mixing](#channel-mixing) |
+| Loudness | ITU-R BS.1770 through libebur128, with the test signals of EBU Tech 3341 and 3342; see [Loudness](#loudness) |
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
 | Microsoft ADPCM | [Microsoft Multimedia Data Standards Update, 15 April 1994](https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/RIFFNEW.pdf), pages 22 to 26 |
 | QuickTime IMA (`ima4`) | Apple QuickTime File Format documentation |
@@ -88,6 +89,7 @@ Run as programs, never read as source.
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
 | libilbc 3.0.4 | iLBC: `ilbc_oracle.c`, a few lines over libilbc's public interface built from the pinned sources under `reference/ilbc`, encodes speech, silence, clipping, noise and bursts in both frame sizes and decodes them; the test wraps the frames in the storage format of RFC 3952 and ffmpeg copies them into CAF and QuickTime files. Every sample must be libilbc's integer, also for runs of random frames, which exercise concealment, and for frames altered to state the codebook index libilbc refuses, which must be refused at the same frame |
+| libebur128 1.2.6 and ffmpeg's `ebur128` | Loudness: `ebur128_oracle.c` over libebur128's public interface, built from the pinned sources under `reference/ebur128`, measures tones and programmes at 32 to 96 kHz in mono, stereo and 5.1, whose integrated, momentary and short-term loudness, loudness range and sample peaks `LoudnessMeter` must equal within double rounding, fed in blocks of random size. ffmpeg's `ebur128` filter, an independent implementation, must agree on integrated loudness within 0.1 LU. Only run |
 | ffmpeg's channel mixing | `ChannelMixOracleTest` mixes a different tone in every channel through 24 layout conversions, from 7.1, 6.1, 5.1, 5.0, quad, 3.0 and stereo down, and mono and stereo up, which `Pcm.mixChannels` must match sample for sample within float rounding. Only run |
 | speexdsp 1.2.1 and ffmpeg's soxr | Resampling: `resample_oracle.c` over speexdsp's resampler, built from the pinned sources under `reference/speexdsp` in its float build without SIMD or fused multiply-adds, converts tones and noise at twelve rate pairs, mono and stereo, which `Resampler` must reproduce sample for sample however its input is split into blocks. ffmpeg's `aresample` with soxr at 28 bits converts the same tones, whose level and phase must agree within speexdsp's passband ripple; it is only run |
 | ffmpeg and ffprobe, for DSD | DSF and DSDIFF files the test writes from a sigma delta modulator: ffprobe's rate, channels and duration, and ffmpeg's conversion to PCM, tone by tone in level and phase, within the bound its filter's difference from AudioKodec's sets; the suite also measures ffmpeg's filter itself, from single flipped bits, to confirm its delay. ffmpeg's source is not read |
@@ -823,6 +825,24 @@ BS.775 covers 3/2 material without a low-frequency channel. The rules for
 the side, back centre, front centre pair and top front positions were
 measured from ffmpeg's float mixing with a different tone in every input
 channel, and the oracle suite holds AudioKodec to them.
+
+## Loudness
+
+The loudness meter is a translation of libebur128, recorded here before the
+first line was written.
+
+| Field | Value |
+|---|---|
+| Source | https://github.com/jiixyj/libebur128, tag v1.2.6, commit `67b33abe1558160ed76ada1322329b0e9e058b02` |
+| Licence | MIT, in `COPYING`, reproduced in `NOTICE` |
+| Files | `ebur128/ebur128.c` and `ebur128/ebur128.h`; `ebur128/queue/sys/queue.h`, BSD, only to build the oracle |
+| Never opened | Nothing in the tree mentions a copyleft licence. ffmpeg's `ebur128` filter was only run |
+| Not ported | The histogram mode, the change of parameters mid-stream, the integer sample paths, and the 49-tap true peak interpolator, replaced by AudioKodec's own resampler |
+
+The figures the tests expect come from EBU Tech 3341 (2023), Table 1, cases
+1, 2, 3 and 6, SHA-256 `dd5a7b0b611024e616b86a42c89eed0ded33f3129afc1994204885216fa1619e`,
+and EBU Tech 3342 (2023), Table 1, case 1, SHA-256
+`a12cb59fa4a8258d400bc931c7a79326a83a27c1cfd7b38220bc85ba5cfa89d8`.
 
 ## Resampling
 

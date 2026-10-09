@@ -79,6 +79,10 @@ audio and Ogg.
   of RFC 3952 and from CAF and QuickTime, translated from WebRTC in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with exact seeking.
+- Loudness measurement, `LoudnessMeter`: integrated, momentary and
+  short-term loudness, loudness range and sample and true peak as EBU R 128
+  defines them, translated from libebur128 1.2.6 and matching it, with
+  ReplayGain 2 track and album values for the tag writers.
 - Channel mixing between layouts, `Pcm.mixChannels`, with the downmix
   coefficients of ITU-R BS.775 and ffmpeg's rules for the positions BS.775
   leaves out, refusing a conversion with no defined answer; per-channel gain

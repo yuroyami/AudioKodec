@@ -386,6 +386,31 @@ public final class io/github/yuroyami/audiokodec/IntPcmSourceKt {
 	public static synthetic fun asIntPcmSource$default ([ILio/github/yuroyami/audiokodec/AudioFormat;IIILjava/lang/Object;)Lio/github/yuroyami/audiokodec/IntPcmSource;
 }
 
+public final class io/github/yuroyami/audiokodec/LoudnessMeter {
+	public static final field Companion Lio/github/yuroyami/audiokodec/LoudnessMeter$Companion;
+	public fun <init> (IIZ)V
+	public synthetic fun <init> (IIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILio/github/yuroyami/audiokodec/ChannelLayout;Z)V
+	public synthetic fun <init> (ILio/github/yuroyami/audiokodec/ChannelLayout;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun add ([FII)V
+	public static synthetic fun add$default (Lio/github/yuroyami/audiokodec/LoudnessMeter;[FIIILjava/lang/Object;)V
+	public final fun finish ()V
+	public final fun getIntegratedLoudness ()D
+	public final fun getLayout ()Lio/github/yuroyami/audiokodec/ChannelLayout;
+	public final fun getLoudnessRange ()D
+	public final fun getMeasureTruePeak ()Z
+	public final fun getMomentaryLoudness ()D
+	public final fun getSampleRate ()I
+	public final fun getShortTermLoudness ()D
+	public final fun replayGain ()Lio/github/yuroyami/audiokodec/tag/ReplayGain;
+	public final fun samplePeak (I)D
+	public final fun truePeak (I)D
+}
+
+public final class io/github/yuroyami/audiokodec/LoudnessMeter$Companion {
+	public final fun albumReplayGain (Ljava/util/List;)Ljava/util/List;
+}
+
 public final class io/github/yuroyami/audiokodec/Pcm {
 	public static final field INSTANCE Lio/github/yuroyami/audiokodec/Pcm;
 	public final fun applyChannelGains ([FI[F)[F
