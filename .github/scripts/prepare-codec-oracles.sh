@@ -140,6 +140,12 @@ if [[ ! -d reference/mpc/r495 ]]; then
 fi
 command -v mpcenc >/dev/null
 
+# libspeex 1.2.1 is BSD; the oracle harness is compiled against these sources
+# with libogg. speexenc and speexdec come from the system's speex package.
+reference_checkout reference/speex/src https://github.com/xiph/speex.git 5dceaaf3e23ee7fd17c80cb5f02a838fd6c18e01
+command -v speexenc >/dev/null
+command -v speexdec >/dev/null
+
 vectors=reference/opus_testvectors-rfc8251.tar.gz
 if [[ ! -f "$vectors" ]]; then
     curl --fail --show-error --location --retry 2 --max-time 180 \

@@ -174,9 +174,7 @@ The Ogg container is read in full: pages and their checksums, packets
 reassembled across pages, files carrying several logical streams at once, and
 files chained one after another.
 
-Vorbis, Opus and FLAC inside Ogg all decode, seeking included. Speex is
-identified and its headers, length and tags are read; its audio does not
-decode yet, and `open` says so by name rather than failing obscurely.
+Vorbis, Opus, FLAC and Speex inside Ogg all decode, seeking included.
 
 [Compatible chained links](docs/ogg-chains.md) play in sequence, with each
 link's own decoder state and trimming. Duration and seek positions cover the
@@ -321,6 +319,20 @@ translated from libmpcdec, BSD-licensed, and works in its single-precision
 arithmetic. On the JVM every sample is the float the reference decoder
 gives, which the test suite checks on files of every quality. Stream
 version 7 and older are refused by name. See [Musepack](docs/musepack.md).
+
+## Speex
+
+Speex inside Ogg decodes in all three of its modes, narrowband,
+wideband and ultra-wideband, at every quality, with variable bitrate,
+discontinuous transmission, several frames to a packet, and in-band stereo.
+It decodes as `speexdec` does, with the perceptual enhancer on, and to the
+same length, trimmed at both ends exactly as `speexdec` trims. The decoder is
+translated from libspeex 1.2.1, BSD-licensed, in its floating-point build's
+arithmetic, and on the JVM every sample is the float libspeex gives, which
+the test suite checks in every mode. Seeking restarts the decoder a short
+run-up before the target, so the samples after a seek converge on a
+continuous decode rather than equalling it; a seek to the start is exact.
+See [Speex](docs/speex.md).
 
 ## True Audio
 
@@ -523,7 +535,7 @@ and `42ni` is 24-bit.
 
 | Container | Codings |
 |---|---|
-| Ogg | Vorbis, Opus and FLAC, with up to 256 simultaneous logical streams. Speex has its headers, length and tags read, and its audio is not decoded yet. Tags can be rewritten; audio encoding is not implemented |
+| Ogg | Vorbis, Opus, FLAC and Speex, with up to 256 simultaneous logical streams. Tags can be rewritten; audio encoding is not implemented |
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |

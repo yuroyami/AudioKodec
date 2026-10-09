@@ -119,12 +119,13 @@ internal object OggChain {
             AudioCodec.FLAC -> OggFlacDecoder(childReader, link, options)
             AudioCodec.VORBIS -> VorbisDecoder(childReader, link, options)
             AudioCodec.OPUS -> OggOpusDecoder(childReader, link, options)
+            AudioCodec.SPEEX -> OggSpeexDecoder(childReader, link, options)
             else -> throw UnsupportedFormatException(AudioContainer.OGG,
                 "this Ogg link carries ${link.audio?.codecName ?: "no audio"}, which AudioKodec cannot decode yet")
         }
         if (parsed.links.size == 1) return open(reader, parsed.links[0])
         for (link in parsed.links) {
-            if (link.audio?.codec !in listOf(AudioCodec.FLAC, AudioCodec.VORBIS, AudioCodec.OPUS)) {
+            if (link.audio?.codec !in listOf(AudioCodec.FLAC, AudioCodec.VORBIS, AudioCodec.OPUS, AudioCodec.SPEEX)) {
                 throw UnsupportedFormatException(AudioContainer.OGG,
                     "this Ogg chain carries ${link.audio?.codecName ?: "no audio"}, which AudioKodec cannot decode yet")
             }

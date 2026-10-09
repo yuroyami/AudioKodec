@@ -132,6 +132,8 @@ internal object OggAnalyser {
         val terminalFailure: AudioKodecException?,
         /** Setup used to read packet lengths; chains release it before parsing another link. */
         var vorbisConfig: VorbisConfig?,
+        /** For Speex, where speexdec's output starts and how long it is. */
+        val speexTiming: OggSpeexTiming.Timing? = null,
     )
 
     private class Headers(
@@ -172,6 +174,11 @@ internal object OggAnalyser {
             AudioCodec.VORBIS, AudioCodec.FLAC -> audioStartGranule(reader, ogg, headers, streamEnd, options, vorbisConfig)
             else -> 0L
         }
+        val speexTiming = if (audio.codec == AudioCodec.SPEEX && last != null) {
+            OggSpeexTiming.of(ogg, audio, audioStart, streamEnd, granule, options)
+        } else {
+            null
+        }
         val duration = when {
             // An empty EOS page immediately after the headers represents a
             // zero-frame link, with no audio packets whose damage EOF could hide.
@@ -180,6 +187,7 @@ internal object OggAnalyser {
             // the decoder meet any later damage rather than declaring EOF.
             granule <= 0 -> null
             audio.codec == AudioCodec.OPUS -> (granule - startGranule - audio.preSkip).coerceAtLeast(0L)
+            speexTiming != null -> speexTiming.duration
             else -> (granule - startGranule).coerceAtLeast(0L)
         }
         return Parsed(
@@ -195,6 +203,7 @@ internal object OggAnalyser {
             headersEndAtPageBoundary = headers.endsPage,
             terminalFailure = end.failure,
             vorbisConfig = vorbisConfig,
+            speexTiming = speexTiming,
         )
     }
 

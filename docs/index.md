@@ -338,7 +338,7 @@ headers cannot be read.
 | Vorbis | read | decodes, with seeking |
 | FLAC | read | decodes, with seeking |
 | Opus | read | decodes, with seeking |
-| Speex | read | not yet |
+| Speex | read | decodes, with seeking that converges after a run-up |
 
 ```kotlin
 val info = AudioKodec.probe(oggBytes)
@@ -520,6 +520,14 @@ Musepack files in stream version 8 decode to the exact length their header
 states, mono or stereo. Seeking is exact, except that noise substitution
 draws new noise after a seek. Stream version 7 and older are refused by
 name. APEv2 tags are read as for any file. See [Musepack](musepack.md).
+
+## Speex
+
+Speex inside Ogg decodes in narrowband, wideband and ultra-wideband, mono or
+in-band stereo, to the samples and the length `speexdec` gives. Seeking
+restarts the decoder 25 frames before the target, so the samples after a
+seek converge on a continuous decode; a seek to the start is exact. Bitstream
+versions other than 4 are refused by name. See [Speex](speex.md).
 
 ## True Audio
 

@@ -79,6 +79,7 @@ Run as programs, never read as source.
 | mac | Monkey's Audio, built from the SDK the port follows, at every compression level from fast to insane, 8, 16, 24 and 32-bit integers and 32-bit float, one to eight channels except seven; every file must decode to exactly the input integers and to exactly what `mac -d` writes |
 | tta (libtta 2.3) | True Audio, the format authors' encoder and decoder, built from `libtta-c-2.3.tar.gz` (SourceForge, SHA-256 `68ba6db2d494dcd4aa6832a40952b88a3d50ca1174ab0ef1e091db16992303c7`). LGPL, so it is built and run as a program and its source is never opened. Its files at 16, 20 and 24 bits with one to six channels, and ffmpeg's at 8, 16 and 24 bits with up to eight, must decode to exactly the input integers, to exactly what `tta -d` writes and to exactly what ffmpeg decodes. It also writes the password-protected files that must be refused by name |
 | mpcenc and libmpcdec r495 | Musepack: `mpcenc` from the operating system's `musepack-tools` package writes the files, and `mpc_float_oracle.c`, a few lines over libmpcdec's public API compiled against the r495 sources, writes the floats the reference decodes them to. `mpcdec` itself writes only 16-bit samples. Every sample must be the same float, at qualities 0 to 10, at 32, 44.1 and 48 kHz, mono and stereo, with each mid/side mode and with noise substitution. The encoder is LGPL and only run |
+| speexenc, speexdec and libspeex 1.2.1 | Speex: `speexenc` from the operating system's `speex` package writes the files, in all three modes, at every narrowband quality and across the others, with variable and average bitrate, voice activity detection with discontinuous transmission, several frames to a packet, and stereo. `speex_float_oracle.c`, a few lines over libogg and libspeex's public API compiled against the 1.2.1 sources without SSE, writes the floats the reference decodes them to, which every sample must equal. `speexdec` itself writes 16-bit samples from a build with SSE, so it gives only the length, which must be the same |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -630,6 +631,40 @@ counts the short codes of a combination's rank, is declared with 512
 entries and initialised with 511, so its entry for 16 of 32 is 0 rather than
 472661434. The entry is used when 16 of 32 bands are coded mid and side, so
 the decoder keeps the reference's 0.
+
+## Speex
+
+The decoder is a translation of libspeex and speexdec, recorded here before
+the first line was written.
+
+| Field | Value |
+|---|---|
+| Source | https://github.com/xiph/speex.git, tag Speex-1.2.1, commit `5dceaaf3e23ee7fd17c80cb5f02a838fd6c18e01` |
+| Licence | BSD 3-Clause, `COPYING` and the header of every file read, reproduced in `NOTICE` |
+| Files | In `libspeex`: `bits.c`, `nb_celp.c` and `.h`, `sb_celp.c` and `.h`, `modes.c`, `modes_wb.c` and `modes.h`, `filters.c` and `.h`, `lsp.c` and `.h`, `quant_lsp.c` and `.h`, `ltp.c` and `.h`, `cb_search.c` and `.h`, `stereo.c`, `speex.c`, `speex_callbacks.c`, `speex_header.c`, `arch.h`, `math_approx.h`, `stack_alloc.h` and `os_support.h`, and the table files `exc_*_table.c`, `gain_table.c`, `gain_table_lbr.c`, `hexc_table.c`, `hexc_10_32_table.c`, `high_lsp_tables.c` and `lsp_tables_nb.c`; `include/speex/*.h`; and `src/speexdec.c` for how the tool sets up the decoder and trims its output |
+| Never opened | `libspeex/bfin.h`, `libspeex/fftwrap.c`, `libspeex/quant_lsp_bfin.h` and `src/getopt*`, which mention the GPL, and everything else outside the decoder |
+| Not ported | The encoder, the fixed-point build, the SSE and Blackfin kernels, packet loss concealment, the jitter buffer and speexdsp |
+
+The floating-point build is the one translated, without SSE, which changes
+the order of some sums: Ubuntu's `speexdec` is built with SSE and its output
+differs from the plain build's by up to 0.62 of a 16-bit step, so the oracle
+is the plain build, compiled from these sources. Where C promotes a sum to
+double because of a double constant, the translation computes in double too
+and rounds where C stores to a float.
+
+The tables were extracted from the table files and from `nb_celp.c`,
+`sb_celp.c`, `filters.c` and `stereo.c` by `reference/speex/gen_kotlin.py`, so none was typed; the script checks every
+table's length against the size its declaration states, and writes float
+constants with the precision C gives them, single where the literal has an
+`f` and rounded from double where it has none.
+
+`speexdec` works page by page, and the decoder reproduces its timing rather
+than the granule positions alone: a stream whose first audio page is not its
+last loses the encoder's delay and the decoder's lookahead at the start and
+is the final granule position long; a stream of one audio page loses nothing
+at the start and runs on for the decoder's lookahead; and either ends where
+the frames run out. Every file in the oracle suite is exactly as long as
+`speexdec`'s output.
 
 ## True Audio
 

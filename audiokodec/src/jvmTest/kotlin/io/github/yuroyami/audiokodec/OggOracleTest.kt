@@ -468,6 +468,36 @@ class OggOracleTest {
                 seconds > 0.9 && seconds < 1.1,
                 "$what: reported $seconds seconds where one was encoded",
             )
+            if (codec == AudioCodec.SPEEX) speexAgreesWithSpeexdec(ogg, what)
+        }
+    }
+
+    /**
+     * speexdec writes 16-bit samples, rounded from libspeex's floats, so
+     * AudioKodec's floats must be within one step of them: half a step of
+     * rounding, and less than half again for the vector arithmetic a
+     * distribution's libspeex may be built with. SpeexOracleTest compares the
+     * floats themselves.
+     */
+    private fun speexAgreesWithSpeexdec(ogg: File, what: String) {
+        val speexdec = System.getenv("PATH").orEmpty().split(File.pathSeparator)
+            .map { File(it, "speexdec") }.firstOrNull { it.canExecute() }
+        org.junit.Assume.assumeTrue("speexdec is required to compare $what's samples", speexdec != null)
+        val wav = temp("${ogg.nameWithoutExtension}.speexdec.wav")
+        wav.delete()
+        assertTrue(tryRun(listOf(speexdec!!.absolutePath, ogg.absolutePath, wav.absolutePath)), "$what: speexdec")
+        val bytes = wav.readBytes()
+        var at = 12
+        while (String(bytes, at, 4) != "data") {
+            at += 8 + java.nio.ByteBuffer.wrap(bytes, at + 4, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).int
+        }
+        val count = java.nio.ByteBuffer.wrap(bytes, at + 4, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).int / 2
+        val pcm = java.nio.ByteBuffer.wrap(bytes, at + 8, count * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+        val decoded = AudioKodec.decode(ogg.readBytes()).samples
+        assertEquals(count, decoded.size, "$what: speexdec's length")
+        for (i in 0 until count) {
+            val diff = kotlin.math.abs(decoded[i] * 32768f - pcm.get(i))
+            assertTrue(diff <= 1f, "$what: sample $i is ${decoded[i] * 32768f} where speexdec gives ${pcm.get(i)}")
         }
     }
 

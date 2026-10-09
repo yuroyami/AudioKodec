@@ -38,8 +38,7 @@ audio and Ogg.
   order.
 - The Ogg container, read in full: pages and checksums, packet reassembly
   across pages, several logical streams at once, chained streams and granule
-  positions. Vorbis, Opus and FLAC inside Ogg all decode and seek; Speex has
-  its headers, length and comments read.
+  positions. Vorbis, Opus, FLAC and Speex inside Ogg all decode and seek.
 - MP4, M4A, M4B, 3GP and QuickTime, read: the box tree, sample tables, a
   `moov` before or after the audio, fragmented files, edit lists, and
   chapters from a chapter track or a Nero `chpl` list. ALAC, Opus, FLAC and
@@ -72,6 +71,11 @@ audio and Ogg.
   states, and seeking. Translated from libmpcdec, BSD-licensed, and on the
   JVM identical to it float for float. Stream version 7 and older are refused
   by name.
+- Speex inside Ogg, decoded: narrowband, wideband and ultra-wideband at every
+  quality, variable bitrate, discontinuous transmission and in-band stereo,
+  to the samples and length `speexdec` gives, and seeking. Translated from
+  libspeex 1.2.1, BSD-licensed, and on the JVM identical to its float build
+  float for float.
 - True Audio, decoded: 8 to 24 bits including 20-bit audio, any number of
   channels, exact integers through `IntPcmAccess`, every CRC verified, and
   exact seeking. Translated from the format authors' BSD-licensed decoder
