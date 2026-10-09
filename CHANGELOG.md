@@ -79,6 +79,9 @@ audio and Ogg.
   of RFC 3952 and from CAF and QuickTime, translated from WebRTC in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with exact seeking.
+- `Levels` for peak, RMS and clipping scans, silence at the ends, gain and
+  linear or logarithmic fades, and `Signals` for sine, square, noise and
+  silence.
 - Waveform data, `WaveformReducer`: per-bucket minimum, maximum and RMS
   of each channel, pushed a block at a time and pulled in bounded memory,
   identical however the audio is split.

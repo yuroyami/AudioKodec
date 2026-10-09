@@ -240,6 +240,17 @@ final enum class io.github.yuroyami.audiokodec/AudioContainer : kotlin/Enum<io.g
     final fun values(): kotlin/Array<io.github.yuroyami.audiokodec/AudioContainer> // io.github.yuroyami.audiokodec/AudioContainer.values|values#static(){}[0]
 }
 
+final enum class io.github.yuroyami.audiokodec/FadeCurve : kotlin/Enum<io.github.yuroyami.audiokodec/FadeCurve> { // io.github.yuroyami.audiokodec/FadeCurve|null[0]
+    enum entry LINEAR // io.github.yuroyami.audiokodec/FadeCurve.LINEAR|null[0]
+    enum entry LOGARITHMIC // io.github.yuroyami.audiokodec/FadeCurve.LOGARITHMIC|null[0]
+
+    final val entries // io.github.yuroyami.audiokodec/FadeCurve.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec/FadeCurve> // io.github.yuroyami.audiokodec/FadeCurve.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec/FadeCurve // io.github.yuroyami.audiokodec/FadeCurve.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec/FadeCurve> // io.github.yuroyami.audiokodec/FadeCurve.values|values#static(){}[0]
+}
+
 final enum class io.github.yuroyami.audiokodec/ResampleQuality : kotlin/Enum<io.github.yuroyami.audiokodec/ResampleQuality> { // io.github.yuroyami.audiokodec/ResampleQuality|null[0]
     enum entry LINEAR // io.github.yuroyami.audiokodec/ResampleQuality.LINEAR|null[0]
     enum entry SINC // io.github.yuroyami.audiokodec/ResampleQuality.SINC|null[0]
@@ -725,6 +736,21 @@ final class io.github.yuroyami.audiokodec/IntAudioFrame { // io.github.yuroyami.
         final fun <get-samples>(): kotlin/IntArray // io.github.yuroyami.audiokodec/IntAudioFrame.samples.<get-samples>|<get-samples>(){}[0]
 }
 
+final class io.github.yuroyami.audiokodec/LevelScan { // io.github.yuroyami.audiokodec/LevelScan|null[0]
+    final val clippedSamples // io.github.yuroyami.audiokodec/LevelScan.clippedSamples|{}clippedSamples[0]
+        final fun <get-clippedSamples>(): kotlin/Int // io.github.yuroyami.audiokodec/LevelScan.clippedSamples.<get-clippedSamples>|<get-clippedSamples>(){}[0]
+    final val firstClippedFrame // io.github.yuroyami.audiokodec/LevelScan.firstClippedFrame|{}firstClippedFrame[0]
+        final fun <get-firstClippedFrame>(): kotlin/Int // io.github.yuroyami.audiokodec/LevelScan.firstClippedFrame.<get-firstClippedFrame>|<get-firstClippedFrame>(){}[0]
+    final val peak // io.github.yuroyami.audiokodec/LevelScan.peak|{}peak[0]
+        final fun <get-peak>(): kotlin/Float // io.github.yuroyami.audiokodec/LevelScan.peak.<get-peak>|<get-peak>(){}[0]
+    final val peakChannel // io.github.yuroyami.audiokodec/LevelScan.peakChannel|{}peakChannel[0]
+        final fun <get-peakChannel>(): kotlin/Int // io.github.yuroyami.audiokodec/LevelScan.peakChannel.<get-peakChannel>|<get-peakChannel>(){}[0]
+    final val peakFrame // io.github.yuroyami.audiokodec/LevelScan.peakFrame|{}peakFrame[0]
+        final fun <get-peakFrame>(): kotlin/Int // io.github.yuroyami.audiokodec/LevelScan.peakFrame.<get-peakFrame>|<get-peakFrame>(){}[0]
+    final val rms // io.github.yuroyami.audiokodec/LevelScan.rms|{}rms[0]
+        final fun <get-rms>(): kotlin/Double // io.github.yuroyami.audiokodec/LevelScan.rms.<get-rms>|<get-rms>(){}[0]
+}
+
 final class io.github.yuroyami.audiokodec/LoudnessMeter { // io.github.yuroyami.audiokodec/LoudnessMeter|null[0]
     constructor <init>(kotlin/Int, io.github.yuroyami.audiokodec/ChannelLayout, kotlin/Boolean = ...) // io.github.yuroyami.audiokodec/LoudnessMeter.<init>|<init>(kotlin.Int;io.github.yuroyami.audiokodec.ChannelLayout;kotlin.Boolean){}[0]
     constructor <init>(kotlin/Int, kotlin/Int, kotlin/Boolean = ...) // io.github.yuroyami.audiokodec/LoudnessMeter.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Boolean){}[0]
@@ -773,6 +799,15 @@ final class io.github.yuroyami.audiokodec/Resampler { // io.github.yuroyami.audi
     final fun maxOutputFrames(kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/Resampler.maxOutputFrames|maxOutputFrames(kotlin.Int){}[0]
     final fun process(kotlin/FloatArray, kotlin/Int, kotlin/Int, kotlin/FloatArray, kotlin/Int): kotlin/Int // io.github.yuroyami.audiokodec/Resampler.process|process(kotlin.FloatArray;kotlin.Int;kotlin.Int;kotlin.FloatArray;kotlin.Int){}[0]
     final fun reset() // io.github.yuroyami.audiokodec/Resampler.reset|reset(){}[0]
+}
+
+final class io.github.yuroyami.audiokodec/SilenceBounds { // io.github.yuroyami.audiokodec/SilenceBounds|null[0]
+    final val isSilent // io.github.yuroyami.audiokodec/SilenceBounds.isSilent|{}isSilent[0]
+        final fun <get-isSilent>(): kotlin/Boolean // io.github.yuroyami.audiokodec/SilenceBounds.isSilent.<get-isSilent>|<get-isSilent>(){}[0]
+    final val soundEnd // io.github.yuroyami.audiokodec/SilenceBounds.soundEnd|{}soundEnd[0]
+        final fun <get-soundEnd>(): kotlin/Int // io.github.yuroyami.audiokodec/SilenceBounds.soundEnd.<get-soundEnd>|<get-soundEnd>(){}[0]
+    final val soundStart // io.github.yuroyami.audiokodec/SilenceBounds.soundStart|{}soundStart[0]
+        final fun <get-soundStart>(): kotlin/Int // io.github.yuroyami.audiokodec/SilenceBounds.soundStart.<get-soundStart>|<get-soundStart>(){}[0]
 }
 
 final class io.github.yuroyami.audiokodec/TruncatedStreamException : io.github.yuroyami.audiokodec/AudioKodecException { // io.github.yuroyami.audiokodec/TruncatedStreamException|null[0]
@@ -845,6 +880,14 @@ final object io.github.yuroyami.audiokodec/AudioKodec { // io.github.yuroyami.au
     final fun writeTags(kotlin/ByteArray, io.github.yuroyami.audiokodec.tag/TagBundle, io.github.yuroyami.audiokodec.tag/TagWriteOptions = ...): kotlin/ByteArray // io.github.yuroyami.audiokodec/AudioKodec.writeTags|writeTags(kotlin.ByteArray;io.github.yuroyami.audiokodec.tag.TagBundle;io.github.yuroyami.audiokodec.tag.TagWriteOptions){}[0]
 }
 
+final object io.github.yuroyami.audiokodec/Levels { // io.github.yuroyami.audiokodec/Levels|null[0]
+    final fun applyGain(kotlin/FloatArray, kotlin/Int, kotlin/Double, kotlin/Int = ..., kotlin/Int = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Levels.applyGain|applyGain(kotlin.FloatArray;kotlin.Int;kotlin.Double;kotlin.Int;kotlin.Int){}[0]
+    final fun fadeIn(kotlin/FloatArray, kotlin/Int, kotlin/Int, kotlin/Int, io.github.yuroyami.audiokodec/FadeCurve = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Levels.fadeIn|fadeIn(kotlin.FloatArray;kotlin.Int;kotlin.Int;kotlin.Int;io.github.yuroyami.audiokodec.FadeCurve){}[0]
+    final fun fadeOut(kotlin/FloatArray, kotlin/Int, kotlin/Int, kotlin/Int, io.github.yuroyami.audiokodec/FadeCurve = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Levels.fadeOut|fadeOut(kotlin.FloatArray;kotlin.Int;kotlin.Int;kotlin.Int;io.github.yuroyami.audiokodec.FadeCurve){}[0]
+    final fun findSilence(kotlin/FloatArray, kotlin/Int, kotlin/Double = ..., kotlin/Int = ..., kotlin/Int = ...): io.github.yuroyami.audiokodec/SilenceBounds // io.github.yuroyami.audiokodec/Levels.findSilence|findSilence(kotlin.FloatArray;kotlin.Int;kotlin.Double;kotlin.Int;kotlin.Int){}[0]
+    final fun scan(kotlin/FloatArray, kotlin/Int, kotlin/Int = ..., kotlin/Int = ..., kotlin/Float = ...): io.github.yuroyami.audiokodec/LevelScan // io.github.yuroyami.audiokodec/Levels.scan|scan(kotlin.FloatArray;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Float){}[0]
+}
+
 final object io.github.yuroyami.audiokodec/Pcm { // io.github.yuroyami.audiokodec/Pcm|null[0]
     final fun applyChannelGains(kotlin/FloatArray, kotlin/Int, kotlin/FloatArray): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.applyChannelGains|applyChannelGains(kotlin.FloatArray;kotlin.Int;kotlin.FloatArray){}[0]
     final fun clampInPlace(kotlin/FloatArray, kotlin/Int = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.clampInPlace|clampInPlace(kotlin.FloatArray;kotlin.Int){}[0]
@@ -861,6 +904,14 @@ final object io.github.yuroyami.audiokodec/Pcm { // io.github.yuroyami.audiokode
     final fun resample(kotlin/FloatArray, kotlin/Int, kotlin/Int, kotlin/Int, io.github.yuroyami.audiokodec/ResampleQuality = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.resample|resample(kotlin.FloatArray;kotlin.Int;kotlin.Int;kotlin.Int;io.github.yuroyami.audiokodec.ResampleQuality){}[0]
     final fun scaleOf(kotlin/Int): kotlin/Double // io.github.yuroyami.audiokodec/Pcm.scaleOf|scaleOf(kotlin.Int){}[0]
     final fun stereoToMidSide(kotlin/FloatArray, kotlin/Int, kotlin/FloatArray? = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Pcm.stereoToMidSide|stereoToMidSide(kotlin.FloatArray;kotlin.Int;kotlin.FloatArray?){}[0]
+}
+
+final object io.github.yuroyami.audiokodec/Signals { // io.github.yuroyami.audiokodec/Signals|null[0]
+    final fun dbToLinear(kotlin/Double): kotlin/Double // io.github.yuroyami.audiokodec/Signals.dbToLinear|dbToLinear(kotlin.Double){}[0]
+    final fun silence(kotlin/Int, kotlin/Int): kotlin/FloatArray // io.github.yuroyami.audiokodec/Signals.silence|silence(kotlin.Int;kotlin.Int){}[0]
+    final fun sine(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Double, kotlin/Float = ..., kotlin/Double = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Signals.sine|sine(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Double;kotlin.Float;kotlin.Double){}[0]
+    final fun square(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/Double, kotlin/Float = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Signals.square|square(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Double;kotlin.Float){}[0]
+    final fun whiteNoise(kotlin/Int, kotlin/Int, kotlin/Float = ..., kotlin/Int = ...): kotlin/FloatArray // io.github.yuroyami.audiokodec/Signals.whiteNoise|whiteNoise(kotlin.Int;kotlin.Int;kotlin.Float;kotlin.Int){}[0]
 }
 
 final fun (kotlin/ByteArray).io.github.yuroyami.audiokodec/asAudioSource(): io.github.yuroyami.audiokodec/AudioSource // io.github.yuroyami.audiokodec/asAudioSource|asAudioSource@kotlin.ByteArray(){}[0]

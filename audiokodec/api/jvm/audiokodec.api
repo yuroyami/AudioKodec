@@ -359,6 +359,14 @@ public final class io/github/yuroyami/audiokodec/EncodeTarget$Companion {
 	public final fun wavMuLaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;
 }
 
+public final class io/github/yuroyami/audiokodec/FadeCurve : java/lang/Enum {
+	public static final field LINEAR Lio/github/yuroyami/audiokodec/FadeCurve;
+	public static final field LOGARITHMIC Lio/github/yuroyami/audiokodec/FadeCurve;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/yuroyami/audiokodec/FadeCurve;
+	public static fun values ()[Lio/github/yuroyami/audiokodec/FadeCurve;
+}
+
 public final class io/github/yuroyami/audiokodec/IntAudioFrame {
 	public fun <init> (Lio/github/yuroyami/audiokodec/AudioFormat;[IIJI)V
 	public final fun getBitDepth ()I
@@ -384,6 +392,29 @@ public abstract interface class io/github/yuroyami/audiokodec/IntPcmSource {
 public final class io/github/yuroyami/audiokodec/IntPcmSourceKt {
 	public static final fun asIntPcmSource ([ILio/github/yuroyami/audiokodec/AudioFormat;II)Lio/github/yuroyami/audiokodec/IntPcmSource;
 	public static synthetic fun asIntPcmSource$default ([ILio/github/yuroyami/audiokodec/AudioFormat;IIILjava/lang/Object;)Lio/github/yuroyami/audiokodec/IntPcmSource;
+}
+
+public final class io/github/yuroyami/audiokodec/LevelScan {
+	public final fun getClippedSamples ()I
+	public final fun getFirstClippedFrame ()I
+	public final fun getPeak ()F
+	public final fun getPeakChannel ()I
+	public final fun getPeakFrame ()I
+	public final fun getRms ()D
+}
+
+public final class io/github/yuroyami/audiokodec/Levels {
+	public static final field INSTANCE Lio/github/yuroyami/audiokodec/Levels;
+	public final fun applyGain ([FIDII)[F
+	public static synthetic fun applyGain$default (Lio/github/yuroyami/audiokodec/Levels;[FIDIIILjava/lang/Object;)[F
+	public final fun fadeIn ([FIIILio/github/yuroyami/audiokodec/FadeCurve;)[F
+	public static synthetic fun fadeIn$default (Lio/github/yuroyami/audiokodec/Levels;[FIIILio/github/yuroyami/audiokodec/FadeCurve;ILjava/lang/Object;)[F
+	public final fun fadeOut ([FIIILio/github/yuroyami/audiokodec/FadeCurve;)[F
+	public static synthetic fun fadeOut$default (Lio/github/yuroyami/audiokodec/Levels;[FIIILio/github/yuroyami/audiokodec/FadeCurve;ILjava/lang/Object;)[F
+	public final fun findSilence ([FIDII)Lio/github/yuroyami/audiokodec/SilenceBounds;
+	public static synthetic fun findSilence$default (Lio/github/yuroyami/audiokodec/Levels;[FIDIIILjava/lang/Object;)Lio/github/yuroyami/audiokodec/SilenceBounds;
+	public final fun scan ([FIIIF)Lio/github/yuroyami/audiokodec/LevelScan;
+	public static synthetic fun scan$default (Lio/github/yuroyami/audiokodec/Levels;[FIIIFILjava/lang/Object;)Lio/github/yuroyami/audiokodec/LevelScan;
 }
 
 public final class io/github/yuroyami/audiokodec/LoudnessMeter {
@@ -471,6 +502,24 @@ public final class io/github/yuroyami/audiokodec/Resampler {
 	public final fun maxOutputFrames (I)I
 	public final fun process ([FII[FI)I
 	public final fun reset ()V
+}
+
+public final class io/github/yuroyami/audiokodec/Signals {
+	public static final field INSTANCE Lio/github/yuroyami/audiokodec/Signals;
+	public final fun dbToLinear (D)D
+	public final fun silence (II)[F
+	public final fun sine (IIIDFD)[F
+	public static synthetic fun sine$default (Lio/github/yuroyami/audiokodec/Signals;IIIDFDILjava/lang/Object;)[F
+	public final fun square (IIIDF)[F
+	public static synthetic fun square$default (Lio/github/yuroyami/audiokodec/Signals;IIIDFILjava/lang/Object;)[F
+	public final fun whiteNoise (IIFI)[F
+	public static synthetic fun whiteNoise$default (Lio/github/yuroyami/audiokodec/Signals;IIFIILjava/lang/Object;)[F
+}
+
+public final class io/github/yuroyami/audiokodec/SilenceBounds {
+	public final fun getSoundEnd ()I
+	public final fun getSoundStart ()I
+	public final fun isSilent ()Z
 }
 
 public final class io/github/yuroyami/audiokodec/TruncatedStreamException : io/github/yuroyami/audiokodec/AudioKodecException {

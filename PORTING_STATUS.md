@@ -441,7 +441,7 @@ A 13 MiB image also checks streaming allocations and an exact metaflac export.
 | Mixing between channel layouts | ✅ ITU-R BS.775-3 Table 2 for every 3/2 downmix, ffmpeg's rules for side, back centre, front centre pair and top front positions, refusal of a conversion with no defined answer; 24 conversions agree with ffmpeg's float mixing sample for sample. Per-channel gain and mid-side, exact up to 23 bits |
 | Loudness measurement and ReplayGain | ✅ translated from libebur128 1.2.6: integrated, momentary and short-term loudness and loudness range equal to libebur128's within double rounding, integrated loudness within 0.1 LU of ffmpeg's `ebur128`, EBU Tech 3341 cases 1, 2, 3 and 6 and Tech 3342 case 1; true peak by sinc oversampling. ReplayGain 2 track and album values compose with the tag writers |
 | Waveform peaks | ✅ per-bucket minimum, maximum and RMS per channel, streaming in bounded memory, bit-identical whatever the block sizes, with the bucket count known before decoding |
-| Levels, fades and test signals | ❌ #29 |
+| Levels, fades and test signals | ✅ peak, RMS and clipping scans with frame positions, silence at the ends to the frame, gain in decibels, linear and logarithmic fades, and sine, square, noise and silence generators, which the test suite's own sine now builds on |
 
 ## Decoding
 

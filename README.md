@@ -666,6 +666,13 @@ mean square of each channel per bucket of frames, a block at a time, so a
 long file streams through in bounded memory, and says how many buckets a
 file gives before any audio is read. See [Draw a waveform](docs/waveform.md).
 
+## Levels, fades and test signals
+
+`Levels` scans a range for its peak, RMS and clipped samples, finds the
+silence at its ends, applies a gain and fades in and out along a linear or
+a logarithmic curve, and `Signals` generates sine, square, noise and
+silence. See [Levels, fades and test signals](docs/levels.md).
+
 ## Precision
 
 Decoding produces Float32, which carries 8-, 16- and 24-bit audio exactly. It

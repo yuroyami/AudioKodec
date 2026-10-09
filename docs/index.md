@@ -1218,6 +1218,12 @@ turns them into ReplayGain values for the tag writers. See
 RMS for drawing, in bounded memory, with the bucket count known up front. See
 [Draw a waveform](waveform.md).
 
+## Levels, fades and test signals
+
+`Levels` measures a range, finds silence at its ends, applies gain and
+fades; `Signals` generates test signals. See
+[Levels, fades and test signals](levels.md).
+
 ## Handling bad input
 
 Every failure AudioKodec reports is an `AudioKodecException`:

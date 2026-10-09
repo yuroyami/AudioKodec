@@ -1,9 +1,7 @@
 package io.github.yuroyami.audiokodec
 
-import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.round
-import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.test.assertTrue
 
@@ -18,18 +16,9 @@ import kotlin.test.assertTrue
  */
 internal object TestSignals {
 
-    /** Interleaved sine waves, one per channel, each a different frequency. */
-    fun sine(frames: Int, channels: Int, sampleRate: Int = 44_100, amplitude: Float = 0.8f): FloatArray {
-        val out = FloatArray(frames * channels)
-        for (c in 0 until channels) {
-            val frequency = 220.0 * (c + 1)
-            for (f in 0 until frames) {
-                val phase = 2.0 * PI * frequency * f / sampleRate
-                out[f * channels + c] = (amplitude * sin(phase)).toFloat()
-            }
-        }
-        return out
-    }
+    /** Interleaved sine waves, one per channel, each a different frequency, from the public generator. */
+    fun sine(frames: Int, channels: Int, sampleRate: Int = 44_100, amplitude: Float = 0.8f): FloatArray =
+        Pcm.interleave(Array(channels) { c -> Signals.sine(frames, 1, sampleRate, 220.0 * (c + 1), amplitude) }, frames)
 
     /**
      * A signal that visits the extremes, which is where clamping and sign
