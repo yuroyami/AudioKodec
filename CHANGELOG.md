@@ -79,6 +79,12 @@ audio and Ogg.
   of RFC 3952 and from CAF and QuickTime, translated from WebRTC in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with exact seeking.
+- DSD, read from DSF and DSDIFF files and converted to PCM at a
+  thirty-second of its rate through three linear-phase decimating filters,
+  stated in full, with channels in AudioKodec's order, the ID3v2 tags of
+  both containers read, and exact seeking. Agrees with ffmpeg's conversion
+  tone by tone within the filters' difference. DST compression is refused
+  by name.
 - G.722 and G.726, decoded from WAV and AU files, written from the ITU
   Recommendations and exact on every one of the ITU's test sequences, with
   exact seeking. `DecodeOptions.g722Mode` selects G.722's mode 2 or 3.

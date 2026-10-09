@@ -48,9 +48,15 @@ internal object TagLocator {
             AudioContainer.FLAC -> readFlacBlocks(containerReader, embedded)
             AudioContainer.OGG -> readOggBlocks(containerReader, embedded)
             AudioContainer.MP4 -> readMp4Ilst(containerReader, embedded)
+            AudioContainer.DSF -> readDsfMetadata(containerReader, embedded)
+            AudioContainer.DFF -> readDffId3(containerReader, embedded)
             else -> Unit
         }
-        for (block in embedded) blocks.add(shift(block, containerReader.baseOffset))
+        for (block in embedded) {
+            val shifted = shift(block, containerReader.baseOffset)
+            // An ID3v2.4 block at the end of a DSF file is found from both ends.
+            if (blocks.none { it.offset == shifted.offset && it.format == shifted.format }) blocks.add(shifted)
+        }
 
         return blocks.sortedBy { it.offset }
     }
@@ -645,6 +651,58 @@ internal object TagLocator {
             into.add(
                 RawTagBlock(TagFormat.AIFF_TEXT, firstChunk, lastEnd - firstChunk, entries),
             )
+        }
+    }
+
+    /**
+     * Reads the ID3v2 block a DSF file's header points to, which is usually
+     * the last thing in the file. A pointer of zero means there is none.
+     */
+    private fun readDsfMetadata(reader: SourceReader, into: MutableList<RawTagBlock>) {
+        val at = try {
+            reader.seek(0)
+            if (reader.readFourCc() != "DSD ") return
+            reader.seek(20)
+            reader.readI64Le()
+        } catch (_: TruncatedStreamException) {
+            return
+        }
+        if (at < 28 || (reader.size >= 0 && at > reader.size - Id3v2Reader.HEADER_SIZE)) return
+        val header = readRange(reader, at, Id3v2Reader.HEADER_SIZE) ?: return
+        val size = Id3v2Reader.blockSizeAt(header, 0)
+        if (size <= 0 || (reader.size >= 0 && size.toLong() > reader.size - at)) return
+        reader.options.checkAllocation(size.toLong(), "reading a DSF ID3v2 block")
+        val block = readRange(reader, at, size) ?: return
+        Id3v2Reader.read(block, 0, at, reader.options)?.let { into.add(it) }
+    }
+
+    /**
+     * Reads the `ID3 ` chunk that DSDIFF writers add at the top level of the
+     * form, outside the format's own specification but universal in
+     * practice.
+     */
+    private fun readDffId3(reader: SourceReader, into: MutableList<RawTagBlock>) {
+        try {
+            reader.seek(0)
+            if (reader.readFourCc() != "FRM8") return
+            val formSize = reader.readI64Be()
+            if (reader.readFourCc() != "DSD " || formSize < 4) return
+            val formEnd = if (reader.size >= 0) minOf(formSize + 12, reader.size) else formSize + 12
+            var at = 16L
+            while (at <= formEnd - 12) {
+                reader.seek(at)
+                val id = reader.readFourCc()
+                val size = reader.readI64Be()
+                val body = at + 12
+                if (size < 0 || size > formEnd - body) return
+                if (id == "ID3 ") {
+                    val bytes = readSizedBytes(reader, size, "reading a DSDIFF ID3 chunk")
+                    Id3v2Reader.read(bytes, 0, body, reader.options)?.let { into.add(it) }
+                }
+                at = body + size + (size and 1)
+            }
+        } catch (_: TruncatedStreamException) {
+            return
         }
     }
 

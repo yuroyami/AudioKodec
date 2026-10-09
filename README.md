@@ -376,6 +376,18 @@ three modes. ffmpeg's G.726 does not follow the Recommendation, so its
 samples differ, badly at 40 kbit/s. Seeking is exact. See
 [G.722 and G.726](docs/g722-g726.md).
 
+## DSD
+
+DSD, the one-bit signal of the Super Audio CD, is read from DSF and DSDIFF
+files and converted to PCM at a thirty-second of its rate, 88.2 kHz from
+DSD64, through three linear-phase decimating filters that pass the audio band
+flat within 2e-5 dB and keep anything from aliasing into it. There is no one
+correct conversion; the filter is stated in full, and ffmpeg's own conversion
+agrees tone by tone within the difference between the two filters. Channels
+come out in AudioKodec's order, the ID3v2 tags of both containers are read,
+and seeking is exact. DST-compressed DSDIFF is refused by name. See
+[DSD](docs/dsd.md).
+
 ## True Audio
 
 True Audio decodes at 8 to 24 bits, including 20-bit audio, with any number
@@ -589,6 +601,7 @@ and `42ni` is 24-bit.
 | Musepack | Stream version 8, mono and stereo, at 32 to 48 kHz, with the exact length its header states. APEv2 tags are read |
 | AMR-NB and AMR-WB | Every rate, single-channel and multichannel, with comfort noise and concealment, exactly as opencore-amr decodes them |
 | iLBC | 20 and 30 ms frames in the storage format of RFC 3952, exactly as WebRTC's iLBC decodes them |
+| DSF and DSDIFF | DSD at any rate, converted to PCM at a thirty-second of it, one to six channels in DSF and any number in DSDIFF. ID3v2 tags are read. DST compression is refused |
 
 ### Probed but not decoded
 
@@ -598,8 +611,8 @@ decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 
-Matroska and WebM, DSF, DSDIFF, AC-3, DTS, ASF and WMA, MPEG-TS, MIDI,
-Shorten, OptimFROG and TAK.
+Matroska and WebM, AC-3, DTS, ASF and WMA, MPEG-TS, MIDI, Shorten,
+OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw
 `UnsupportedFormatException` for all of these, and the message names the

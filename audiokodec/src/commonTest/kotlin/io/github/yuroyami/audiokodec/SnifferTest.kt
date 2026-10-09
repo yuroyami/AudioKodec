@@ -249,7 +249,7 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these eighteen.
+        // The README's read and write tables name exactly these twenty.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -270,6 +270,8 @@ class SnifferTest {
                 AudioContainer.AMR_NB,
                 AudioContainer.AMR_WB,
                 AudioContainer.ILBC,
+                AudioContainer.DSF,
+                AudioContainer.DFF,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -303,6 +305,9 @@ class SnifferTest {
         assertTrue(AudioContainer.AMR_NB.isDecodable)
         assertTrue(AudioContainer.AMR_WB.isDecodable)
         assertTrue(AudioContainer.ILBC.isDecodable)
+        // DSD is converted to PCM, from either of its containers.
+        assertTrue(AudioContainer.DSF.isDecodable)
+        assertTrue(AudioContainer.DFF.isDecodable)
         assertTrue(!AudioContainer.MATROSKA.isDecodable)
     }
 }

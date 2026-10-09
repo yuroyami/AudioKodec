@@ -35,6 +35,8 @@ can hold checkouts without them ever reaching the repository.
 | A-law and mu-law | ITU-T Recommendation G.711 |
 | G.722 | ITU-T Recommendation G.722 (11/88), sections 4 to 6; see [G.722 and G.726](#g722-and-g726) |
 | G.726 | ITU-T Recommendation G.726 (12/90), section 4; see [G.722 and G.726](#g722-and-g726) |
+| DSF | Sony DSF File Format Specification, version 1.01; see [DSD](#dsd) |
+| DSDIFF | Philips DSDIFF File Format Specification, version 1.5; see [DSD](#dsd) |
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
 | Microsoft ADPCM | [Microsoft Multimedia Data Standards Update, 15 April 1994](https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/RIFFNEW.pdf), pages 22 to 26 |
 | QuickTime IMA (`ima4`) | Apple QuickTime File Format documentation |
@@ -85,6 +87,7 @@ Run as programs, never read as source.
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
 | libilbc 3.0.4 | iLBC: `ilbc_oracle.c`, a few lines over libilbc's public interface built from the pinned sources under `reference/ilbc`, encodes speech, silence, clipping, noise and bursts in both frame sizes and decodes them; the test wraps the frames in the storage format of RFC 3952 and ffmpeg copies them into CAF and QuickTime files. Every sample must be libilbc's integer, also for runs of random frames, which exercise concealment, and for frames altered to state the codebook index libilbc refuses, which must be refused at the same frame |
+| ffmpeg and ffprobe, for DSD | DSF and DSDIFF files the test writes from a sigma delta modulator: ffprobe's rate, channels and duration, and ffmpeg's conversion to PCM, tone by tone in level and phase, within the bound its filter's difference from AudioKodec's sets; the suite also measures ffmpeg's filter itself, from single flipped bits, to confirm its delay. ffmpeg's source is not read |
 | ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
 | ffmpeg's G.722 and G.726 | G.722: every sample of the WAV and AU files ffmpeg writes, in all three modes through `-bits_per_codeword`, must equal ffmpeg's. G.726: ffmpeg's encoder writes the WAV and AU files, whose code words must decode to exactly the samples of the decoder `G726ConformanceTest` checks; ffmpeg's own G.726 decoder does not follow the Recommendation, so at 16 to 32 kbit/s its samples only bound the result, and at 40 kbit/s not even that |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
@@ -785,6 +788,25 @@ text: COMPRESS takes a wrapped SR of -32768 as a magnitude of zero, as its
 `(65536 - SR) & 32767` says, and for A-law a negative magnitude that falls
 exactly on a decision value belongs to the interval below it, as Table 15
 shows.
+
+## DSD
+
+Both container readers are written from the format specifications, as
+dsd-guide.com publishes them; the conversion to PCM is AudioKodec's own
+design, so no implementation was read.
+
+| Field | Value |
+|---|---|
+| DSF | Sony, DSF File Format Specification, version 1.01, https://dsd-guide.com/sites/default/files/white-papers/DSFFileFormatSpec_E.pdf, SHA-256 `2c154f3e82ea835a8023d08308adc26344b0fcec627c14e585640e0111740da4` |
+| DSDIFF | Philips, Direct Stream Digital Interchange File Format, version 1.5 (2004-04-27), https://dsd-guide.com/sites/default/files/white-papers/DSDIFF_1.5_Spec.pdf, SHA-256 `fba0c3053c81f7af93eb8bb3ea70b6f78bb1188578a844c054988af2ff2f0b01` |
+| Never opened | ffmpeg's DSD reader and converter, and every other DSD implementation |
+
+The three filter stages are Kaiser-windowed sincs designed by
+`design-dsd-filters.py` at the repository's root, which states the design,
+checks each stage's passband ripple and the attenuation of every band that
+would alias, and prints the taps as Kotlin; they are pasted unedited. The
+`ID3 ` chunk in DSDIFF is not in the specification but is what every writer
+of DSDIFF tags uses.
 
 ## True Audio
 

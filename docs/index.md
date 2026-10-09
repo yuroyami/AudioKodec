@@ -559,6 +559,13 @@ G.722 files ffmpeg writes decode to exactly ffmpeg's samples; ffmpeg's G.726
 does not follow the Recommendation. Seeking is exact. See
 [G.722 and G.726](g722-g726.md).
 
+## DSD
+
+DSD decodes from DSF and DSDIFF files, converted to PCM at a thirty-second of
+its rate through a stated three-stage filter that agrees with ffmpeg's
+conversion tone by tone within the two filters' difference. Seeking is exact,
+and DST compression is refused by name. See [DSD](dsd.md).
+
 ## True Audio
 
 True Audio files decode at 8 to 24 bits with exact integers through
