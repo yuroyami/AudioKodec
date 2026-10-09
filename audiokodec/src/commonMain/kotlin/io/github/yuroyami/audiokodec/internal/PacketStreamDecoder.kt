@@ -85,6 +85,12 @@ internal interface PacketCodec {
 
     /** Forgets everything carried between packets, before decoding from somewhere new. */
     fun reset()
+
+    /**
+     * Says which packet of the index the next [decode] call reads, for a
+     * codec whose packets differ in ways their bytes do not state.
+     */
+    fun beginPacket(index: Int) = Unit
 }
 
 /**
@@ -220,6 +226,7 @@ internal open class PacketStreamDecoder(
             }
             return null
         }
+        codec.beginPacket(nextPacket)
         nextPacket++
         return size
     }

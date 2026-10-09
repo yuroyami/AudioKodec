@@ -67,6 +67,12 @@ audio and Ogg.
   `IntPcmAccess`, block checksums verified, and exact seeking. Hybrid files
   decode to their lossy stream. Translated from WavPack 5.9.0 and identical
   to `wvunpack`. DSD inside WavPack is refused by name.
+- Monkey's Audio, decoded: every compression level from fast to insane, 8 to
+  32 bits and 32-bit float, one to eight channels in AudioKodec's speaker
+  order except seven, exact integers through `IntPcmAccess`, frame checksums
+  verified, and exact seeking. Translated from the Monkey's Audio SDK 13.27
+  and identical to `mac -d`. Files from before version 3.99 are refused by
+  name.
 - Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
   to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames

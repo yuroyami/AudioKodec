@@ -76,6 +76,7 @@ Run as programs, never read as source.
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, encodes the files that check the iTunes gapless record, and encodes and decodes the AAC files that check AudioKodec's AAC decoder against Apple's |
 | wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form |
+| mac | Monkey's Audio, built from the SDK the port follows, at every compression level from fast to insane, 8, 16, 24 and 32-bit integers and 32-bit float, one to eight channels except seven; every file must decode to exactly the input integers and to exactly what `mac -d` writes |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -588,6 +589,27 @@ damaged bitstream it starts again from the beginning and lets the block
 checksum catch the result; the translation reads zeros there, which the
 checksum catches the same way, and a block the reference would mute is an
 error instead.
+
+## Monkey's Audio
+
+Monkey's Audio has no format document beyond its SDK, so the decoder is a
+translation of the SDK's decoding half, recorded here before the first line
+was written.
+
+| Field | Value |
+|---|---|
+| Download | https://monkeysaudio.com/files/MAC_1327_SDK.zip, linked from https://monkeysaudio.com/developers.html |
+| Version | 13.27, SHA-256 `c47c6b36f6a7bd50d990f2eb36a70915c0074a7b9634be396c94464905e76686` |
+| Licence | BSD 3-Clause, `License.txt` in the archive, reproduced in `NOTICE` |
+| Files | `Source/MACLib/APEHeader.cpp`, `APEInfo.cpp`, `APEDecompress.cpp`, `APEDecompressCore.cpp`, `UnBitArrayBase.cpp`, `UnBitArray.cpp`, `NewPredictor.cpp`, `NNFilter.cpp`, `NNFilterGeneric.cpp`, `ScaledFirstOrderFilter.h`, `Prepare.cpp`, `FloatTransform.cpp` and the CRC in `Source/Shared` |
+| Not ported | Files from before version 3.99 (`Source/MACLib/Old`), the encoder, MD5 checking of the whole file, and the vectorised filter loops, which compute the same as the generic one |
+
+The arithmetic is the SDK's: 32-bit and wrapping in the predictors and
+filters, with the 64-bit predictor kept for 32-bit audio where the SDK keeps
+it, and the 16-bit filter variant used where the SDK uses it, including the
+interim mode it retries a 24-bit frame in when the first decode fails its
+checksum. Where the SDK reads past the end of a damaged frame, the
+translation reads zeros, and the frame checksum reports the result.
 
 ## AAC constant tables
 

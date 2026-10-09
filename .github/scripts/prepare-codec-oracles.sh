@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
-for executable in ffmpeg ffprobe flac metaflac lame exiftool cmake cc c++ make python3 curl git; do
+for executable in ffmpeg ffprobe flac metaflac lame exiftool cmake cc c++ make python3 curl git unzip; do
     command -v "$executable" >/dev/null
 done
 if [[ "$(uname -s)" == Darwin ]]; then
@@ -76,6 +76,25 @@ reference_checkout reference/wavpack/src https://github.com/dbry/WavPack.git 580
 cmake -S reference/wavpack/src -B reference/wavpack/build -DCMAKE_BUILD_TYPE=Release \
     -DWAVPACK_BUILD_DOCS=OFF -DWAVPACK_ENABLE_LIBCRYPTO=OFF -DBUILD_TESTING=OFF
 cmake --build reference/wavpack/build --target wavpackapp wvunpack -j4
+
+ape_sdk=reference/ape/MAC_1327_SDK.zip
+if [[ ! -f "$ape_sdk" ]]; then
+    mkdir -p reference/ape
+    curl --fail --show-error --location --retry 2 --max-time 180 \
+        https://monkeysaudio.com/files/MAC_1327_SDK.zip -o "$ape_sdk.part"
+    mv "$ape_sdk.part" "$ape_sdk"
+fi
+python3 - "$ape_sdk" <<'PY'
+import hashlib, sys
+with open(sys.argv[1], 'rb') as stream:
+    digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+assert digest == 'c47c6b36f6a7bd50d990f2eb36a70915c0074a7b9634be396c94464905e76686', 'Monkey\'s Audio SDK checksum mismatch'
+PY
+if [[ ! -d reference/ape/sdk ]]; then
+    unzip -q "$ape_sdk" -d reference/ape/sdk
+fi
+cmake -S reference/ape/sdk -B reference/ape/build -DCMAKE_BUILD_TYPE=Release
+cmake --build reference/ape/build --target macutil -j4
 
 vectors=reference/opus_testvectors-rfc8251.tar.gz
 if [[ ! -f "$vectors" ]]; then

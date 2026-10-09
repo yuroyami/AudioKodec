@@ -293,6 +293,21 @@ integer too. DSD audio inside WavPack is refused by name, and files from
 before version 4.0, which begin as WAV files, are not read. See
 [WavPack](docs/wavpack.md).
 
+## Monkey's Audio
+
+Monkey's Audio decodes at every compression level, fast, normal, high,
+extra high and insane, at 8, 16, 24 and 32 bits and as 32-bit float, with
+one to eight channels except seven. Lossless integer files give exact
+integers through `IntPcmAccess`, and every frame's checksum is verified.
+Frames stand alone, so seeking is exact and needs no run-up. The decoder is
+translated from the Monkey's Audio SDK 13.27, BSD-licensed.
+
+Every file the SDK's own `mac` tool writes in the test suite decodes to
+exactly the integers that went in, and to exactly what `mac -d` gives, at
+every level and depth. Files from encoders older than version 3.99, from
+2004, are refused by name, as are seven channels, which the SDK cannot decode
+either. See [Monkey's Audio](docs/ape.md).
+
 ## MPEG audio
 
 MP3 and its two older layers have no file header at all: a file is a run of
@@ -487,6 +502,7 @@ and `42ni` is 24-bit.
 | MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AC-3 and AMR are named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 | ADTS | AAC-LC, with sample-accurate seeking |
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
+| Monkey's Audio | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to eight channels except seven, from version 3.99 on. APEv2 tags are read |
 
 ### Probed but not decoded
 
@@ -496,9 +512,8 @@ decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 
-Matroska and WebM, Monkey's
-Audio, Musepack, True Audio, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA,
-MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
+Matroska and WebM, Musepack, True Audio, DSF, DSDIFF, AMR, AC-3, DTS, ASF and
+WMA, MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw
 `UnsupportedFormatException` for all of these, and the message names the

@@ -24,7 +24,6 @@ internal object ApeTag {
     const val FOOTER_SIZE: Int = 32
 
     private const val FLAG_HAS_HEADER = 1 shl 31
-    private const val FLAG_HAS_NO_FOOTER = 1 shl 30
     private const val FLAG_IS_HEADER = 1 shl 29
     private const val RESERVED_GLOBAL_FLAGS = 0x1FFF_FFFE
     private const val ALLOWED_ITEM_FLAGS = 0x7
@@ -461,7 +460,10 @@ internal object ApeTag {
         header: Boolean,
     ): Boolean {
         if (flags and RESERVED_GLOBAL_FLAGS != 0) return false
-        if (flags and FLAG_HAS_NO_FOOTER != 0) return false
+        // Bit 30 is not checked. The APEv2 description reads it as "has no
+        // footer", but Monkey's Audio, which defined the format, sets it on
+        // every tag it writes, meaning "has a footer". Either way the header
+        // and the footer each state the tag's size, so reading needs neither.
         if ((flags and FLAG_IS_HEADER != 0) != header) return false
         for (index in at + 24 until at + FOOTER_SIZE) {
             if (bytes[index].toInt() != 0) return false

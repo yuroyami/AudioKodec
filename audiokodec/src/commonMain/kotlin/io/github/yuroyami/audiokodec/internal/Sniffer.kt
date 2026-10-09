@@ -90,7 +90,7 @@ internal object Sniffer {
             "fLaC" -> return AudioContainer.FLAC
             "OggS" -> return AudioContainer.OGG
             "ADIF" -> return AudioContainer.ADIF
-            "MAC " -> return AudioContainer.APE
+            "MAC ", "MACF" -> return AudioContainer.APE
             "wvpk" -> return AudioContainer.WAVPACK
             "MPCK" -> return AudioContainer.MUSEPACK
             "TTA1" -> return AudioContainer.TTA

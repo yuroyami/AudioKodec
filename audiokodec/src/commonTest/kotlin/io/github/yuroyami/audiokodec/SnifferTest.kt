@@ -249,7 +249,7 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these twelve.
+        // The README's read and write tables name exactly these thirteen.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -264,6 +264,7 @@ class SnifferTest {
                 AudioContainer.MP4,
                 AudioContainer.ADTS,
                 AudioContainer.WAVPACK,
+                AudioContainer.APE,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -291,6 +292,7 @@ class SnifferTest {
         assertTrue(AudioContainer.ADTS.isDecodable)
         assertTrue(!AudioContainer.ADIF.isDecodable)
         assertTrue(AudioContainer.WAVPACK.isDecodable)
+        assertTrue(AudioContainer.APE.isDecodable)
         assertTrue(!AudioContainer.MATROSKA.isDecodable)
     }
 }

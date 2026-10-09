@@ -505,6 +505,15 @@ because blocks stand alone. Hybrid files decode to their lossy stream,
 without the correction file. APEv2 tags are read as for any file. See
 [WavPack](wavpack.md).
 
+## Monkey's Audio
+
+Monkey's Audio files decode at every compression level, at 8 to 32 bits and
+as 32-bit floats, with exact integers through `IntPcmAccess` for integer
+files. Every frame's checksum is verified, and seeking is exact because
+frames stand alone. Files from before version 3.99 and files with seven
+channels are refused by name. APEv2 tags are read as for any file. See
+[Monkey's Audio](ape.md).
+
 ## MPEG audio
 
 An MP3 has no file header. It is a run of frames, each one carrying its own
