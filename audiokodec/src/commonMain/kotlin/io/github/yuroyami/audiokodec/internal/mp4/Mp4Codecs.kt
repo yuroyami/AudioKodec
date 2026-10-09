@@ -241,6 +241,16 @@ internal object Mp4Codecs {
         val family = cursor.u8()
         if (channels == 0) throw CorruptStreamException("an Opus track declares no channels", entry.offset)
         checkShape(entry, options, 48_000, channels)
+        // Projection needs its demixing matrix, which Ogg carries in place of
+        // the mapping table. The Opus-in-ISOBMFF mapping, version 0.6.8,
+        // predates family 3 and defines nowhere for it in MP4.
+        if (family == 3) {
+            throw io.github.yuroyami.audiokodec.UnsupportedFeatureException(
+                "Opus projection in MP4",
+                "this MP4 file codes ambisonics by projection, and the Opus-in-ISOBMFF mapping defines no place " +
+                    "for the demixing matrix it needs; the same audio decodes from Ogg",
+            )
+        }
         val streams: Int
         val coupled: Int
         val mapping: IntArray
@@ -256,12 +266,6 @@ internal object Mp4Codecs {
         }
         if (!OpusMultistreamDecoder.validStreamCounts(streams, coupled) || mapping.any { it != OpusMultistreamDecoder.SILENT && it >= streams + coupled }) {
             throw CorruptStreamException("the 'dOps' box describes an impossible channel layout", entry.offset)
-        }
-        if (family == 3) {
-            throw io.github.yuroyami.audiokodec.UnsupportedFeatureException(
-                "Opus projection in MP4",
-                "this MP4 file codes ambisonics by projection, whose matrix MP4 carries in a box AudioKodec does not read",
-            )
         }
         val order = if (family == 1 && channels <= 8) VorbisDecoder.orderFor(channels) else IntArray(channels) { it }
         val layout = when (family) {

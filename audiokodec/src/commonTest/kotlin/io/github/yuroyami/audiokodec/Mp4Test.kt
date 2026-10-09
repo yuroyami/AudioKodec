@@ -605,6 +605,20 @@ class Mp4Test {
     }
 
     @Test
+    fun opusProjectionIsRefusedAsUnsupportedWhateverFollowsTheFamily() {
+        // Nothing defines the demixing matrix's place in MP4, so whether a
+        // writer copied Ogg's matrix or a mapping table, the refusal is the same.
+        val ogglike = byteArrayOf(3, 1, 2) + ByteArray(2 * 3 * 4) { (it * 37).toByte() }
+        val mapped = byteArrayOf(3, 1, 2, 0, 1, 2, 3)
+        for (table in listOf(ogglike, mapped, byteArrayOf(3))) {
+            val dops = box("dOps", byteArrayOf(0, 4), u16(312), u32(48_000), u16(0), table)
+            val file = build(3, 4, 3, format = "Opus", sampleEntryBoxes = dops)
+            val failure = assertFailsWith<UnsupportedFeatureException> { AudioKodec.open(file).close() }
+            assertTrue("projection" in failure.message.orEmpty(), failure.message)
+        }
+    }
+
+    @Test
     fun aZeroMovieTimescaleIsRejectedBeforeAnyEditArithmetic() {
         for (version in 0..1) {
             for (edit in listOf(0L to 125L, null)) {
