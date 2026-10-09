@@ -81,16 +81,17 @@ including when the `COMM` sample size disagrees.
 CAF IMA accepts a compressed sample width of 0 or 4. Its packet description
 must still specify flags 0, 34 bytes per channel and 64 frames per packet.
 
-Raw AAC is probed but not yet decoded. ADTS puts a header on every frame and
-no index anywhere, so `probe` walks the frame headers, without reading the
-payloads, and reports the exact length: 1024 frames for every raw data block.
-A sync word is believed only when the next three frames agree with it, and
-junk between frames is crossed as for MPEG audio. The rate is the one the
-headers state; a stream with implicit spectral band replication plays at twice
-that rate, which only decoding reveals. A channel configuration of zero takes
-the channel count from the program configuration that leads the first frame,
-with the speakers left unnamed. ADIF has one header and no frame lengths, so
-its duration is `null`. `open` refuses both with `UnsupportedFormatException`.
+Raw AAC in ADTS framing decodes, as [AAC](aac.md) describes. ADTS puts a
+header on every frame and no index anywhere, so `probe` walks the frame
+headers, without reading the payloads, and reports the exact length: 1024
+frames for every raw data block. A sync word is believed only when the next
+three frames agree with it, and junk between frames is crossed as for MPEG
+audio. The rate is the one the headers state; a stream with implicit spectral
+band replication would play at twice that rate, and `open` refuses it by name.
+A channel configuration of zero takes the channel count from the program
+configuration that leads the first frame, with the speakers left unnamed.
+ADIF has one header and no frame lengths, so its duration is `null`, and
+`open` refuses it with `UnsupportedFormatException`.
 
 ## Name a format
 
@@ -445,7 +446,8 @@ must fit in the supplied window; `probe` and `open` can jump over larger padding
 | Uncompressed PCM, float, A-law and mu-law | decodes, with seeking, exactly |
 | ALAC | decodes, with seeking, exactly; encodes |
 | MPEG Layers I, II and III | decodes, with seeking and edit-list trimming |
-| AAC, AC-3, AMR | named, not yet decoded |
+| AAC-LC | decodes, with seeking and edit-list trimming |
+| AC-3, AMR | named, not yet decoded |
 
 ```kotlin
 val info = AudioKodec.probe(m4aBytes)
@@ -471,6 +473,12 @@ Opening an Opus edit decodes up to 80 ms of preceding packets, as seeking does,
 and discards their output before reporting playable frame zero. This run-up
 restores packet state; it approximates a continuous decode rather than promising
 bit-exact Opus seeking. Independent codecs start at the first audible packet.
+
+AAC-LC decodes every tool of its profile, from the floating-point process the
+standard describes, and agrees with ffmpeg's decoder to within float rounding.
+Seeking decodes one block before its target, which makes it sample-exact.
+HE-AAC is refused by name, rather than played as its half-rate core. See
+[AAC](aac.md).
 
 [MPEG tracks](mpeg-in-mp4.md) use the same frame decoding as bare MPEG files.
 MP3 restores its bit reservoir and synthesis history with up to ten preceding

@@ -108,9 +108,11 @@ class AdtsTest {
     }
 
     @Test
-    fun openingNamesTheCodingItCannotDecode() {
-        val failure = assertFailsWith<UnsupportedFormatException> { AudioKodec.open(stream(frames = 3)) }
-        assertTrue("AAC" in failure.message.orEmpty())
+    fun framesWhosePayloadIsNotAacDecodeAsDamage() {
+        // The filler payloads frame correctly but do not decode.
+        AudioKodec.open(stream(frames = 3)).use { decoder ->
+            assertFailsWith<CorruptStreamException> { decoder.nextFrame() }
+        }
         // A header whose stated length leads to something that is not a frame.
         val lone = byteArrayOf(0xFF.toByte(), 0xF1.toByte(), 0x50, 0x80.toByte(), 0x10, 0x1F, 0xFC.toByte()) + ByteArray(600) { 0x13 }
         assertEquals(AudioContainer.ADTS, AudioKodec.sniff(lone))
@@ -149,7 +151,7 @@ class AdtsTest {
                 for (tolerant in listOf(false, true)) {
                     expectOnlyOwnFailures("cut to $keep") { AudioKodec.probe(cut, DecodeOptions(tolerant = tolerant)) }
                 }
-                expectOnlyOwnFailures("open cut to $keep") { AudioKodec.open(cut).close() }
+                expectOnlyOwnFailures("decode cut to $keep") { AudioKodec.decode(cut) }
             }
             for (at in file.indices) {
                 for (bit in 0 until 8) {

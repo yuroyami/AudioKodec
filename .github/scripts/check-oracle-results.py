@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 
 reports = Path("audiokodec/build/test-results/jvmTest")
 required = {
-    "AdtsOracleTest", "AiffCOracleTest", "AlacOracleTest", "AlacEncodeOracleTest", "BextOracleTest", "CafOracleTest", "FfmpegOracleTest",
+    "AacDecodeOracleTest", "AdtsOracleTest", "AiffCOracleTest", "AlacOracleTest", "AlacEncodeOracleTest", "BextOracleTest", "CafOracleTest", "FfmpegOracleTest",
     "FfmpegTagOracleTest", "FlacEncodeOracleTest", "FlacOracleTest", "FlacConformanceTest",
     "IntegerEncodingOracleTest", "Mp4OracleTest", "Mp4GaplessOracleTest", "Mp4TagOracleTest", "MpegMp4OracleTest", "MpegCrcOracleTest", "MpegFreeFormatOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
     "OggOracleTest", "OggChainOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
@@ -21,6 +21,7 @@ apple_only = {
     ("CafOracleTest", "quickTimeAdpcmInsideCafDecodes"),
     ("Mp4GaplessOracleTest", "appleAfconvertFilesDecodeToExactlyWhatWentIn"),
     ("AlacEncodeOracleTest", "applesAfconvertDecodesExactlyWhatWentIn"),
+    ("AacDecodeOracleTest", "appleEncodedFilesDecodeAsAppleDecodesThem"),
 }
 seen = set()
 failures = []

@@ -743,11 +743,15 @@ class Mp4Test {
 
     @Test
     fun aCodingWithoutADecoderIsNamedAndRefused() {
-        val file = build(frames = 1_024, channels = 2, chunkFrames = 1_024, format = "mp4a")
+        val file = build(frames = 1_024, channels = 2, chunkFrames = 1_024, format = "ac-3")
         val info = AudioKodec.probe(file)
-        assertEquals(AudioCodec.AAC, info.codec)
+        assertEquals(AudioCodec.AC3, info.codec)
         val refusal = assertFailsWith<UnsupportedFormatException> { AudioKodec.open(file) }
-        assertTrue("AAC" in refusal.message.orEmpty(), "the refusal names the coding: ${refusal.message}")
+        assertTrue("AC-3" in refusal.message.orEmpty(), "the refusal names the coding: ${refusal.message}")
+        // AAC without the configuration that names its band tables is damage.
+        val bare = build(frames = 1_024, channels = 2, chunkFrames = 1_024, format = "mp4a")
+        assertEquals(AudioCodec.AAC, AudioKodec.probe(bare).codec)
+        assertFailsWith<CorruptStreamException> { AudioKodec.open(bare) }
     }
 
     @Test

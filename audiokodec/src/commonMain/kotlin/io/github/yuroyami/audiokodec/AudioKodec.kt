@@ -13,6 +13,7 @@ import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.mpeg.Layer12Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.Mp3Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.MpegStream
+import io.github.yuroyami.audiokodec.internal.aac.AacPacketCodec
 import io.github.yuroyami.audiokodec.internal.container.AdifReader
 import io.github.yuroyami.audiokodec.internal.container.AdtsStream
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4Container
@@ -114,13 +115,14 @@ public object AudioKodec {
             AudioContainer.MPEG_AUDIO -> openMpeg(reader, options)
             AudioContainer.MP4 -> Mp4Container.decoder(reader, options)
             AudioContainer.CAF -> CafReader.open(reader, options)
-            AudioContainer.ADTS, AudioContainer.ADIF -> {
-                // The framing is read so that damage is reported as damage;
-                // only then is the coding refused.
-                if (detected.container == AudioContainer.ADTS) AdtsStream.parse(reader, options) else AdifReader.info(reader, options)
+            AudioContainer.ADTS -> AacPacketCodec.openAdts(reader, options)
+            AudioContainer.ADIF -> {
+                // The header is read so that damage is reported as damage;
+                // only then is the framing refused.
+                AdifReader.info(reader, options)
                 throw UnsupportedFormatException(
-                    detected.container,
-                    "this file holds raw AAC, which AudioKodec cannot decode yet. Its format and length are readable through probe.",
+                    AudioContainer.ADIF,
+                    "this file holds AAC in ADIF framing, which AudioKodec cannot decode yet. Its format is readable through probe.",
                 )
             }
             else -> parse(reader, options, detected.container).toDecoder(reader, options)

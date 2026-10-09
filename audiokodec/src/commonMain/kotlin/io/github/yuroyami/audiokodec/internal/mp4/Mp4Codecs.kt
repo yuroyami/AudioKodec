@@ -7,6 +7,8 @@ import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.CorruptStreamException
 import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.internal.PacketCodec
+import io.github.yuroyami.audiokodec.internal.aac.AacPacketCodec
+import io.github.yuroyami.audiokodec.internal.aac.AacStreamConfig
 import io.github.yuroyami.audiokodec.internal.alac.AlacConfig
 import io.github.yuroyami.audiokodec.internal.alac.AlacPacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
@@ -95,25 +97,41 @@ internal object Mp4Codecs {
         if (objectType == 0x69 || objectType == 0x6B) {
             return mpeg(entry, reader, options, firstPacket)
         }
+        val aac = objectType == 0x40 || objectType in 0x66..0x68
+        val name = if (aac) "AAC" else "MPEG-4 object type 0x${objectType.toString(16)}"
         // The AudioSpecificConfig states the real channel count and rate,
-        // which the sample entry may not: an entry is limited to 65535 Hz and
-        // HE-AAC doubles the rate it states.
-        var channels = entry.channels
-        var rate = entry.sampleRate
-        descriptor?.second?.let { config ->
-            parseAudioSpecificConfig(config)?.let { (configRate, configChannels) ->
-                if (configRate > 0) rate = configRate
-                if (configChannels > 0) channels = configChannels
+        // which the sample entry may not: an entry is limited to 65535 Hz.
+        val config = descriptor?.second?.takeIf { aac }?.let { AacStreamConfig.parse(it, entry.offset) }
+        if (config == null) {
+            checkShape(entry, options, entry.sampleRate, entry.channels)
+            // AAC cannot be decoded without its configuration, which
+            // names the band tables; any other object type has no decoder.
+            val missing: ((Int) -> PacketCodec)? = if (!aac) null else { _ ->
+                throw CorruptStreamException("this AAC track has no AudioSpecificConfig to decode it by", entry.offset)
             }
+            return Choice(
+                if (aac) AudioCodec.AAC else AudioCodec.UNKNOWN,
+                name,
+                AudioFormat(entry.sampleRate, ChannelLayout.canonical(entry.channels)),
+                null, 0, missing,
+            )
         }
-        checkShape(entry, options, rate, channels)
-        val name = if (objectType == 0x40 || objectType in 0x66..0x68) "AAC" else "MPEG-4 object type 0x${objectType.toString(16)}"
-        return Choice(
-            if (name == "AAC") AudioCodec.AAC else AudioCodec.UNKNOWN,
-            name,
-            AudioFormat(rate, ChannelLayout.canonical(channels)),
-            null, 0, null,
-        )
+        // Explicitly signalled spectral band replication doubles the output
+        // rate, and probing reports the rate a full decoder would give.
+        val rate = if (config.sbr && config.extensionRate > 0) config.extensionRate else config.sampleRate
+        checkShape(entry, options, rate, config.channels)
+        val format = AudioFormat(rate, config.layout)
+        return Choice(AudioCodec.AAC, name, format, null, 0) { _ ->
+            val codec = AacPacketCodec(config, null)
+            firstPacket?.let { (offset, size) ->
+                options.checkAllocation(size.toLong(), "reading a $size-byte packet")
+                val packet = ByteArray(size)
+                reader.seek(offset)
+                reader.readFully(packet)
+                codec.screen(packet, size)
+            }
+            codec
+        }
     }
 
     private fun mpeg(
@@ -178,36 +196,6 @@ internal object Mp4Codecs {
         }
         return objectType to specific
     }
-
-    /** The output rate and channel count an AAC AudioSpecificConfig states, as far as it states them. */
-    private fun parseAudioSpecificConfig(config: ByteArray): Pair<Int, Int>? {
-        if (config.size < 2) return null
-        var bit = 0
-        fun read(count: Int): Int {
-            var value = 0
-            repeat(count) {
-                val byte = bit / 8
-                if (byte >= config.size) return -1
-                value = (value shl 1) or ((config[byte].toInt() ushr (7 - bit % 8)) and 1)
-                bit++
-            }
-            return value
-        }
-        fun objectType(): Int = read(5).let { if (it == 31) 32 + read(6) else it }
-        fun frequency(): Int = read(4).let { if (it == 15) read(24) else AAC_RATES.getOrElse(it) { 0 } }
-        var type = objectType()
-        var rate = frequency()
-        val channels = read(4)
-        if (type == 5 || type == 29) {
-            // Explicitly signalled SBR doubles the rate, and says so.
-            rate = frequency()
-            type = objectType()
-        }
-        return rate to AAC_CHANNELS.getOrElse(channels) { 0 }
-    }
-
-    private val AAC_RATES = intArrayOf(96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350)
-    private val AAC_CHANNELS = intArrayOf(0, 1, 2, 3, 4, 5, 6, 8)
 
     // Apple Lossless.
 

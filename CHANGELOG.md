@@ -43,8 +43,8 @@ audio and Ogg.
 - MP4, M4A, M4B, 3GP and QuickTime, read: the box tree, sample tables, a
   `moov` before or after the audio, fragmented files, edit lists, and
   chapters from a chapter track or a Nero `chpl` list. ALAC, Opus, FLAC and
-  uncompressed audio inside decode and seek; AAC, MP3, AC-3 and AMR are named
-  with their length and refused.
+  uncompressed audio inside decode and seek; AC-3 and AMR are named with their
+  length and refused.
 - MP4 item lists, read and written: the standard atoms, freeform items,
   track, disc, tempo and compilation numbers, ReplayGain and cover art, with
   unmodelled items kept and only the `moov` box rebuilt. Changed chapters are
@@ -56,6 +56,12 @@ audio and Ogg.
   same packets, with tags, cover art and chapters.
 - Raw AAC in ADTS and ADIF framing, probed: rate, channels and bitrate, and
   for ADTS the exact length from its frame headers.
+- AAC-LC, decoded from MP4 and ADTS: every tool of the low complexity
+  profile, every sampling rate, fixed and program channel configurations
+  reordered into AudioKodec's channel order, edit-list trimming and
+  sample-exact seeking. Written from ISO/IEC 14496-3 in floating point and
+  agreeing with ffmpeg's decoder to within float rounding. HE-AAC, AAC Main,
+  SSR and LTP, 960-sample frames and coupling channels are refused by name.
 - Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
   to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames

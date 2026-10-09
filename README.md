@@ -210,8 +210,8 @@ external data references are named and refused.
 
 ALAC, Opus, FLAC, MPEG Layers I, II and III, and QuickTime's uncompressed codings
 decode, seeking included. [MPEG tracks](docs/mpeg-in-mp4.md) share the bare-stream
-frame decoder and apply the MP4 edit list. AAC, AC-3 and AMR are named, with their length and chapters, and
-`open` refuses them by name.
+frame decoder and apply the MP4 edit list. AAC-LC decodes as described [below](#aac). AC-3 and AMR are named,
+with their length and chapters, and `open` refuses them by name.
 
 The iTunes item list inside `moov` is read and written, cover art included,
 whatever the coding. A rewrite rebuilds only the `moov` box and copies the
@@ -246,6 +246,32 @@ Tags can be rewritten in a single-stream Ogg file whose final header packet
 ends its page. The header pages are rebuilt and the pages after them renumbered,
 with the audio packets copied untouched. A shared header/audio page is refused
 before any output, including in tolerant mode.
+
+## AAC
+
+AAC-LC decodes from MP4 and from raw ADTS streams, at every sampling rate the
+standard tabulates, from 7.35 to 96 kHz, and with any number of channels a
+fixed configuration or a program configuration describes. Fixed configurations
+come out in AudioKodec's speaker order. Every tool of the low complexity profile is
+implemented: mid/side and intensity stereo, noise substitution, temporal noise
+shaping, pulses, and block switching between sine and Kaiser-Bessel windows.
+It is written from ISO/IEC 14496-3 in floating point, as the standard
+describes it. The MP4 edit list trims the encoder's delay and padding, and
+seeking runs one block ahead of its target, which makes it sample-exact.
+
+Wherever the spectrum is coded, ffmpeg's decoder agrees with AudioKodec's to
+within float rounding. Their largest difference is below 2e-6 and the signal
+to difference ratio is above 120 dB. These comparisons cover ffmpeg's encoder
+at every rate table, mono to 7.1, and program configurations, in both ADTS and
+MP4. Noise substitution draws random numbers the standard leaves open, so
+there the energy of every block is compared instead.
+
+HE-AAC, whose spectral band replication rebuilds the upper half of the
+spectrum, is refused by name rather than played as its muffled, half-rate
+core. The refusal covers explicit signalling in the MP4 configuration and
+implicit signalling in the stream. AAC Main, SSR and LTP, the 960-sample
+frame and coupling channel elements are refused by name too. See
+[AAC](docs/aac.md).
 
 ## MPEG audio
 
@@ -438,14 +464,14 @@ and `42ni` is 24-bit.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| MP4, M4A, M4B, 3GP and QuickTime | ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, AC-3 and AMR are named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
+| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AC-3 and AMR are named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
+| ADTS | AAC-LC, with sample-accurate seeking |
 
 ### Probed but not decoded
 
-Raw AAC in ADTS and ADIF framing. `probe` reports the sample rate, channels and
-bitrate, and for ADTS the exact length, counted frame by frame as ffprobe counts
-them; ADIF states no frame boundaries, so its length is unknown until AAC
-decodes. `open` refuses both by name.
+Raw AAC in ADIF framing. `probe` reports the sample rate, channels and
+bitrate; ADIF states no frame boundaries, so its length is unknown without
+decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 

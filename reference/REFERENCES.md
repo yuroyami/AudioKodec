@@ -47,6 +47,7 @@ can hold checkouts without them ever reaching the repository.
 | Vorbis floor 0 | [Vorbis I specification section 6.2](https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-920006.2), including vector accumulation, extra final vector values, unsigned amplitude and reserved book selectors. Section 6.2.3 and its 2015 Bark-scale erratum define the odd/even products and frequency mapping. Implemented directly from this text, with no implementation source used. `VorbisFloor0Fixtures` assembles complete streams; direct double products independently check synthesis, FFmpeg's native float decoder checks lookup type one, and its public libvorbis wrapper checks lookup type two at 16-bit precision (#45) |
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |
 | Free-format MPEG | ISO/IEC 11172-3 and 13818-3 free bitrate-index syntax, slot padding and constant frame spacing. MPEG-1 free-format Layer II uses Table 3-B.2a; the measured bitrate does not select a declared-rate table. The owned decoder is reused with measured or indexed packet lengths. LAME's public `--freeformat` executable interface generates MP3; [libmpg123 initialisation](https://mpg123.org/api/group__mpg123__init.shtml), [input](https://mpg123.org/api/group__mpg123__input.shtml), [output formats](https://mpg123.org/api/group__mpg123__output.shtml) and [seeking](https://mpg123.org/api/group__mpg123__seek.shtml) document the independent float PCM and exact-length API. Neither tool's implementation source is read. FFmpeg rejects the high-rate free-format fixtures in the qualified environment, so it is not claimed as their decoder oracle (#46) |
+| AAC-LC | ISO/IEC 14496-3:2009, subpart 4 (4.4.2 syntax, 4.5.2 semantics, 4.6.1 to 4.6.3 quantisation and noiseless coding, 4.6.8 joint stereo, 4.6.9 noise shaping, 4.6.11 filter bank, 4.6.13 noise substitution, Annex 4.A codebooks, Tables 4.129 to 4.141 band offsets, 4.156 and 4.157 noise shaping limits), and subpart 1 (1.6.2.1 AudioSpecificConfig, 1.6.5.2 SBR signalling, Table 1.19 channel configurations, Annex 1.A ADTS). Implemented from the standard in floating point. Every constant table was extracted from the text by script, never typed, and agreed against the PacketVideo decoder below; ffmpeg is an executable oracle only |
 | MPEG audio in MP4 | ISO/IEC 14496-12 sample tables and edit lists, MPEG frame syntax from ISO/IEC 11172-3 and 13818-3, and the [MP4 registration authority's object types](https://mp4ra.org/registered-types/object-types) (`0x69` and `0x6B`). The existing owned frame decoder is shared; no additional implementation source is ported. FFmpeg and LAME are executable oracles only |
 | Format magic numbers | The published headers of each format the sniffer names |
 | Sniffing past ID3 metadata | [ID3v2.4 structure](https://id3.org/id3v2.4.0-structure) sections 3 and 5 for headers, synchsafe lengths, footers and metadata placement. The [public Mutagen ID3 API](https://mutagen.readthedocs.io/en/latest/api/id3.html) supplies independent tags and [FFprobe](https://ffmpeg.org/ffprobe.html) names complete files; no implementation source is read |
@@ -73,7 +74,7 @@ Run as programs, never read as source.
 | ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write. `IntegerEncodingOracleTest` compares exact 32-bit WAV/AIFF/AU transcodes, every integer target depth and channel count, and independent PCM depth reduction; the reference FLAC executable also verifies the integer-input files' samples and MD5 |
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks (#115). `FlacBinarySeekTest` measures source bytes at 10%, 50% and 90% of an unindexed recording, and exercises CRC-8-valid fake headers embedded in RFC 9639 verbatim samples; the oracle suite repeats the read bounds on reference FLAC output and verifies the embedded-header PCM with FFmpeg (#116) |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
-| afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, and encodes the files that check the iTunes gapless record |
+| afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, encodes the files that check the iTunes gapless record, and encodes and decodes the AAC files that check AudioKodec's AAC decoder against Apple's |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -563,6 +564,27 @@ exercise prediction and escape coding. The JVM tests require exact input
 integers through `IntPcmAccess`, including extrema, low bits, short final
 packets and packet-boundary seeks. The 5.1 expectation uses the channel
 order declared in Apple's public header independently of the Kotlin decoder.
+
+## AAC constant tables
+
+The AAC decoder is written from ISO/IEC 14496-3:2009, not ported. Its tables
+were extracted from the standard's text by script, so that none was typed by
+hand, and then agreed entry by entry with a second rendering: the AAC decoder
+PacketVideo contributed to the Android Open Source Project, which is
+Apache-2.0. Only its tables and table lookups were read; its decoding was
+not used as a guide.
+
+| Field | Value |
+|---|---|
+| Repository | https://github.com/aosp-mirror/platform_frameworks_base |
+| Tag | `android-2.3.7_r1`, commit `3f2821425f1ab6eddb76a8725e3f2c3edb5d8b07` |
+| Path | `media/libstagefright/codecs/aacdec` |
+| Licence | Apache-2.0, stated in the header of every file |
+| Agreed | All 1362 codewords of the twelve Huffman codebooks, by compiling its codeword lookup functions in a harness and running every codeword through them; all thirteen band offset tables against `sfb.cpp`; the noise shaping band limits against `get_tns.cpp`; and the computed sine and Kaiser-Bessel windows against its Q15 tables in `window_tables_fxp.cpp`, to within one step of their rounding |
+
+The extraction found no disagreement. Table 4.141 is identical to Table
+4.139, and one array serves both. Table 4.157 lists no noise shaping limits
+for 7.35 kHz, which uses the 8 kHz tables throughout, and takes 8 kHz's.
 
 ## Never opened
 
