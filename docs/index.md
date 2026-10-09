@@ -415,9 +415,11 @@ Strict mode reports the invalid header boundary as `CorruptStreamException`;
 tolerant mode reports `UnsupportedFeatureException` because copying only the
 later pages would lose audio. An external ID3 prefix is also left unwritten.
 
-A file interleaving several logical streams, such as a video with a soundtrack,
-is refused rather than repaginated. Rebuilding the interleaving is a job worth
-doing properly or not at all.
+In a file interleaving several logical streams, such as a video with a
+soundtrack or two soundtracks, the first audio stream's tags are rewritten:
+its header pages are rebuilt where they stood, its audio pages are renumbered
+in place, and every page of the other streams is copied byte for byte, so the
+interleaving and every granule position stay as they were.
 
 ## MP4
 

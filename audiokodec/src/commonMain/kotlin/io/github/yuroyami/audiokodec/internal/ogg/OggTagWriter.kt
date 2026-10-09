@@ -25,10 +25,14 @@ import io.github.yuroyami.audiokodec.tag.TagBundle
  * themselves are never touched, which is the property that matters: editing a
  * title must not re-encode anything.
  *
- * A file carrying more than one logical stream at once is refused. Repaginating
- * one stream of an interleaved file would mean rebuilding the interleaving, and
- * getting that subtly wrong would break playback in ways a caller could not
- * see.
+ * A file that interleaves several logical streams, such as two soundtracks,
+ * has the comment header of its first audio stream rewritten. Every page of
+ * the other streams is copied byte for byte, in its place relative to the
+ * rest: the rebuilt identification page stands where the old one stood among
+ * the beginning-of-stream pages, the other rebuilt header pages where that
+ * stream's first one did, and the audio pages of the rewritten stream keep
+ * their places and granule positions under new sequence numbers. So every
+ * stream's packets reach a reader in the order they did before.
  */
 internal object OggTagWriter {
 
@@ -42,13 +46,6 @@ internal object OggTagWriter {
             "writing tags into an Ogg file with no recognised audio",
             "this Ogg file carries no audio stream AudioKodec recognises",
         )
-        if (parsed.streams.size > 1) {
-            throw UnsupportedFeatureException(
-                "writing tags into a multiplexed Ogg file",
-                "this Ogg file interleaves ${parsed.streams.size} logical streams, and " +
-                    "AudioKodec only rewrites the tags of a file that carries one",
-            )
-        }
         if (!parsed.headersEndAtPageBoundary) {
             throw UnsupportedFeatureException(
                 "writing Ogg tags when audio shares the final header page",
@@ -92,18 +89,94 @@ internal object OggTagWriter {
         }
 
         val writer = PageWriter(sink, serial)
+        val ogg = OggReader(reader, options)
+        if (parsed.streams.size > 1) {
+            copyMultiplexed(ogg, reader, parsed, headers, sourceEnd, writer)
+            return
+        }
 
-        // The identification packet has a page to itself, which is what every
-        // mapping requires and what a reader looking for it expects.
+        writeIdentification(writer, headers)
+        writeOtherHeaders(writer, headers)
+        copyAudioPages(ogg, reader, serial, parsed.audioStartOffset, sourceEnd, writer)
+    }
+
+    /** The identification packet has a page to itself, which is what every mapping requires and what a reader looking for it expects. */
+    private fun writeIdentification(writer: PageWriter, headers: List<ByteArray>) {
         writer.writePacket(headers[0], granule = 0, first = true, flush = true)
+    }
 
+    private fun writeOtherHeaders(writer: PageWriter, headers: List<ByteArray>) {
         for (index in 1 until headers.size) {
             writer.writePacket(headers[index], granule = 0, flush = index == headers.size - 1)
         }
         writer.flush(granule = 0)
+    }
 
-        val ogg = OggReader(reader, options)
-        copyAudioPages(ogg, reader, serial, parsed.audioStartOffset, sourceEnd, writer)
+    /**
+     * Rewrites one stream of a file that interleaves several.
+     *
+     * Pages are taken in file order. The rewritten stream's header pages are
+     * replaced where they stood, its audio pages are renumbered, and every
+     * page of another stream is copied byte for byte, so the interleaving and
+     * every granule position stay as they were. Once every stream has ended,
+     * whatever follows, such as a further link of a chained file, is copied
+     * unchanged.
+     */
+    private fun copyMultiplexed(
+        ogg: OggReader,
+        reader: SourceReader,
+        parsed: OggAnalyser.Parsed,
+        headers: List<ByteArray>,
+        sourceEnd: Long,
+        writer: PageWriter,
+    ) {
+        val serial = parsed.audio!!.serialNumber
+        val serials = parsed.streams.map { it.serialNumber }.toSet()
+        val open = serials.toMutableSet()
+        var at = parsed.streams.minOf { it.firstPageOffset }
+        var identificationWritten = false
+        var headersWritten = false
+        while (open.isNotEmpty()) {
+            if (sourceEnd in 1..at) break
+            val page = ogg.pageAt(at) ?: break
+            if (page.offset > Long.MAX_VALUE - page.byteLength) {
+                throw CorruptStreamException("an Ogg page offset overflows 64 bits", page.offset)
+            }
+            at = page.offset + page.byteLength
+            if (page.serialNumber !in serials) {
+                throw UnsupportedFeatureException(
+                    "writing tags into a multiplexed Ogg file",
+                    "an Ogg stream with serial ${page.serialNumber} begins while the file's other streams are still open",
+                )
+            }
+            if (page.serialNumber == serial) {
+                if (page.offset < parsed.audioStartOffset) {
+                    if (page.isFirst) {
+                        writeIdentification(writer, headers)
+                        identificationWritten = true
+                    } else if (!headersWritten) {
+                        if (!identificationWritten) {
+                            throw CorruptStreamException("an Ogg header page comes before its stream's first page", page.offset)
+                        }
+                        writeOtherHeaders(writer, headers)
+                        headersWritten = true
+                    }
+                    continue
+                }
+                if (!headersWritten) {
+                    throw CorruptStreamException("the Ogg stream's audio begins before its header pages end", page.offset)
+                }
+                writer.writeRawPage(page)
+            } else {
+                writer.copyOriginalRemainder(reader, page.offset, at)
+            }
+            if (page.isLast) open.remove(page.serialNumber)
+        }
+        if (serial in open) {
+            // As for a single stream, an unterminated stream is not rewritten.
+            throw TruncatedStreamException("the Ogg logical stream ends before an end-of-stream page", at)
+        }
+        writer.copyOriginalRemainder(reader, at, sourceEnd)
     }
 
     /** Which header packet holds the comments, for each mapping. */

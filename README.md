@@ -176,6 +176,9 @@ files chained one after another.
 
 Vorbis, Opus, FLAC and Speex inside Ogg all decode, seeking included.
 
+Tags can be rewritten in any of them, including a file that interleaves
+several logical streams, whose other streams are copied byte for byte.
+
 [Compatible chained links](docs/ogg-chains.md) play in sequence, with each
 link's own decoder state and trimming. Duration and seek positions cover the
 complete recording. A change in sample rate or channel layout is refused

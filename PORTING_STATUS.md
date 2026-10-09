@@ -304,7 +304,7 @@ inspected and edited.
 | **Lyrics3v2** | ✅ | ❌ | Read for its content and, more importantly, for its length: a reader that does not know it is there gets every other trailing offset wrong |
 | **Vorbis comments** | ✅ | ✅ | In FLAC, and in Ogg for every mapping it carries |
 | **FLAC metadata blocks** | ✅ | ✅ | Comment and picture blocks are rewritten; seek tables, cue sheets and application blocks are carried across untouched; padding is regenerated so the next edit need not move the audio |
-| **Ogg comment headers** | ✅ | ✅ | Vorbis, Opus, FLAC and Speex. Writing rebuilds the header pages and renumbers the pages after them, leaving the audio packets untouched. Interleaved logical streams and a final header sharing its page with audio are refused before output, including in tolerant mode |
+| **Ogg comment headers** | ✅ | ✅ | Vorbis, Opus, FLAC and Speex. Writing rebuilds the header pages and renumbers the pages after them, leaving the audio packets untouched. In a file that interleaves several logical streams, the first audio stream's headers are rebuilt in place and every other stream's pages are copied byte for byte in their original order, checked with libogg and ffmpeg on files ffmpeg wrote. A final header sharing its page with audio is refused before output, including in tolerant mode |
 | **MP4 `ilst`** | ✅ | ✅ | Standard atoms, several values in one item, UTF-16 text, `trkn`, `disk`, `tmpo`, `cpil` and the numbered `gnre`, freeform `----` items with the conventional names, ReplayGain, and JPEG, PNG, GIF and BMP front covers. Unmodelled and unreadable items are carried across unchanged. Only `moov` is rebuilt: padding absorbs a size change, and growth moves every chunk offset with the audio. Changed chapters are written as Nero `chpl`; chapter tracks are kept but not edited. ffmpeg writes and AudioKodec reads, AudioKodec writes and ffprobe reads, with unchanged PCM |
 | Matroska tags | ❌ | ❌ | #41 |
 
@@ -635,8 +635,8 @@ packets identical to Apple's reference encoder, the item list inside an MP4
 reads and writes, which closes the last tag gap, and the iTunes gapless trim is
 applied.
 
-Writing tags into an Ogg file that interleaves several logical streams remains
-at #44. Vorbis floor type 0 and free-format MPEG audio now decode, with their
+Writing tags into an Ogg file that interleaves several logical streams is done,
+#44. Vorbis floor type 0 and free-format MPEG audio now decode, with their
 independent comparisons and malformed-input coverage recorded above.
 
 This is past the point at which the library is worth publishing. WAV, AIFF, AU, Wave64,

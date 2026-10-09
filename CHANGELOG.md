@@ -79,6 +79,9 @@ audio and Ogg.
   of RFC 3952 and from CAF and QuickTime, translated from WebRTC in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with exact seeking.
+- Tag writing into Ogg files that interleave several logical streams: the
+  first audio stream's headers are rebuilt in place and every other
+  stream's pages are copied byte for byte, in their original order.
 - `Levels` for peak, RMS and clipping scans, silence at the ends, gain and
   linear or logarithmic fades, and `Signals` for sine, square, noise and
   silence.
