@@ -514,6 +514,13 @@ frames stand alone. Files from before version 3.99 and files with seven
 channels are refused by name. APEv2 tags are read as for any file. See
 [Monkey's Audio](ape.md).
 
+## Musepack
+
+Musepack files in stream version 8 decode to the exact length their header
+states, mono or stereo. Seeking is exact, except that noise substitution
+draws new noise after a seek. Stream version 7 and older are refused by
+name. APEv2 tags are read as for any file. See [Musepack](musepack.md).
+
 ## True Audio
 
 True Audio files decode at 8 to 24 bits with exact integers through

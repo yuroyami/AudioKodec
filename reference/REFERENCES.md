@@ -78,6 +78,7 @@ Run as programs, never read as source.
 | wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form |
 | mac | Monkey's Audio, built from the SDK the port follows, at every compression level from fast to insane, 8, 16, 24 and 32-bit integers and 32-bit float, one to eight channels except seven; every file must decode to exactly the input integers and to exactly what `mac -d` writes |
 | tta (libtta 2.3) | True Audio, the format authors' encoder and decoder, built from `libtta-c-2.3.tar.gz` (SourceForge, SHA-256 `68ba6db2d494dcd4aa6832a40952b88a3d50ca1174ab0ef1e091db16992303c7`). LGPL, so it is built and run as a program and its source is never opened. Its files at 16, 20 and 24 bits with one to six channels, and ffmpeg's at 8, 16 and 24 bits with up to eight, must decode to exactly the input integers, to exactly what `tta -d` writes and to exactly what ffmpeg decodes. It also writes the password-protected files that must be refused by name |
+| mpcenc and libmpcdec r495 | Musepack: `mpcenc` from the operating system's `musepack-tools` package writes the files, and `mpc_float_oracle.c`, a few lines over libmpcdec's public API compiled against the r495 sources, writes the floats the reference decodes them to. `mpcdec` itself writes only 16-bit samples. Every sample must be the same float, at qualities 0 to 10, at 32, 44.1 and 48 kHz, mono and stereo, with each mid/side mode and with noise substitution. The encoder is LGPL and only run |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -590,6 +591,45 @@ damaged bitstream it starts again from the beginning and lets the block
 checksum catch the result; the translation reads zeros there, which the
 checksum catches the same way, and a block the reference would mute is an
 error instead.
+
+## Musepack
+
+The decoder is a translation of libmpcdec, recorded here before the first
+line was written. Musepack's last source release is SVN revision 475; the
+decoder follows revision 495, which Debian and Ubuntu ship and whose
+`mpcenc` the oracle runs. Beyond comments, the two revisions' decoders
+differ only in the stream version 7 header reader, which is not ported, and
+in the demuxer's handling of a frame that yields no samples after a seek.
+
+| Field | Value |
+|---|---|
+| Download | http://archive.ubuntu.com/ubuntu/pool/universe/libm/libmpc/libmpc_0.1~r495.orig.tar.gz |
+| Version | SVN revision 495, SHA-256 `5182d7a30eec1b338cafc9c1706d663a6c8dc217b1d90187054512074f662202`, which Ubuntu's `libmpc_0.1~r495-2build1.dsc` also states |
+| Licence | BSD 3-Clause, `libmpcdec/COPYING` and the header of every file read, reproduced in `NOTICE` |
+| Files | `libmpcdec/mpc_decoder.c`, `mpc_demux.c`, `streaminfo.c`, `mpc_bits_reader.c` and `.h`, `huffman.c` and `.h`, `requant.c` and `.h`, `synth_filter.c`, `mpcdec_math.h`, `decoder.h`, `internal.h`, and `include/mpc/mpcdec.h`, `reader.h` and `streaminfo.h` |
+| Never opened | `include/mpc/mpc_types.h`, `mpcmath.h`, `minimax.h` and `datatypes.h`, which are LGPL, and everything outside `libmpcdec` |
+| Not ported | Stream versions 7 and older, the fixed-point build, replay gain applied to the output, and chapters |
+
+Two values came from outside the files read. The scale of the float output
+is set in `mpc_types.h`, which is LGPL; the decoder's samples match the
+reference's only at a scale of 2^-15 per unit, which is what the port uses.
+The CRC of the stream header is computed by `common/crc32.c`, which is not
+part of libmpcdec and was not read; it is the standard CRC-32, which every
+file the encoder writes passes.
+
+The tables were extracted from `huffman.c` and `synth_filter.c` by
+`reference/mpc/gen_kotlin.py`, so none was typed. Every canonical Huffman
+table fills its code space exactly and maps every code to a symbol inside
+its symbol table. The synthesis window `Di_opt` is the MPEG-1 window that
+the MPEG decoder already uses, entry for entry, and the decoder takes it
+from there. The tables a formula defines are computed rather than copied,
+after the script showed that each formula reproduces the C table: the
+binomials of the enumerative coder and their code lengths, the bundled
+quantiser triples, the parity table. One entry differs: `Cnk_lost`, which
+counts the short codes of a combination's rank, is declared with 512
+entries and initialised with 511, so its entry for 16 of 32 is 0 rather than
+472661434. The entry is used when 16 of 32 bands are coded mid and side, so
+the decoder keeps the reference's 0.
 
 ## True Audio
 

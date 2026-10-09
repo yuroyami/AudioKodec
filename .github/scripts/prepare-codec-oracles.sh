@@ -116,6 +116,30 @@ if [[ ! -x reference/tta/libtta/build/console/tta ]]; then
     (cd reference/tta/libtta/build && ../libtta-c-2.3/configure --disable-shared && make -j4)
 fi
 
+# libmpcdec r495 is BSD; the oracle harness is compiled against these sources.
+# mpcenc comes from the system's musepack-tools package and is only run.
+mpc_source=reference/mpc/libmpc_0.1~r495.orig.tar.gz
+if [[ ! -f "$mpc_source" ]]; then
+    mkdir -p reference/mpc
+    curl --fail --show-error --location --retry 2 --max-time 180 \
+        "http://archive.ubuntu.com/ubuntu/pool/universe/libm/libmpc/libmpc_0.1~r495.orig.tar.gz" -o "$mpc_source.part"
+    mv "$mpc_source.part" "$mpc_source"
+fi
+python3 - "$mpc_source" <<'PY'
+import hashlib, sys
+with open(sys.argv[1], 'rb') as stream:
+    digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+assert digest == '5182d7a30eec1b338cafc9c1706d663a6c8dc217b1d90187054512074f662202', 'libmpcdec checksum mismatch'
+PY
+if [[ ! -d reference/mpc/r495 ]]; then
+    mkdir -p reference/mpc/r495
+    tar -xzf "$mpc_source" -C reference/mpc/r495
+    # requant.h declares its constant tables without extern, which links only
+    # under the old common-symbol default; declare them as the arrays they are.
+    sed -i.orig 's/^const \(.*\);/extern const \1;/' reference/mpc/r495/musepack_src_r495/libmpcdec/requant.h
+fi
+command -v mpcenc >/dev/null
+
 vectors=reference/opus_testvectors-rfc8251.tar.gz
 if [[ ! -f "$vectors" ]]; then
     curl --fail --show-error --location --retry 2 --max-time 180 \

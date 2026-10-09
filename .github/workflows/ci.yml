@@ -37,7 +37,7 @@ jobs:
       - name: Install the codec oracles
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg flac lame libopusfile0 libmpg123-dev libimage-exiftool-perl cmake build-essential python3-venv
+          sudo apt-get install -y ffmpeg flac lame libopusfile0 libmpg123-dev libimage-exiftool-perl cmake build-essential python3-venv musepack-tools
           bash .github/scripts/prepare-codec-oracles.sh
 
       - uses: gradle/actions/setup-gradle@v4
@@ -135,7 +135,7 @@ jobs:
 
       - name: Install the codec oracles
         run: |
-          brew install ffmpeg flac lame exiftool opusfile mpg123 cmake
+          brew install ffmpeg flac lame exiftool opusfile mpg123 cmake musepack
           bash .github/scripts/prepare-codec-oracles.sh
 
       - uses: gradle/actions/setup-gradle@v4

@@ -308,6 +308,20 @@ every level and depth. Files from encoders older than version 3.99, from
 2004, are refused by name, as are seven channels, which the SDK cannot decode
 either. See [Monkey's Audio](docs/ape.md).
 
+## Musepack
+
+Musepack decodes in its current stream format, version 8, which its encoder
+has written since 2009: every quality from the lowest to the highest, mono
+and stereo, mid/side coding and noise substitution, with the exact length the
+stream header states, so the encoder's delay and its padding are gone.
+Seeking lands on exactly the samples a continuous decode gives, with one
+exception: noise substitution draws from a generator that runs through the
+whole stream, so noise after a seek is different noise. The decoder is
+translated from libmpcdec, BSD-licensed, and works in its single-precision
+arithmetic. On the JVM every sample is the float the reference decoder
+gives, which the test suite checks on files of every quality. Stream
+version 7 and older are refused by name. See [Musepack](docs/musepack.md).
+
 ## True Audio
 
 True Audio decodes at 8 to 24 bits, including 20-bit audio, with any number
@@ -518,6 +532,7 @@ and `42ni` is 24-bit.
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
 | Monkey's Audio | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to eight channels except seven, from version 3.99 on. APEv2 tags are read |
 | True Audio | 8 to 24 bits, exact integers through `IntPcmAccess`, any number of channels. ID3 and APEv2 tags are read |
+| Musepack | Stream version 8, mono and stereo, at 32 to 48 kHz, with the exact length its header states. APEv2 tags are read |
 
 ### Probed but not decoded
 
@@ -527,8 +542,8 @@ decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 
-Matroska and WebM, Musepack, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA,
-MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
+Matroska and WebM, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA, MPEG-TS, MIDI,
+Shorten, OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw
 `UnsupportedFormatException` for all of these, and the message names the

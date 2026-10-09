@@ -67,6 +67,11 @@ audio and Ogg.
   `IntPcmAccess`, block checksums verified, and exact seeking. Hybrid files
   decode to their lossy stream. Translated from WavPack 5.9.0 and identical
   to `wvunpack`. DSD inside WavPack is refused by name.
+- Musepack, decoded: stream version 8 at every quality, mono and stereo,
+  with mid/side coding and noise substitution, the exact length its header
+  states, and seeking. Translated from libmpcdec, BSD-licensed, and on the
+  JVM identical to it float for float. Stream version 7 and older are refused
+  by name.
 - True Audio, decoded: 8 to 24 bits including 20-bit audio, any number of
   channels, exact integers through `IntPcmAccess`, every CRC verified, and
   exact seeking. Translated from the format authors' BSD-licensed decoder

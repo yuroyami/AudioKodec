@@ -21,6 +21,7 @@ internal object HostileInputFixtures {
             "WavPack" to WavPackTest().hostileFixture(),
             "Monkey's Audio" to ApeTest().hostileFixture(),
             "True Audio" to TtaTest().hostileFixture(),
+            "Musepack" to MusepackTest().hostileFixture(),
             "MP4 MPEG" to MpegMp4Fixtures.file(MpegMp4Fixtures.packets(MpegTest().silentFrames(3, count = 2, compact = true))),
         ) + HandBuiltFileTest().hostileFixtures() + Mp4Test().hostileFixtures() +
             (1..3).map { "MPEG Layer $it" to MpegTest().silentFrames(it, count = 2, compact = true) } +
