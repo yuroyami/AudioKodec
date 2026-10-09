@@ -200,6 +200,12 @@ public enum class AudioCodec(
     /** GSM 06.10 full rate. */
     GSM("GSM 06.10", false),
 
+    /** ITU-T G.722 sub-band ADPCM, 7 kHz audio in 64 kbit/s. */
+    G722("G.722", false),
+
+    /** ITU-T G.726 ADPCM, at 16, 24, 32 or 40 kbit/s. */
+    G726("G.726", false),
+
     /** Direct Stream Digital, the 1-bit coding used by SACD. */
     DSD("DSD", true),
 

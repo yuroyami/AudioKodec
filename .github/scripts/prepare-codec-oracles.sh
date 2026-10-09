@@ -166,6 +166,36 @@ if [[ ! -d reference/gsm/src ]]; then
     tar -xzf "$gsm_source" -C reference/gsm/src
 fi
 
+# The ITU's digital test sequences for G.726 and G.722, Appendix II to each
+# Recommendation: test data, checked by the conformance tests and never committed.
+itu_sequences() {
+    local archive=$1 url=$2 digest=$3 prefix=$4 target=$5
+    if [[ ! -f "$archive" ]]; then
+        mkdir -p "$(dirname "$archive")"
+        curl --fail --show-error --location --retry 2 --max-time 180 "$url" -o "$archive.part"
+        mv "$archive.part" "$archive"
+    fi
+    python3 - "$archive" "$digest" "$prefix" "$target" <<'PY'
+import hashlib, io, pathlib, sys, zipfile
+archive, digest, prefix, target = sys.argv[1:]
+with open(archive, 'rb') as stream:
+    assert hashlib.file_digest(stream, 'sha256').hexdigest() == digest, archive + ' checksum mismatch'
+outer = zipfile.ZipFile(archive)
+inner = zipfile.ZipFile(io.BytesIO(outer.read(next(n for n in outer.namelist() if n.endswith('Software.zip')))))
+for name in inner.namelist():
+    if name.startswith(prefix) and not name.endswith('/'):
+        path = pathlib.Path(target, name[len(prefix):])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(inner.read(name))
+PY
+}
+itu_sequences reference/g72x/downloads/g726-appii.zip \
+    'https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-G.726-199103-I!AppII!SOFT-ZST-E&type=items' \
+    2af43f18c4a95e57ef137721d85988627973e8d5c0ee325cf30f755b70c46688 software/G726ap2/G726ap2e/ reference/g72x/g726-appii
+itu_sequences reference/g72x/downloads/g722-appii.zip \
+    'https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-G.722-198703-S!AppII!ZPF-E&type=items' \
+    b1691633a13e134e59b703059ec55d2935e5053f07a60032cd3b23834d228731 software/G722ap2/G722E/ reference/g72x/g722-appii
+
 # opencore-amr and vo-amrwbenc are Apache 2.0; the AMR oracle harnesses are
 # compiled against these sources, and the encoders are only run.
 reference_checkout reference/amr/src https://git.code.sf.net/p/opencore-amr/code 7dba8c32238418ce0b316a852b2224df586ca896

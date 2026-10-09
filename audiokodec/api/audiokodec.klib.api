@@ -164,6 +164,8 @@ final enum class io.github.yuroyami.audiokodec/AudioCodec : kotlin/Enum<io.githu
     enum entry A_LAW // io.github.yuroyami.audiokodec/AudioCodec.A_LAW|null[0]
     enum entry DSD // io.github.yuroyami.audiokodec/AudioCodec.DSD|null[0]
     enum entry FLAC // io.github.yuroyami.audiokodec/AudioCodec.FLAC|null[0]
+    enum entry G722 // io.github.yuroyami.audiokodec/AudioCodec.G722|null[0]
+    enum entry G726 // io.github.yuroyami.audiokodec/AudioCodec.G726|null[0]
     enum entry GSM // io.github.yuroyami.audiokodec/AudioCodec.GSM|null[0]
     enum entry IMA_ADPCM // io.github.yuroyami.audiokodec/AudioCodec.IMA_ADPCM|null[0]
     enum entry MP1 // io.github.yuroyami.audiokodec/AudioCodec.MP1|null[0]
@@ -612,10 +614,12 @@ final class io.github.yuroyami.audiokodec/CorruptStreamException : io.github.yur
 }
 
 final class io.github.yuroyami.audiokodec/DecodeOptions { // io.github.yuroyami.audiokodec/DecodeOptions|null[0]
-    constructor <init>(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ...) // io.github.yuroyami.audiokodec/DecodeOptions.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+    constructor <init>(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ..., kotlin/Int = ...) // io.github.yuroyami.audiokodec/DecodeOptions.<init>|<init>(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long;kotlin.Int){}[0]
 
     final val allowSlowSeek // io.github.yuroyami.audiokodec/DecodeOptions.allowSlowSeek|{}allowSlowSeek[0]
         final fun <get-allowSlowSeek>(): kotlin/Boolean // io.github.yuroyami.audiokodec/DecodeOptions.allowSlowSeek.<get-allowSlowSeek>|<get-allowSlowSeek>(){}[0]
+    final val g722Mode // io.github.yuroyami.audiokodec/DecodeOptions.g722Mode|{}g722Mode[0]
+        final fun <get-g722Mode>(): kotlin/Int // io.github.yuroyami.audiokodec/DecodeOptions.g722Mode.<get-g722Mode>|<get-g722Mode>(){}[0]
     final val maxAllocationBytes // io.github.yuroyami.audiokodec/DecodeOptions.maxAllocationBytes|{}maxAllocationBytes[0]
         final fun <get-maxAllocationBytes>(): kotlin/Long // io.github.yuroyami.audiokodec/DecodeOptions.maxAllocationBytes.<get-maxAllocationBytes>|<get-maxAllocationBytes>(){}[0]
     final val maxChannels // io.github.yuroyami.audiokodec/DecodeOptions.maxChannels|{}maxChannels[0]
@@ -629,7 +633,7 @@ final class io.github.yuroyami.audiokodec/DecodeOptions { // io.github.yuroyami.
 
     final fun checkAllocation(kotlin/Long, kotlin/String) // io.github.yuroyami.audiokodec/DecodeOptions.checkAllocation|checkAllocation(kotlin.Long;kotlin.String){}[0]
     final fun checkStreamShape(kotlin/Int, kotlin/Int, kotlin/Long = ...) // io.github.yuroyami.audiokodec/DecodeOptions.checkStreamShape|checkStreamShape(kotlin.Int;kotlin.Int;kotlin.Long){}[0]
-    final fun copy(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ...): io.github.yuroyami.audiokodec/DecodeOptions // io.github.yuroyami.audiokodec/DecodeOptions.copy|copy(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long){}[0]
+    final fun copy(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ..., kotlin/Int = ...): io.github.yuroyami.audiokodec/DecodeOptions // io.github.yuroyami.audiokodec/DecodeOptions.copy|copy(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Long;kotlin.Int){}[0]
 
     final object Companion { // io.github.yuroyami.audiokodec/DecodeOptions.Companion|null[0]
         final val DEFAULT // io.github.yuroyami.audiokodec/DecodeOptions.Companion.DEFAULT|{}DEFAULT[0]

@@ -9,6 +9,7 @@ import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.IntAudioFrame
 import io.github.yuroyami.audiokodec.IntPcmAccess
 import io.github.yuroyami.audiokodec.TruncatedStreamException
+import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.codec.SampleCodec
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
 
@@ -51,9 +52,19 @@ internal open class BlockStreamDecoder(
     private val framesPerBlock: Int = codec.framesPerBlock
     private val channels: Int = format.channels
 
-    /** Whole blocks the payload holds. */
+    /**
+     * Bytes of a last block the payload ends inside of, when the codec allows
+     * its last block to end after its last whole sample; zero otherwise.
+     */
+    private val shortTailBytes: Int = if (dataBytes >= 0) {
+        (dataBytes % blockBytes).toInt().takeIf { codec.framesInShortBlock(it) > 0 } ?: 0
+    } else {
+        0
+    }
+
+    /** Blocks the payload holds, counting a short last block. */
     private val blockCount: Long = if (dataBytes >= 0) {
-        dataBytes / blockBytes
+        dataBytes / blockBytes + if (shortTailBytes > 0) 1 else 0
     } else {
         val sourceSize = reader.size
         if (sourceSize < 0) Long.MAX_VALUE else (sourceSize - dataOffset).coerceAtLeast(0L) / blockBytes
@@ -62,6 +73,7 @@ internal open class BlockStreamDecoder(
     private val rawCapacityFrames: Long = when {
         blockCount == Long.MAX_VALUE -> Long.MAX_VALUE
         blockCount > Long.MAX_VALUE / framesPerBlock -> Long.MAX_VALUE
+        shortTailBytes > 0 -> (blockCount - 1) * framesPerBlock + codec.framesInShortBlock(shortTailBytes)
         else -> blockCount * framesPerBlock
     }
 
@@ -99,7 +111,7 @@ internal open class BlockStreamDecoder(
                 dataOffset + dataBytes.coerceAtLeast(0L),
             )
         }
-        if (dataBytes >= 0 && dataBytes % blockBytes != 0L && !options.tolerant) {
+        if (dataBytes >= 0 && dataBytes % blockBytes != 0L && shortTailBytes == 0 && !options.tolerant) {
             throw TruncatedStreamException(
                 "the audio payload ends ${dataBytes % blockBytes} bytes into a " +
                     "$blockBytes-byte codec block",
@@ -143,10 +155,12 @@ internal open class BlockStreamDecoder(
         }
     }
 
-    private var nextBlock: Long = trimStartFrames / framesPerBlock
+    private val fromStart: Boolean = codec.preRollBlocks == SampleCodec.FROM_START
 
-    /** Frames to drop from the front of the next decoded block after a seek. */
-    private var pendingSkip: Int = (trimStartFrames % framesPerBlock).toInt()
+    private var nextBlock: Long = if (fromStart) 0L else trimStartFrames / framesPerBlock
+
+    /** Frames to drop from the front of the next decoded run, after a seek or for priming. */
+    private var pendingSkip: Long = trimStartFrames - nextBlock * framesPerBlock
 
     private var closed = false
 
@@ -248,7 +262,7 @@ internal open class BlockStreamDecoder(
             if (blocks == 0) return null
             decodedFrames = blocks * framesPerBlock
         } while (skipWhole(decodedFrames))
-        val skip = pendingSkip
+        val skip = pendingSkip.toInt()
         pendingSkip = 0
         val usable = (decodedFrames - skip).coerceAtMost(read.limitFrames)
         if (usable <= 0) return null
@@ -268,7 +282,8 @@ internal open class BlockStreamDecoder(
     }
 
     private fun finishFloat(buffer: FloatArray, decodedFrames: Int, limitFrames: Int): AudioFrame? {
-        val skip = pendingSkip
+        // Smaller than the run just decoded, by skipWhole.
+        val skip = pendingSkip.toInt()
         pendingSkip = 0
         val usable = (decodedFrames - skip).coerceAtMost(limitFrames)
         if (usable <= 0) return null
@@ -317,7 +332,21 @@ internal open class BlockStreamDecoder(
         val at = dataOffset + relative
         reader.seek(at)
         val wantedBytes = wanted * blockBytes
-        val got = reader.readSome(encoded, 0, wantedBytes)
+        val got = if (shortTailBytes > 0 && nextBlock + wanted == blockCount) {
+            // A short last block is read up to the payload's end, not into
+            // what follows it, and as though zero bits completed it; the
+            // stream's length leaves out the samples they decode to.
+            val payloadLeft = wantedBytes - blockBytes + shortTailBytes
+            val read = reader.readSome(encoded, 0, payloadLeft)
+            if (read == payloadLeft) {
+                encoded.fill(0, read, wantedBytes)
+                wantedBytes
+            } else {
+                read
+            }
+        } else {
+            reader.readSome(encoded, 0, wantedBytes)
+        }
         val whole = got / blockBytes
         if (whole <= 0) {
             if (got == 0 && dataBytes < 0) {
@@ -360,10 +389,26 @@ internal open class BlockStreamDecoder(
         }
         val codedTarget = trimStartFrames + target
         val targetBlock = codedTarget / framesPerBlock
-        // A codec that carries state between blocks starts afresh a run-up before the target.
-        codec.reset()
-        nextBlock = (targetBlock - codec.preRollBlocks).coerceAtLeast(0L)
-        pendingSkip = (codedTarget - nextBlock * framesPerBlock).toInt()
+        if (fromStart) {
+            // The codec's state is that of every block before nextBlock, so a
+            // target at or after it is reached by decoding on.
+            val onward = !corruptionReached && targetBlock >= nextBlock
+            if (!onward && targetBlock > 0 && !options.allowSlowSeek) {
+                throw UnsupportedFeatureException(
+                    "seeking a coding that must be decoded from the start of the stream",
+                    "frame $target can only be reached by decoding from the start, and slow seeking is off",
+                )
+            }
+            if (!onward) {
+                codec.reset()
+                nextBlock = 0L
+            }
+        } else {
+            // A codec that carries state between blocks starts afresh a run-up before the target.
+            codec.reset()
+            nextBlock = (targetBlock - codec.preRollBlocks).coerceAtLeast(0L)
+        }
+        pendingSkip = codedTarget - nextBlock * framesPerBlock
         // A corrupt block ended the stream where it was; elsewhere may be fine.
         corruptionReached = false
         positionFrames = target

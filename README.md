@@ -356,6 +356,16 @@ arithmetic, so every sample is exactly the integer libgsm gives, on every
 target. Seeking decodes a half-second run-up and converges on a continuous
 decode; a seek to the start is exact. See [GSM 06.10](docs/gsm.md).
 
+## G.722 and G.726
+
+G.722 wideband and G.726 narrowband ADPCM, the ITU telephony codings, decode
+from WAV and AU files. Both are written from the Recommendations, in their
+integer arithmetic, and reproduce every output word of the ITU's own test
+sequences; G.722 files ffmpeg writes decode to exactly ffmpeg's samples in all
+three modes. ffmpeg's G.726 does not follow the Recommendation, so its
+samples differ, badly at 40 kbit/s. Seeking is exact. See
+[G.722 and G.726](docs/g722-g726.md).
+
 ## True Audio
 
 True Audio decodes at 8 to 24 bits, including 20-bit audio, with any number
@@ -541,9 +551,9 @@ frame by confirming frames within the first 512 KiB.
 | Container | Codings |
 |---|---|
 | FLAC | FLAC, 8 to 32-bit on read and 8, 16 or 24-bit on write |
-| WAV (RIFF), including WAVE_FORMAT_EXTENSIBLE | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law, IMA ADPCM, Microsoft ADPCM; GSM 06.10 is read |
+| WAV (RIFF), including WAVE_FORMAT_EXTENSIBLE | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law, IMA ADPCM, Microsoft ADPCM; GSM 06.10, G.722 and G.726 are read |
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
-| AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law |
+| AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law; G.722 and G.726 (Sun's G.721 and G.723) are read |
 | MP4 and M4A | ALAC 16/20/24/32-bit with one to eight channels, written with packets identical to Apple's reference encoder. Other MP4 codings are read only; see below |
 
 RF64 and BW64 are read, and written automatically when a file passes 4 GiB.

@@ -545,6 +545,14 @@ QuickTime and MP4 files, in the plain 33-byte frames, to exactly the samples
 libgsm gives. Seeking decodes a half-second run-up before the target. See
 [GSM 06.10](gsm.md).
 
+## G.722 and G.726
+
+G.722 and G.726 decode from WAV and AU files, written from the ITU
+Recommendations and checked against every one of the ITU's test sequences.
+G.722 files ffmpeg writes decode to exactly ffmpeg's samples; ffmpeg's G.726
+does not follow the Recommendation. Seeking is exact. See
+[G.722 and G.726](g722-g726.md).
+
 ## True Audio
 
 True Audio files decode at 8 to 24 bits with exact integers through

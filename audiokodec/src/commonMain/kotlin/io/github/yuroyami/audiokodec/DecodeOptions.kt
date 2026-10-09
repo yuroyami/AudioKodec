@@ -62,9 +62,20 @@ public class DecodeOptions(
      * attempted.
      */
     public val maxAllocationBytes: Long = 1L shl 30,
+
+    /**
+     * The mode a G.722 stream was coded in, which no container records.
+     *
+     * Mode 1, the default, is 64 kbit/s of audio and decodes all six bits of
+     * the lower sub-band. Modes 2 and 3 give the last one or two of those
+     * bits to an auxiliary data channel, leaving 56 or 48 kbit/s of audio,
+     * and decode only the rest.
+     */
+    public val g722Mode: Int = 1,
 ) {
     init {
         require(maxChannels in 1..4096) { "maxChannels must be 1..4096, was $maxChannels" }
+        require(g722Mode in 1..3) { "g722Mode must be 1, 2 or 3, was $g722Mode" }
         require(maxSampleRate > 0) { "maxSampleRate must be positive, was $maxSampleRate" }
         require(maxAllocationBytes > 0) {
             "maxAllocationBytes must be positive, was $maxAllocationBytes"
@@ -104,6 +115,7 @@ public class DecodeOptions(
         maxChannels: Int = this.maxChannels,
         maxSampleRate: Int = this.maxSampleRate,
         maxAllocationBytes: Long = this.maxAllocationBytes,
+        g722Mode: Int = this.g722Mode,
     ): DecodeOptions = DecodeOptions(
         tolerant = tolerant,
         reuseBuffers = reuseBuffers,
@@ -111,6 +123,7 @@ public class DecodeOptions(
         maxChannels = maxChannels,
         maxSampleRate = maxSampleRate,
         maxAllocationBytes = maxAllocationBytes,
+        g722Mode = g722Mode,
     )
 
     public companion object {

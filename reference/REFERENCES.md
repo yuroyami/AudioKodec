@@ -33,6 +33,8 @@ can hold checkouts without them ever reaching the repository.
 | AIFF-C | Apple AIFF-C specification, including the compression type registry; [Inside Macintosh: Common Chunks](https://dev.os9.ca/techpubs/mac/Sound/Sound-82.html) for the compressed sample width field. Writer conventions are checked with `afconvert` and ffmpeg |
 | AU | Sun and NeXT audio file format documentation |
 | A-law and mu-law | ITU-T Recommendation G.711 |
+| G.722 | ITU-T Recommendation G.722 (11/88), sections 4 to 6; see [G.722 and G.726](#g722-and-g726) |
+| G.726 | ITU-T Recommendation G.726 (12/90), section 4; see [G.722 and G.726](#g722-and-g726) |
 | IMA and DVI ADPCM | IMA Digital Audio Focus and Technical Working Group, Recommended Practices for Enhancing Digital Audio Compatibility, plus Microsoft's IMA ADPCM WAVE type documentation |
 | Microsoft ADPCM | [Microsoft Multimedia Data Standards Update, 15 April 1994](https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/RIFFNEW.pdf), pages 22 to 26 |
 | QuickTime IMA (`ima4`) | Apple QuickTime File Format documentation |
@@ -82,6 +84,8 @@ Run as programs, never read as source.
 | speexenc, speexdec and libspeex 1.2.1 | Speex: `speexenc` from the operating system's `speex` package writes the files, in all three modes, at every narrowband quality and across the others, with variable and average bitrate, voice activity detection with discontinuous transmission, several frames to a packet, and stereo. `speex_float_oracle.c`, a few lines over libogg and libspeex's public API compiled against the 1.2.1 sources without SSE, writes the floats the reference decodes them to, which every sample must equal. `speexdec` itself writes 16-bit samples from a build with SSE, so it gives only the length, which must be the same |
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
+| ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
+| ffmpeg's G.722 and G.726 | G.722: every sample of the WAV and AU files ffmpeg writes, in all three modes through `-bits_per_codeword`, must equal ffmpeg's. G.726: ffmpeg's encoder writes the WAV and AU files, whose code words must decode to exactly the samples of the decoder `G726ConformanceTest` checks; ffmpeg's own G.726 decoder does not follow the Recommendation, so at 16 to 32 kbit/s its samples only bound the result, and at 40 kbit/s not even that |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -725,6 +729,42 @@ one, least significant bit first and two frames to a 65-byte block, so both
 are read by one field reader rather than by the reference's two unrolled
 unpackers.
 
+## G.722 and G.726
+
+Both decoders are written from the Recommendations, with no implementation
+read. The ITU's reference code for them is part of the Software Tool Library,
+whose licence does not allow an Apache-2.0 port, and it was never opened.
+
+| Field | Value |
+|---|---|
+| G.726 | ITU-T Recommendation G.726 (12/90), `T-REC-G.726-199012-I`, SHA-256 `0b2900da45a774526a5a4ff9aad5f277b5727ab1d9831a038e3d66fef07e86f1` |
+| G.722 | ITU-T Recommendation G.722 (11/88), `T-REC-G.722-198811-S`, SHA-256 `01e93c977dd3d9c5e2c77c0b878bb7e97291f49a34ae5031778e73c104dd1d56` |
+| G.726 test sequences | Appendix II (03/91), `T-REC-G.726-199103-I!AppII!SOFT-ZST-E`, SHA-256 `2af43f18c4a95e57ef137721d85988627973e8d5c0ee325cf30f755b70c46688` |
+| G.722 test sequences | Appendix II (03/87), `T-REC-G.722-198703-S!AppII!ZPF-E`, SHA-256 `b1691633a13e134e59b703059ec55d2935e5053f07a60032cd3b23834d228731` |
+| Never opened | The Software Tool Library (ITU-T G.191) and its G.722 and G.726 modules, spandsp, and ffmpeg's source |
+
+Every constant table was extracted from the Recommendations' text by
+`reference/g72x/gen_tables.py`, which checks each against a property it
+must have: G.722's inverse quantizer outputs lie inside their decision
+intervals, its 5-bit and 4-bit outputs are the 6-bit quantizer's decision
+levels, its log-to-linear table is 2048 times 2 to the power i/32, and every
+G.726 output level is the same for a code word and its one's complement.
+G.726's scale factor multipliers were also read off the page images.
+
+G.726's quantized difference signal is carried as a 16-bit signed magnitude
+at every rate, which 40 kbit/s requires and the other rates permit; the
+transition detector's threshold follows that choice. G.722's receive QMF is
+left partly open by the Recommendation and untested by its sequences; it
+accumulates exactly, truncates, and keeps one bit more than the 15 of XOUT,
+which makes its 16-bit output equal ffmpeg's.
+
+Two details of the log PCM output stage, which the conformance test adds
+and the decoder does not have, are settled by the sequences rather than the
+text: COMPRESS takes a wrapped SR of -32768 as a magnitude of zero, as its
+`(65536 - SR) & 32767` says, and for A-law a negative magnitude that falls
+exactly on a decision value belongs to the interval below it, as Table 15
+shows.
+
 ## True Audio
 
 The True Audio format page on the authors' site could not be reached while
@@ -799,7 +839,8 @@ list is here to be checked against, not to be worked around.
 
 ffmpeg and libav source, libmad, mpg123, LAME, Shine, TwoLAME, FAAD2,
 FDK-AAC, liba52, libdca, taglib, mutagen, jaudiotagger, JLayer, FluidSynth,
-libopenmpt, and the sox source tree.
+libopenmpt, the sox source tree, spandsp, and the ITU-T Software Tool
+Library.
 
 If a search result shows code from any of them, stop at the licence header.
 

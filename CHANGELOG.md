@@ -75,6 +75,9 @@ audio and Ogg.
   QuickTime and MP4 in the plain one, translated from libgsm in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with seeking.
+- G.722 and G.726, decoded from WAV and AU files, written from the ITU
+  Recommendations and exact on every one of the ITU's test sequences, with
+  exact seeking. `DecodeOptions.g722Mode` selects G.722's mode 2 or 3.
 - AMR-NB and AMR-WB, decoded at every rate, from `.amr` and `.awb` files,
   multichannel ones included, and from 3GP and MP4: comfort noise,
   concealment of frames without data, AMR-WB decoder homing, and seeking.

@@ -30,9 +30,18 @@ internal interface SampleCodec {
     /**
      * Blocks to decode and throw away before a seek target, for a codec that
      * carries state from block to block; zero for one whose blocks stand
-     * alone, which is every codec but GSM 06.10.
+     * alone. [FROM_START] asks for every block before the target, for a
+     * codec whose state is never sure to settle, so that a seek lands on
+     * exactly the samples a continuous decode gives.
      */
     val preRollBlocks: Int get() = 0
+
+    /**
+     * Frames a last block cut short to [bytes] bytes still holds whole, for a
+     * coding whose writers end a stream after its last whole sample rather
+     * than at the end of a block; zero for one whose blocks are always whole.
+     */
+    fun framesInShortBlock(bytes: Int): Int = 0
 
     /** Forgets the state carried from block to block, before decoding from somewhere new. */
     fun reset() = Unit
@@ -69,6 +78,11 @@ internal interface SampleCodec {
         out: IntArray,
         outOffset: Int,
     ): Int
+
+    companion object {
+        /** The [preRollBlocks] of a codec that must decode a stream from its start. */
+        const val FROM_START: Int = Int.MAX_VALUE
+    }
 }
 
 /** A codec that can also turn PCM back into its encoded form. */

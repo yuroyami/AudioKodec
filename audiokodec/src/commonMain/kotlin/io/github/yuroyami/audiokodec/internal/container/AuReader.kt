@@ -10,6 +10,8 @@ import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.ParsedStream
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
+import io.github.yuroyami.audiokodec.internal.codec.G722Codec
+import io.github.yuroyami.audiokodec.internal.codec.G726Codec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.PcmLayout
 import io.github.yuroyami.audiokodec.internal.io.SourceReader
@@ -34,6 +36,10 @@ internal object AuReader {
     private const val PCM_32 = 5L
     private const val FLOAT_32 = 6L
     private const val FLOAT_64 = 7L
+    private const val G721 = 23L
+    private const val G722 = 24L
+    private const val G723_3 = 25L
+    private const val G723_5 = 26L
     private const val A_LAW_8 = 27L
 
     fun parse(reader: SourceReader, options: DecodeOptions): ParsedStream {
@@ -112,6 +118,21 @@ internal object AuReader {
                 ),
                 null,
             )
+            // Sun's G.721 and G.723 are G.726 at 32, 24 and 40 kbit/s, packed from each byte's least significant bit.
+            G721, G723_3, G723_5, G722 -> {
+                if (channels != 1) {
+                    throw UnsupportedFeatureException(
+                        "AU encoding $encoding in $channels channels",
+                        "this AU file states encoding $encoding in $channels channels; the coding is defined for one",
+                    )
+                }
+                when (encoding) {
+                    G722 -> Triple(AudioCodec.G722, G722Codec(options.g722Mode), null)
+                    G721 -> Triple(AudioCodec.G726, G726Codec(bits = 4, lsbFirst = true), null)
+                    G723_3 -> Triple(AudioCodec.G726, G726Codec(bits = 3, lsbFirst = true), null)
+                    else -> Triple(AudioCodec.G726, G726Codec(bits = 5, lsbFirst = true), null)
+                }
+            }
             else -> throw UnsupportedFeatureException(
                 "AU encoding $encoding",
                 "this AU file uses encoding $encoding, which AudioKodec cannot decode",

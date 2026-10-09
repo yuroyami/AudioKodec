@@ -10,6 +10,8 @@ import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.ParsedStream
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
+import io.github.yuroyami.audiokodec.internal.codec.G722Codec
+import io.github.yuroyami.audiokodec.internal.codec.G726Codec
 import io.github.yuroyami.audiokodec.internal.codec.GsmCodec
 import io.github.yuroyami.audiokodec.internal.codec.ImaAdpcmWavCodec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
@@ -36,6 +38,8 @@ internal object WaveReader {
     private const val FORMAT_MULAW = 0x0007
     private const val FORMAT_IMA_ADPCM = 0x0011
     private const val FORMAT_GSM610 = 0x0031
+    private const val FORMAT_G726 = 0x0045
+    private const val FORMAT_G722 = 0x028F
     private const val FORMAT_EXTENSIBLE = 0xFFFE
 
     /**
@@ -498,6 +502,33 @@ internal object WaveReader {
                     sampleCodec = codec,
                     storedBitDepth = null,
                 )
+            }
+
+            FORMAT_G726, FORMAT_G722 -> {
+                val name = if (formatTag == FORMAT_G726) "G.726" else "G.722"
+                if (channels != 1) {
+                    throw UnsupportedFeatureException(
+                        "$name in $channels channels",
+                        "this WAV file states $name in $channels channels; the coding is defined for one",
+                    )
+                }
+                if (formatTag == FORMAT_G722) {
+                    WaveFormat(
+                        codec = AudioCodec.G722,
+                        audioFormat = audioFormat,
+                        sampleCodec = G722Codec(options.g722Mode),
+                        storedBitDepth = null,
+                    )
+                } else {
+                    // The bits per sample are the code word size, and so the rate.
+                    requireDepth(containerBits, intArrayOf(2, 3, 4, 5), "G.726 code word", start)
+                    WaveFormat(
+                        codec = AudioCodec.G726,
+                        audioFormat = audioFormat,
+                        sampleCodec = G726Codec(containerBits, lsbFirst = false),
+                        storedBitDepth = null,
+                    )
+                }
             }
 
             else -> throw UnsupportedFeatureException(
