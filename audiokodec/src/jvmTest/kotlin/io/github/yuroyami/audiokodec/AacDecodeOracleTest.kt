@@ -72,7 +72,7 @@ class AacDecodeOracleTest {
             run(
                 listOf(
                     ffmpeg, "-y", "-v", "error", "-f", "lavfi",
-                    "-i", "anoisesrc=d=4:c=pink:r=$rate:a=0.3,pan=stereo|c0=c0|c1=0.7*c0",
+                    "-i", "anoisesrc=d=4:c=pink:r=$rate:a=0.3:seed=1,pan=stereo|c0=c0|c1=0.7*c0",
                     "-c:a", "aac", "-b:a", "48k", file.path,
                 ),
             )
