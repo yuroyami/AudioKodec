@@ -101,7 +101,12 @@ internal class VorbisDecoder(
     private val tails = Array(channels) { FloatArray(longBlock / 2) }
 
     private val curve = FloatArray(longBlock / 2)
-    private val floorStates = Array(channels) { VorbisFloor.FloorState(MAX_FLOOR_POINTS) }
+    private val floor0Order = config.floors.maxOf { if (it is VorbisFloor.Floor0) it.order else 0 }
+    private val floorStates = Array(channels) {
+        options.checkAllocation(channels.toLong() * floor0Order * (Float.SIZE_BYTES + Double.SIZE_BYTES),
+            "decoding Vorbis floor 0 coefficients")
+        VorbisFloor.FloorState(MAX_FLOOR_POINTS, floor0Order)
+    }
     private val floorForChannel = arrayOfNulls<VorbisFloor>(channels)
     private val noResidue = BooleanArray(channels)
 

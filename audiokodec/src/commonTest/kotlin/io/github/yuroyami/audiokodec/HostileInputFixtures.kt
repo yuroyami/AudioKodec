@@ -11,6 +11,7 @@ internal object HostileInputFixtures {
             "AU" to AudioKodec.encode(samples, format, EncodeTarget.au(16)),
             "FLAC" to shortFlac(samples, format),
             "Ogg Vorbis" to VorbisTest().file(),
+            "Ogg Vorbis floor 0" to VorbisFloor0Fixtures.file(order = 3, packets = 3),
             "Ogg FLAC" to OggGranuleFixtures.flac(),
             "Ogg Opus" to OggSharedHeaderFixtures.opus(),
             "Ogg chained FLAC" to OggChainFixtures.hostile(),

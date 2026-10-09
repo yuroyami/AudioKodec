@@ -28,7 +28,7 @@ wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
 The shared hostile-input sweep covers all ten decodable containers through
-26 short fixtures, including every Ogg codec, chained Ogg FLAC, all three MPEG
+27 short fixtures, including every Ogg codec, Vorbis floor 0, chained Ogg FLAC, all three MPEG
 layers in both ordinary and free format, CAF
 ALAC/IMA and fragmented MP4. It tests every truncation boundary, all eight
 individual bit flips and an inverted byte at every position, and 100 random
@@ -181,6 +181,16 @@ subject to runner availability, including account billing. Within the suites:
   encoder switch block sizes, and on files as short as a single frame.
 - The inverse MDCT is checked against the transform's own definition computed
   directly, at seven block sizes, rather than only against another decoder.
+- Vorbis floor 0 follows the published LSP vector accumulation and odd/even
+  curve equations, including partial final vectors and 63-bit unsigned
+  amplitudes. Direct products cover orders 1 through 255, both parities,
+  multiple Bark maps and floor rates, and the 2015 Bark erratum. Complete
+  synthetic streams compare with FFmpeg's float decoder within the existing
+  `1e-4` peak bound; RMS is below `1e-5`, or `2e-5` at order 255. Type-two
+  codebooks use FFmpeg's libvorbis wrapper at its 16-bit precision, with the
+  same peak bound and RMS below `3e-5`. Common tests cover silent floors,
+  truncated packets, reserved selectors, scalar-book refusal, allocation
+  guards, oversized vectors, tag payload identity, source sizes and seeking.
 - MPEG audio frame headers, durations and data offsets agree with `ffprobe`
   across five sample rates, three bitrates and both channel counts, and a LAME
   variable bitrate file reports the length that went into the encoder.
@@ -249,7 +259,7 @@ them.
 | **IMA ADPCM (QuickTime `ima4`)** | ✅ | ❌ | 34-byte packets of 64 frames, one packet per channel. CAF accepts Apple's unspecified width and ffmpeg's four-bit width while requiring the same flags and packet geometry; ffmpeg mono and stereo files have sample, length and seek comparisons |
 | **Microsoft ADPCM** | ✅ | ✅ | Seven standard coefficient sets, plus a table carried by the file. Exact ffmpeg comparisons cover every standard coefficient set, signed prediction rounding and independent stereo predictors |
 | **FLAC** | ✅ | ✅ | Constant, verbatim, fixed and linear predictors up to order 32; Rice and Rice2 residuals with escaped partitions; all four stereo arrangements; wasted-bits subframes; 8 to 32-bit decode and 8, 16 and 24-bit encode. Decodes inside Ogg as well as natively. Native unindexed seeks bisect checked headers for known-size sources, decode and retain only the target frame, and resolve ambiguous embedded headers with a verified forward walk |
-| **Vorbis** | ✅ | ❌ | Floor type 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodec's channel order. Floor type 0 is parsed and refused: no encoder has emitted it since the format's 2001 betas, and none exists to make a file to test one against |
+| **Vorbis** | ✅ | ❌ | Floor types 0 and 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodec's channel order. Synthetic floor-zero streams have independent decoder and direct-equation comparisons, including both vector lookup types and maximum order |
 | **Opus** | ✅ | ❌ | SILK, CELT and hybrid frames, mode and bandwidth changes with their redundant frames, concealment and recovery from in-band redundancy, mapping families 0, 1, 2, 3 and 255 with surround reordered into AudioKodec's channel order. Pre-skip, start offset, end trim and output gain applied; seeking with 80 ms of run-up. Bit-exact against libopus 1.5.2 |
 | Speex | ❌ | ❌ | Its Ogg carriage is done: headers, length and comments are read. The codec itself is #18 |
 | **ALAC** | ✅ | ❌ | Translated from Apple's Apache-2.0 reference: adaptive Golomb residues, the adaptive predictor in every order, mixed stereo pairs, shifted-off low bytes at 24 and 32 bits, uncompressed escape frames, one to eight channels reordered from ALAC's order. Every file Apple's `alacconvert` encodes at 16, 24 and 32 bits with one to eight channels decodes to exactly its input, and every ffmpeg file in MP4 to exactly ffmpeg's decode. At 20 bits, a C++ harness calls Apple's `ALACEncoder` directly: mono, stereo and 5.1 require exact input integers, including extrema, low bits, prediction and escape frames, short final packets and seeking. Encoding is #11 |
@@ -605,9 +615,9 @@ MP4 and ALAC, #6, are under way: the container reads and ALAC decodes. The tags
 inside an MP4, its gapless trim and the ALAC encoder remain, and the first of
 those closes the last tag gap.
 
-Three small leftovers, all refused today rather than done wrong: writing tags into an Ogg file that
-interleaves several logical streams (#44), Vorbis floor type 0 (#45), and free
-format MPEG audio (#46).
+Writing tags into an Ogg file that interleaves several logical streams remains
+at #44. Vorbis floor type 0 and free-format MPEG audio now decode, with their
+independent comparisons and malformed-input coverage recorded above.
 
 This is past the point at which the library is worth publishing. WAV, AIFF, AU, Wave64,
 CAF, FLAC, Vorbis, Opus, Ogg and the tag set are a coherent product, and `0.1.0` can

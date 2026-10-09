@@ -1,8 +1,13 @@
 package io.github.yuroyami.audiokodec.internal.vorbis
 
 import io.github.yuroyami.audiokodec.CorruptStreamException
-import io.github.yuroyami.audiokodec.UnsupportedFeatureException
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.atan
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * A Vorbis floor: the coarse shape of the spectrum.
@@ -15,8 +20,7 @@ import kotlin.math.abs
  *
  * Two kinds are defined. Floor 1, the line-segment kind, is what every encoder
  * written since 2001 emits. Floor 0 describes the curve as a set of line
- * spectral pairs instead; it is parsed here so a file using it is named
- * precisely, and refused rather than guessed at.
+ * spectral pairs instead. Both follow the specification's curve equations.
  *
  * Written from the Vorbis I specification, sections 6 and 7.
  */
@@ -39,10 +43,13 @@ internal sealed class VorbisFloor {
      * One of these exists per channel for the life of the stream, so decoding a
      * packet allocates nothing.
      */
-    class FloorState(values: Int) {
+    class FloorState(values: Int, lspValues: Int = 0) {
         val y = IntArray(values)
         val finalY = IntArray(values)
         val step2 = BooleanArray(values)
+        val lsp = FloatArray(lspValues)
+        val lspCos = DoubleArray(lspValues)
+        var amplitude = 0.0
     }
 
     class Floor1(
@@ -236,15 +243,7 @@ internal sealed class VorbisFloor {
         }
     }
 
-    /**
-     * The line spectral pair floor, parsed and refused.
-     *
-     * No encoder has produced this since the format's beta releases in 2001,
-     * and none exists today to produce a file to test a decoder against. Its
-     * header is read so that a file using it is named exactly rather than
-     * failing somewhere further in, and it is refused rather than implemented
-     * from a formula nothing could check.
-     */
+    /** Line spectral pairs and the Bark-mapped response in specification section 6.2. */
     class Floor0(
         val order: Int,
         val rate: Int,
@@ -258,17 +257,85 @@ internal sealed class VorbisFloor {
             reader: VorbisBitReader,
             books: Array<VorbisCodebook>,
             state: FloorState,
-        ): Boolean = throw UnsupportedFeatureException(
-            "Vorbis floor 0",
-            "this Vorbis stream uses the line spectral pair floor, which only the " +
-                "format's 2001 beta encoders ever produced",
-        )
+        ): Boolean {
+            state.amplitude = 0.0
+            // The six-bit setup field permits up to 63 amplitude bits.
+            // Keep the reads within the bit reader's 32-bit word interface.
+            val low = reader.readBits(minOf(amplitudeBits, 32)).toLong() and 0xFFFF_FFFFL
+            val high = if (amplitudeBits > 32) reader.readBits(amplitudeBits - 32).toLong() else 0L
+            val amplitude = low or (high shl 32)
+            if (reader.endOfPacket || amplitude == 0L) return false
+            val number = reader.readBits(VorbisCodebook.ilog(bookList.size))
+            if (reader.endOfPacket) return false
+            if (number >= bookList.size) throw CorruptStreamException("a Vorbis floor 0 packet selects an absent codebook")
+            val book = books[bookList[number]]
+            var offset = 0
+            var last = 0f
+            while (offset < order) {
+                val count = minOf(book.dimensions, order - offset)
+                state.lsp.fill(0f, offset, offset + count)
+                if (!book.addVector(reader, state.lsp, offset, count)) return false
+                for (index in offset until offset + count) {
+                    state.lsp[index] += last
+                    if (!state.lsp[index].isFinite()) throw CorruptStreamException("a Vorbis floor 0 coefficient is not finite")
+                }
+                last = state.lsp[offset + count - 1]
+                offset += count
+            }
+            state.amplitude = amplitude.toDouble()
+            return true
+        }
 
-        override fun synthesise(state: FloorState, into: FloatArray, half: Int): Unit =
-            throw UnsupportedFeatureException(
-                "Vorbis floor 0",
-                "this Vorbis stream uses the line spectral pair floor",
-            )
+        override fun synthesise(state: FloorState, into: FloatArray, half: Int) {
+            if (state.amplitude == 0.0) {
+                into.fill(0f, 0, half)
+                return
+            }
+            for (index in 0 until order) state.lspCos[index] = 2.0 * cos(state.lsp[index].toDouble())
+            val amplitude = state.amplitude * amplitudeOffset / (2.0.pow(amplitudeBits) - 1.0)
+            val scale = barkMapSize / bark(rate * 0.5)
+            var previousMap = -1
+            var value = 0f
+            for (bin in 0 until half) {
+                val map = (bark(rate.toDouble() * bin / (2.0 * half)) * scale).toInt().coerceIn(0, barkMapSize - 1)
+                if (map != previousMap) {
+                    val w = 2.0 * cos(PI * map / barkMapSize)
+                    var p = 0.5
+                    var q = 0.5
+                    for (index in 0 until order - 1 step 2) {
+                        q *= w - state.lspCos[index]
+                        p *= w - state.lspCos[index + 1]
+                    }
+                    if (order and 1 != 0) {
+                        q *= w - state.lspCos[order - 1]
+                        q *= q
+                        p *= p * (4.0 - w * w)
+                    } else {
+                        q *= q * (2.0 + w)
+                        p *= p * (2.0 - w)
+                    }
+                    val denominator = sqrt(p + q)
+                    if (denominator <= 0.0 || !denominator.isFinite()) {
+                        throw CorruptStreamException("a Vorbis floor 0 curve has a singular response")
+                    }
+                    value = exp(0.11512925 * (amplitude / denominator - amplitudeOffset)).toFloat()
+                    if (!value.isFinite()) throw CorruptStreamException("a Vorbis floor 0 curve exceeds finite PCM")
+                    previousMap = map
+                }
+                into[bin] = value
+            }
+        }
+
+        fun validate(books: Array<VorbisCodebook>, at: Long) {
+            for (number in bookList) {
+                if (books[number].lookupType == 0) {
+                    throw CorruptStreamException("a Vorbis floor 0 codebook has no vector lookup", at)
+                }
+            }
+        }
+
+        private fun bark(frequency: Double): Double = 13.1 * atan(0.00074 * frequency) +
+            2.24 * atan(0.0000000185 * frequency * frequency) + 0.0001 * frequency
     }
 
     companion object {
@@ -361,6 +428,9 @@ internal sealed class VorbisFloor {
             val barkMapSize = reader.readBits(16)
             val amplitudeBits = reader.readBits(6)
             val amplitudeOffset = reader.readBits(8)
+            if (order == 0 || rate == 0 || barkMapSize == 0) {
+                throw CorruptStreamException("a Vorbis floor 0 has zero order, rate or Bark map size", at)
+            }
             val bookCount = reader.readBits(4) + 1
             val books = IntArray(bookCount) {
                 val book = reader.readBits(8)

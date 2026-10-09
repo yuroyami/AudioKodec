@@ -221,14 +221,14 @@ Apple's Apache-2.0 reference. Independent comparisons require the exact input
 integers at 16, 24 and 32 bits with one to eight channels, and at 20 bits with
 mono, stereo and 5.1 audio.
 
-Vorbis decodes floor type 1 and all three residue kinds,
+Vorbis decodes floor types 0 and 1 and all three residue kinds,
 channel coupling, block switching, and up to eight channels reordered into
 AudioKodec's own channel order rather than Vorbis's. It is checked against
 libvorbis at qualities 0, 4 and 9 in mono and stereo, plus a 5.1 comparison,
 with a maximum sample difference below 1e-4.
-The one thing left out is floor type 0, which no encoder has produced since the
-format's 2001 beta releases; a file using it is named and refused rather than
-guessed at.
+[Floor type 0](docs/vorbis-floor-zero.md), used by the early beta encoders,
+is checked through synthetic streams, independent decoders and the
+specification's curve equations.
 
 ```kotlin
 val info = AudioKodec.probe(oggBytes)

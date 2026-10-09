@@ -10,7 +10,7 @@ required = {
     "IntegerEncodingOracleTest", "Mp4OracleTest", "MpegMp4OracleTest", "MpegCrcOracleTest", "MpegFreeFormatOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
     "OggOracleTest", "OggChainOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
     "OpusJoinOracleTest", "OpusMultistreamOracleTest", "OpusOracleTest",
-    "SilkDecodeOracleTest", "VorbisOracleTest", "MutagenTagOracleTest",
+    "SilkDecodeOracleTest", "VorbisOracleTest", "VorbisFloor0OracleTest", "MutagenTagOracleTest",
     "NativeTextTagOracleTest", "NativeTextEncodingOracleTest", "R128TagOracleTest",
 }
 apple_only = {

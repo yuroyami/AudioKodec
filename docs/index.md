@@ -363,17 +363,17 @@ AudioKodec.open(oggBytes).use { decoder ->
 }
 ```
 
-Everything an encoder emits is covered: floor type 1, all three residue types,
+Both floor types decode, along with all three residue types,
 channel coupling, block switching, and up to eight channels, which come out in
 AudioKodec's channel order rather than Vorbis's own. Vorbis puts the centre
 channel second, between the two front channels, where WAV and everything derived
 from it puts it third.
 
-Floor type 0, which describes the curve as line spectral pairs instead of line
-segments, is parsed and then refused by name. No encoder has emitted it since
-the format's 2001 beta releases, which also means there is no way to produce a
-file to test an implementation of it against, and shipping a decoder nothing
-could check is worse than a clear refusal.
+[Floor type 0](vorbis-floor-zero.md) describes the curve as line spectral pairs
+instead of line segments. Its vector decoding and Bark-mapped response follow
+the specification. Synthetic complete streams give it independent FFmpeg and
+libvorbis comparisons, including both vector lookup types and changed setups
+between chained links.
 
 ### Rewriting Ogg tags
 

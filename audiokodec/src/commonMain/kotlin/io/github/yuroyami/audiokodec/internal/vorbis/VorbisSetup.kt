@@ -206,6 +206,7 @@ internal class VorbisConfig(
             val floors = Array(floorCount) {
                 VorbisFloor.parse(reader.readBits(16), reader, codebookCount, at)
             }
+            for (floor in floors) if (floor is VorbisFloor.Floor0) floor.validate(codebooks, at)
 
             val residueCount = reader.readBits(6) + 1
             val residues = Array(residueCount) {

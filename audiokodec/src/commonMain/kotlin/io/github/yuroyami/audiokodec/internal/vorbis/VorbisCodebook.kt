@@ -107,20 +107,22 @@ internal class VorbisCodebook private constructor(
     /**
      * Adds one entry's vector into [into] at [at], which is what residue
      * decoding does on every pass after the first.
+     * [count] can discard the unused suffix of floor 0's final vector while
+     * still consuming its complete codeword.
      */
-    fun addVector(reader: VorbisBitReader, into: FloatArray, at: Int): Boolean {
+    fun addVector(reader: VorbisBitReader, into: FloatArray, at: Int, count: Int = dimensions): Boolean {
         val entry = decodeScalar(reader)
         if (entry < 0) return false
         val table = expanded
         if (table != null) {
             val from = entry * dimensions
-            for (i in 0 until dimensions) into[at + i] += table[from + i]
+            for (i in 0 until count) into[at + i] += table[from + i]
             return true
         }
         var last = 0f
         if (lookupType == 1) {
             var divisor = 1
-            for (i in 0 until dimensions) {
+            for (i in 0 until count) {
                 val offset = (entry / divisor) % lookupValues
                 val value = multiplicands[offset] * deltaValue + minimumValue + last
                 into[at + i] += value
@@ -129,7 +131,7 @@ internal class VorbisCodebook private constructor(
             }
         } else {
             var offset = entry * dimensions
-            for (i in 0 until dimensions) {
+            for (i in 0 until count) {
                 val value = multiplicands[offset] * deltaValue + minimumValue + last
                 into[at + i] += value
                 if (sequenceP) last = value
