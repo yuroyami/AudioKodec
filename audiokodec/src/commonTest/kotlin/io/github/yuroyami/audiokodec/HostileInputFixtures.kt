@@ -28,6 +28,7 @@ internal object HostileInputFixtures {
             "WAV GSM 06.10" to GsmTest().hostileFixture(),
             "WAV G.726" to G72xTest().hostileFixture(),
             "WAV G.722" to G72xTest().hostileG722Fixture(),
+            "iLBC" to IlbcTest().hostileFixture(),
             "MP4 MPEG" to MpegMp4Fixtures.file(MpegMp4Fixtures.packets(MpegTest().silentFrames(3, count = 2, compact = true))),
         ) + HandBuiltFileTest().hostileFixtures() + Mp4Test().hostileFixtures() +
             (1..3).map { "MPEG Layer $it" to MpegTest().silentFrames(it, count = 2, compact = true) } +

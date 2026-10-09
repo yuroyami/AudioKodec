@@ -77,6 +77,9 @@ public enum class AudioContainer(
     /** AMR wideband. */
     AMR_WB("AMR-WB", "awb"),
 
+    /** iLBC in the storage format of RFC 3952. */
+    ILBC("iLBC", "lbc"),
+
     /** Raw AC-3 or Enhanced AC-3. */
     AC3("AC-3", "ac3"),
 
@@ -114,7 +117,7 @@ public enum class AudioContainer(
          * unit test, so the documentation cannot claim a decoder that does
          * not exist.
          */
-        val DECODABLE = setOf(WAV, RF64, WAVE64, AIFF, AU, FLAC, CAF, OGG, MPEG_AUDIO, MP4, ADTS, WAVPACK, APE, TTA, MUSEPACK, AMR_NB, AMR_WB)
+        val DECODABLE = setOf(WAV, RF64, WAVE64, AIFF, AU, FLAC, CAF, OGG, MPEG_AUDIO, MP4, ADTS, WAVPACK, APE, TTA, MUSEPACK, AMR_NB, AMR_WB, ILBC)
     }
 }
 
@@ -199,6 +202,9 @@ public enum class AudioCodec(
 
     /** GSM 06.10 full rate. */
     GSM("GSM 06.10", false),
+
+    /** Internet Low Bitrate Codec speech, in 20 or 30 ms frames. */
+    ILBC("iLBC", false),
 
     /** ITU-T G.722 sub-band ADPCM, 7 kHz audio in 64 kbit/s. */
     G722("G.722", false),

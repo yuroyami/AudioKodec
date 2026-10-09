@@ -84,6 +84,7 @@ Run as programs, never read as source.
 | speexenc, speexdec and libspeex 1.2.1 | Speex: `speexenc` from the operating system's `speex` package writes the files, in all three modes, at every narrowband quality and across the others, with variable and average bitrate, voice activity detection with discontinuous transmission, several frames to a packet, and stereo. `speex_float_oracle.c`, a few lines over libogg and libspeex's public API compiled against the 1.2.1 sources without SSE, writes the floats the reference decodes them to, which every sample must equal. `speexdec` itself writes 16-bit samples from a build with SSE, so it gives only the length, which must be the same |
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
+| libilbc 3.0.4 | iLBC: `ilbc_oracle.c`, a few lines over libilbc's public interface built from the pinned sources under `reference/ilbc`, encodes speech, silence, clipping, noise and bursts in both frame sizes and decodes them; the test wraps the frames in the storage format of RFC 3952 and ffmpeg copies them into CAF and QuickTime files. Every sample must be libilbc's integer, also for runs of random frames, which exercise concealment, and for frames altered to state the codebook index libilbc refuses, which must be refused at the same frame |
 | ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
 | ffmpeg's G.722 and G.726 | G.722: every sample of the WAV and AU files ffmpeg writes, in all three modes through `-bits_per_codeword`, must equal ffmpeg's. G.726: ffmpeg's encoder writes the WAV and AU files, whose code words must decode to exactly the samples of the decoder `G726ConformanceTest` checks; ffmpeg's own G.726 decoder does not follow the Recommendation, so at 16 to 32 kbit/s its samples only bound the result, and at 40 kbit/s not even that |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
@@ -728,6 +729,26 @@ layout. That layout stores the same fields in the same order as the plain
 one, least significant bit first and two frames to a 65-byte block, so both
 are read by one field reader rather than by the reference's two unrolled
 unpackers.
+
+## iLBC
+
+The decoder is a translation of WebRTC's fixed-point iLBC decoder, recorded
+here before the first line was written. libilbc packages WebRTC's iLBC on its
+own, with the signal processing functions it calls.
+
+| Field | Value |
+|---|---|
+| Source | https://github.com/TimothyGu/libilbc, tag v3.0.4, commit `cd064edf2c6c104a4e1fd87b34fd24cfa6dbe401`, with its `abseil-cpp` submodule at `1bae23e32ba1f1af7c7d1488a69a351ec96dc98d` for the headers the build needs |
+| Licence | BSD 3-Clause, `COPYING`, with Google's additional patent grant in `PATENTS`; both reproduced in `NOTICE`. `common_audio/third_party/spl_sqrt_floor` is Wilco Dijkstra's public domain square root, as its header and `LICENSE` record |
+| Files | In `modules/audio_coding/codecs/ilbc`, `ilbc.c` for the decoder's interface, `defines.h`, `constants.c`, and every file the decoder reaches: `decode.c`, `unpack_bits.c`, `swap_bytes.c`, `index_conv_dec.c`, `simple_lsf_dequant.c`, `lsf_check.c`, `decoder_interpolate_lsf.c`, `lsf_interpolate_to_poly_dec.c`, `interpolate.c`, `lsf_to_poly.c`, `lsf_to_lsp.c`, `get_lsp_poly.c`, `bw_expand.c`, `decode_residual.c`, `state_construct.c`, `cb_construct.c`, `gain_dequant.c`, `get_cd_vec.c`, `create_augmented_vec.c`, `do_plc.c`, `comp_corr.c`, `hp_output.c`, `xcorr_coef.c`, `init_decode.c`, `enhancer_interface.c`, `enhancer.c`, `get_sync_seq.c`, `nearest_neighbor.c`, `refiner.c`, `my_corr.c`, `enh_upsample.c`, `smooth.c` and `smooth_out_data.c`; in `common_audio/signal_processing`, the portable C forms of the functions those call and `include/signal_processing_library.h` and `spl_inl.h` for its macros; and `spl_sqrt_floor.c` |
+| Never opened | Nothing in the tree mentions a copyleft licence. abseil, Apache 2.0, supplies headers to the oracle build only and was not read. ffmpeg's own iLBC decoder, which does not give WebRTC's samples, was only run |
+| Not ported | The encoder, the decoder without its enhancer, which `WebRtcIlbcfix_DecoderInit` never selects, and the branch for a previous enhancer state of 2, which only WebRTC's NetEq concealment entry point sets |
+
+The decoder's set of functions was found by linking a decode-only program
+over the library with unused sections removed, so nothing it reaches was
+missed. The tables were extracted from `constants.c` by
+`reference/ilbc/gen_kotlin.py`, which checks each table's length against its
+declared size, so none was typed.
 
 ## G.722 and G.726
 

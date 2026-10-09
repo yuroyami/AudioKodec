@@ -18,6 +18,7 @@ import io.github.yuroyami.audiokodec.internal.alac.AlacConfig
 import io.github.yuroyami.audiokodec.internal.alac.AlacPacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.ChannelReorderingCodec
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
+import io.github.yuroyami.audiokodec.internal.ilbc.IlbcCodec
 import io.github.yuroyami.audiokodec.internal.codec.ImaAdpcmQuickTimeCodec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.PcmLayout
@@ -694,6 +695,25 @@ internal object CafReader {
                     allowedBitsPerChannel = intArrayOf(0, 4),
                 )
                 Chosen(AudioCodec.IMA_ADPCM, ImaAdpcmQuickTimeCodec(channels), null)
+            }
+
+            "ilbc" -> {
+                if (channels != 1) {
+                    throw UnsupportedFeatureException(
+                        "iLBC in $channels channels",
+                        "this CAF file states iLBC in $channels channels; the coding is defined for one",
+                    )
+                }
+                // The packet size gives the frame size. ffmpeg states 160 frames a packet
+                // for both, so the stated frame count is not trusted.
+                val mode = when (desc.bytesPerPacket) {
+                    38 -> 20
+                    50 -> 30
+                    else -> throw CorruptStreamException(
+                        "a CAF iLBC packet of ${desc.bytesPerPacket} bytes is neither of the coding's frame sizes",
+                    )
+                }
+                Chosen(AudioCodec.ILBC, IlbcCodec(mode), null)
             }
 
             else -> throw UnsupportedFeatureException(

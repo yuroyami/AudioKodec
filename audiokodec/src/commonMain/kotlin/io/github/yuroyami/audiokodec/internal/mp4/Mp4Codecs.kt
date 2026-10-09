@@ -14,6 +14,7 @@ import io.github.yuroyami.audiokodec.internal.alac.AlacPacketCodec
 import io.github.yuroyami.audiokodec.internal.amr.AmrPacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
 import io.github.yuroyami.audiokodec.internal.codec.GsmPacketCodec
+import io.github.yuroyami.audiokodec.internal.ilbc.IlbcPacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.PcmLayout
 import io.github.yuroyami.audiokodec.internal.codec.SampleCodec
@@ -67,6 +68,7 @@ internal object Mp4Codecs {
             "ac-3", "ec-3" -> named(AudioCodec.AC3, if (entry.format == "ac-3") "AC-3" else "Enhanced AC-3")
             "samr", "sawb" -> amr(entry, options, wide = entry.format == "sawb")
             "agsm" -> gsm(entry, options)
+            "ilbc" -> ilbc(entry, options)
             "alac" -> alac(entry, options)
             "Opus" -> opus(entry, options)
             "fLaC" -> flac(entry, reader, options)
@@ -102,6 +104,19 @@ internal object Mp4Codecs {
             val frames = (largestPacket / GsmPacketCodec.FRAME_BYTES).coerceAtLeast(1).toLong() * GsmPacketCodec.FRAME_SAMPLES
             options.checkAllocation(frames * 4, "decoding a $largestPacket-byte GSM 06.10 sample")
             GsmPacketCodec(format, frames.toInt())
+        }
+    }
+
+    /**
+     * iLBC as QuickTime carries it: each sample one or more frames of 8 kHz
+     * speech, whose size says whether they are 20 or 30 ms ones.
+     */
+    private fun ilbc(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice {
+        checkShape(entry, options, 8_000, 1)
+        val format = AudioFormat(8_000, ChannelLayout.MONO)
+        return Choice(AudioCodec.ILBC, "iLBC", format, null, 0) { largestPacket ->
+            val mode = if (largestPacket % 50 == 0) 30 else 20
+            IlbcPacketCodec(format, 3 * 240, mode)
         }
     }
 

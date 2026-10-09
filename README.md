@@ -356,6 +356,16 @@ arithmetic, so every sample is exactly the integer libgsm gives, on every
 target. Seeking decodes a half-second run-up and converges on a continuous
 decode; a seek to the start is exact. See [GSM 06.10](docs/gsm.md).
 
+## iLBC
+
+iLBC, the Internet Low Bitrate Codec of older voice over IP systems, decodes
+in its 20 and 30 ms frame sizes from `.lbc` files in the storage format of
+RFC 3952 and from CAF and QuickTime files. The decoder is translated from
+WebRTC's and keeps its fixed-point arithmetic and its enhancer, so every
+sample is exactly the integer WebRTC gives, on every target, and frames a
+sender marked empty are concealed as WebRTC conceals them. Seeking is exact.
+See [iLBC](docs/ilbc.md).
+
 ## G.722 and G.726
 
 G.722 wideband and G.726 narrowband ADPCM, the ITU telephony codings, decode
@@ -526,7 +536,7 @@ escaping and reserved-code limits.
 
 ## Name a format
 
-The sniffer names 29 formats, including those AudioKodec cannot decode. That is
+The sniffer names 30 formats, including those AudioKodec cannot decode. That is
 deliberate: a file it cannot read is one you can route somewhere else, and
 guessing from the extension is worse.
 
@@ -569,15 +579,16 @@ and `42ni` is 24-bit.
 |---|---|
 | Ogg | Vorbis, Opus, FLAC and Speex, with up to 256 simultaneous logical streams. Tags can be rewritten; audio encoding is not implemented |
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
-| CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
+| CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit, iLBC |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB, GSM 06.10. AC-3 is named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
+| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB, GSM 06.10, iLBC. AC-3 is named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 | ADTS | AAC-LC, with sample-accurate seeking |
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
 | Monkey's Audio | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to eight channels except seven, from version 3.99 on. APEv2 tags are read |
 | True Audio | 8 to 24 bits, exact integers through `IntPcmAccess`, any number of channels. ID3 and APEv2 tags are read |
 | Musepack | Stream version 8, mono and stereo, at 32 to 48 kHz, with the exact length its header states. APEv2 tags are read |
 | AMR-NB and AMR-WB | Every rate, single-channel and multichannel, with comfort noise and concealment, exactly as opencore-amr decodes them |
+| iLBC | 20 and 30 ms frames in the storage format of RFC 3952, exactly as WebRTC's iLBC decodes them |
 
 ### Probed but not decoded
 

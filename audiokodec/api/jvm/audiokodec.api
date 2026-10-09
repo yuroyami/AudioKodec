@@ -43,6 +43,7 @@ public final class io/github/yuroyami/audiokodec/AudioCodec : java/lang/Enum {
 	public static final field G722 Lio/github/yuroyami/audiokodec/AudioCodec;
 	public static final field G726 Lio/github/yuroyami/audiokodec/AudioCodec;
 	public static final field GSM Lio/github/yuroyami/audiokodec/AudioCodec;
+	public static final field ILBC Lio/github/yuroyami/audiokodec/AudioCodec;
 	public static final field IMA_ADPCM Lio/github/yuroyami/audiokodec/AudioCodec;
 	public static final field MP1 Lio/github/yuroyami/audiokodec/AudioCodec;
 	public static final field MP2 Lio/github/yuroyami/audiokodec/AudioCodec;
@@ -80,6 +81,7 @@ public final class io/github/yuroyami/audiokodec/AudioContainer : java/lang/Enum
 	public static final field DSF Lio/github/yuroyami/audiokodec/AudioContainer;
 	public static final field DTS Lio/github/yuroyami/audiokodec/AudioContainer;
 	public static final field FLAC Lio/github/yuroyami/audiokodec/AudioContainer;
+	public static final field ILBC Lio/github/yuroyami/audiokodec/AudioContainer;
 	public static final field MATROSKA Lio/github/yuroyami/audiokodec/AudioContainer;
 	public static final field MIDI Lio/github/yuroyami/audiokodec/AudioContainer;
 	public static final field MP4 Lio/github/yuroyami/audiokodec/AudioContainer;

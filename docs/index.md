@@ -95,7 +95,7 @@ ADIF has one header and no frame lengths, so its duration is `null`, and
 
 ## Name a format
 
-`sniff` names 29 formats from the bytes supplied, including formats without a
+`sniff` names 30 formats from the bytes supplied, including formats without a
 decoder. Check `isDecodable` before choosing AudioKodec to read one:
 
 ```kotlin
@@ -544,6 +544,12 @@ GSM 06.10 decodes from WAV files, in Microsoft's 65-byte blocks, and from
 QuickTime and MP4 files, in the plain 33-byte frames, to exactly the samples
 libgsm gives. Seeking decodes a half-second run-up before the target. See
 [GSM 06.10](gsm.md).
+
+## iLBC
+
+iLBC decodes in both frame sizes from `.lbc` files, CAF and QuickTime, to
+exactly the samples WebRTC's decoder gives, with its enhancer and its
+concealment of frames marked empty. Seeking is exact. See [iLBC](ilbc.md).
 
 ## G.722 and G.726
 

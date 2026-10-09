@@ -75,6 +75,10 @@ audio and Ogg.
   QuickTime and MP4 in the plain one, translated from libgsm in its
   fixed-point arithmetic and identical to it sample for sample on every
   target, with seeking.
+- iLBC, decoded in both frame sizes from `.lbc` files in the storage format
+  of RFC 3952 and from CAF and QuickTime, translated from WebRTC in its
+  fixed-point arithmetic and identical to it sample for sample on every
+  target, with exact seeking.
 - G.722 and G.726, decoded from WAV and AU files, written from the ITU
   Recommendations and exact on every one of the ITU's test sequences, with
   exact seeking. `DecodeOptions.g722Mode` selects G.722's mode 2 or 3.

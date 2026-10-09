@@ -3,6 +3,7 @@ package io.github.yuroyami.audiokodec
 import io.github.yuroyami.audiokodec.internal.Sniffer
 import io.github.yuroyami.audiokodec.internal.container.AiffReader
 import io.github.yuroyami.audiokodec.internal.container.AuReader
+import io.github.yuroyami.audiokodec.internal.container.IlbcFileReader
 import io.github.yuroyami.audiokodec.internal.container.CafReader
 import io.github.yuroyami.audiokodec.internal.container.ContainerWriter
 import io.github.yuroyami.audiokodec.internal.container.WaveReader
@@ -697,6 +698,7 @@ public object AudioKodec {
             AudioContainer.WAVE64 -> Wave64Reader.parse(reader, options)
             AudioContainer.AIFF -> AiffReader.parse(reader, options)
             AudioContainer.AU -> AuReader.parse(reader, options)
+            AudioContainer.ILBC -> IlbcFileReader.parse(reader, options)
             else -> throw UnsupportedFormatException(
                 container,
                 "this is a ${container.displayName} file, which AudioKodec cannot decode yet",

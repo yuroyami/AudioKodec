@@ -166,6 +166,12 @@ if [[ ! -d reference/gsm/src ]]; then
     tar -xzf "$gsm_source" -C reference/gsm/src
 fi
 
+# libilbc packages WebRTC's iLBC under its BSD licence; the iLBC oracle test
+# builds it with CMake, which needs the headers of its pinned abseil submodule.
+reference_checkout reference/ilbc/src https://github.com/TimothyGu/libilbc.git cd064edf2c6c104a4e1fd87b34fd24cfa6dbe401
+git -C reference/ilbc/src submodule update --init --depth 1 abseil-cpp
+test "$(git -C reference/ilbc/src/abseil-cpp rev-parse HEAD)" = 1bae23e32ba1f1af7c7d1488a69a351ec96dc98d
+
 # The ITU's digital test sequences for G.726 and G.722, Appendix II to each
 # Recommendation: test data, checked by the conformance tests and never committed.
 itu_sequences() {

@@ -128,6 +128,11 @@ internal object Sniffer {
             return AudioContainer.ASF
         }
 
+        // iLBC's storage format, whose magic number names the frame size.
+        if (available >= 9 && (matches(header, offset, "#!iLBC20\n") || matches(header, offset, "#!iLBC30\n"))) {
+            return AudioContainer.ILBC
+        }
+
         // AMR, which states its own name in the header.
         if (available >= 6 && matches(header, offset, "#!AMR")) {
             return if (available >= 9 && matches(header, offset, "#!AMR-WB")) {

@@ -241,15 +241,15 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnHowManyFormatsAreNamed() {
-        // The README says the sniffer names 29 formats. Adding one to the
+        // The README says the sniffer names 30 formats. Adding one to the
         // enum without touching the README would make that sentence wrong,
         // which is what this test is here to stop.
-        assertEquals(29, AudioContainer.entries.size)
+        assertEquals(30, AudioContainer.entries.size)
     }
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these seventeen.
+        // The README's read and write tables name exactly these eighteen.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -269,6 +269,7 @@ class SnifferTest {
                 AudioContainer.MUSEPACK,
                 AudioContainer.AMR_NB,
                 AudioContainer.AMR_WB,
+                AudioContainer.ILBC,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -301,6 +302,7 @@ class SnifferTest {
         assertTrue(AudioContainer.MUSEPACK.isDecodable)
         assertTrue(AudioContainer.AMR_NB.isDecodable)
         assertTrue(AudioContainer.AMR_WB.isDecodable)
+        assertTrue(AudioContainer.ILBC.isDecodable)
         assertTrue(!AudioContainer.MATROSKA.isDecodable)
     }
 }
