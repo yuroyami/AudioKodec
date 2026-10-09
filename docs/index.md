@@ -81,6 +81,17 @@ including when the `COMM` sample size disagrees.
 CAF IMA accepts a compressed sample width of 0 or 4. Its packet description
 must still specify flags 0, 34 bytes per channel and 64 frames per packet.
 
+Raw AAC is probed but not yet decoded. ADTS puts a header on every frame and
+no index anywhere, so `probe` walks the frame headers, without reading the
+payloads, and reports the exact length: 1024 frames for every raw data block.
+A sync word is believed only when the next three frames agree with it, and
+junk between frames is crossed as for MPEG audio. The rate is the one the
+headers state; a stream with implicit spectral band replication plays at twice
+that rate, which only decoding reveals. A channel configuration of zero takes
+the channel count from the program configuration that leads the first frame,
+with the speakers left unnamed. ADIF has one header and no frame lengths, so
+its duration is `null`. `open` refuses both with `UnsupportedFormatException`.
+
 ## Name a format
 
 `sniff` names 29 formats from the bytes supplied, including formats without a

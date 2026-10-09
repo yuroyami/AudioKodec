@@ -440,9 +440,16 @@ and `42ni` is 24-bit.
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
 | MP4, M4A, M4B, 3GP and QuickTime | ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, AC-3 and AMR are named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 
+### Probed but not decoded
+
+Raw AAC in ADTS and ADIF framing. `probe` reports the sample rate, channels and
+bitrate, and for ADTS the exact length, counted frame by frame as ffprobe counts
+them; ADIF states no frame boundaries, so its length is unknown until AAC
+decodes. `open` refuses both by name.
+
 ### Named but not decoded
 
-AAC in both ADTS and ADIF framing, Matroska and WebM, Monkey's
+Matroska and WebM, Monkey's
 Audio, WavPack, Musepack, True Audio, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA,
 MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
 

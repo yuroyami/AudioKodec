@@ -13,6 +13,8 @@ import io.github.yuroyami.audiokodec.internal.io.SourceReader
 import io.github.yuroyami.audiokodec.internal.mpeg.Layer12Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.Mp3Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.MpegStream
+import io.github.yuroyami.audiokodec.internal.container.AdifReader
+import io.github.yuroyami.audiokodec.internal.container.AdtsStream
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4Container
 import io.github.yuroyami.audiokodec.internal.ogg.OggChain
 import io.github.yuroyami.audiokodec.internal.tag.TagAssembler
@@ -59,9 +61,10 @@ public object AudioKodec {
      *
      * This never decodes samples, but reads are not bounded to a header
      * window. Ogg walks pages through the stream end and reads their payloads
-     * to verify checksums. MPEG without a stored Xing or VBRI frame count
-     * scans frame headers across the file for an exact duration. These paths
-     * can read the whole file; other formats read metadata and index tables.
+     * to verify checksums. MPEG without a stored Xing or VBRI frame count, and
+     * ADTS AAC, scan frame headers across the file for an exact duration.
+     * These paths can read the whole file; other formats read metadata and
+     * index tables.
      * Opening Ogg performs the same page walk before playback.
      *
      * The source is not closed.
@@ -76,6 +79,8 @@ public object AudioKodec {
             AudioContainer.MPEG_AUDIO -> mpegInfo(reader, options)
             AudioContainer.MP4 -> Mp4Container.info(reader, options)
             AudioContainer.CAF -> CafReader.info(reader, options)
+            AudioContainer.ADTS -> AdtsStream.parse(reader, options).info(reader)
+            AudioContainer.ADIF -> AdifReader.info(reader, options)
             else -> parse(reader, options, detected.container).toInfo(reader)
         }
     }
@@ -109,6 +114,15 @@ public object AudioKodec {
             AudioContainer.MPEG_AUDIO -> openMpeg(reader, options)
             AudioContainer.MP4 -> Mp4Container.decoder(reader, options)
             AudioContainer.CAF -> CafReader.open(reader, options)
+            AudioContainer.ADTS, AudioContainer.ADIF -> {
+                // The framing is read so that damage is reported as damage;
+                // only then is the coding refused.
+                if (detected.container == AudioContainer.ADTS) AdtsStream.parse(reader, options) else AdifReader.info(reader, options)
+                throw UnsupportedFormatException(
+                    detected.container,
+                    "this file holds raw AAC, which AudioKodec cannot decode yet. Its format and length are readable through probe.",
+                )
+            }
             else -> parse(reader, options, detected.container).toDecoder(reader, options)
         }
     }

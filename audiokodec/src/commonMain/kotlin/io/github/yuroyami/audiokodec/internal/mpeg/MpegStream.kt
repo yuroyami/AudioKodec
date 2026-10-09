@@ -459,7 +459,7 @@ internal class MpegStream(
          * state its size. Seeing a four-byte header is not enough to accept a
          * final frame whose payload was cut off.
          */
-        private fun framePayloadExists(reader: SourceReader, at: Long, frameBytes: Int): Boolean {
+        internal fun framePayloadExists(reader: SourceReader, at: Long, frameBytes: Int): Boolean {
             if (reader.size >= 0) return true
             if (frameBytes <= 0 || at > Long.MAX_VALUE - frameBytes) return false
             reader.seek(at + frameBytes - 1L)
@@ -472,7 +472,7 @@ internal class MpegStream(
          * ID3v2 states its own length, and several may be stacked. Anything
          * else in front is left to the frame search to skip over.
          */
-        private fun skipLeadingTags(reader: SourceReader): Long {
+        internal fun skipLeadingTags(reader: SourceReader): Long {
             val header = ByteArray(10)
             var at = 0L
             while (true) {
@@ -528,7 +528,7 @@ internal class MpegStream(
          * size. Decoding either as audio produces a burst of noise, which is
          * what a decoder that ignores them does.
          */
-        private fun trailingTagStart(reader: SourceReader, size: Long): Long {
+        internal fun trailingTagStart(reader: SourceReader, size: Long): Long {
             if (size <= 0) return size
             var end = size
             val tail = ByteArray(256)

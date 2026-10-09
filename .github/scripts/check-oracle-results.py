@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 
 reports = Path("audiokodec/build/test-results/jvmTest")
 required = {
-    "AiffCOracleTest", "AlacOracleTest", "AlacEncodeOracleTest", "BextOracleTest", "CafOracleTest", "FfmpegOracleTest",
+    "AdtsOracleTest", "AiffCOracleTest", "AlacOracleTest", "AlacEncodeOracleTest", "BextOracleTest", "CafOracleTest", "FfmpegOracleTest",
     "FfmpegTagOracleTest", "FlacEncodeOracleTest", "FlacOracleTest", "FlacConformanceTest",
     "IntegerEncodingOracleTest", "Mp4OracleTest", "Mp4GaplessOracleTest", "Mp4TagOracleTest", "MpegMp4OracleTest", "MpegCrcOracleTest", "MpegFreeFormatOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
     "OggOracleTest", "OggChainOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",

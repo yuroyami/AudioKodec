@@ -54,6 +54,8 @@ audio and Ogg.
 - Apple Lossless encoding into `.m4a` at 16, 20, 24 and 32 bits with one to
   eight channels, translated from Apple's reference encoder and writing the
   same packets, with tags, cover art and chapters.
+- Raw AAC in ADTS and ADIF framing, probed: rate, channels and bitrate, and
+  for ADTS the exact length from its frame headers.
 - Apple Lossless, decoded from MP4 and CAF at 16, 20, 24 and 32 bits with one
   to eight channels, exactly, with integers through `IntPcmAccess`.
 - Opus, decoded: SILK, CELT and the hybrid of the two, the redundant frames
