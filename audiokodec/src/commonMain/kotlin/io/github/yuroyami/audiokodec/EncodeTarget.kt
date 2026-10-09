@@ -168,5 +168,27 @@ public class EncodeTarget private constructor(
             require(effort in 0..8) { "the FLAC effort is 0 to 8, not $effort" }
             return EncodeTarget(AudioContainer.FLAC, AudioCodec.FLAC, bitDepth, effort, dither)
         }
+
+        /**
+         * Apple Lossless in an `.m4a` file, at [bitDepth] bits.
+         *
+         * The encoder is a translation of Apple's reference encoder in its
+         * default mode, and writes the same packets for the same samples.
+         * ALAC keeps up to eight channels in its own speaker order, which
+         * the encoder takes from the source's layout: one, two, three, five
+         * and six channels in their canonical layouts map onto it, and four,
+         * seven and eight channels need a layout naming ALAC's speakers.
+         *
+         * The `moov` box goes after the audio, whose size is only known at the
+         * end, so the sink must support patching. Tags go into the iTunes item
+         * list and chapters into a Nero `chpl` list. [dither] applies when the
+         * source is float or deeper than [bitDepth].
+         */
+        public fun alac(bitDepth: Int = 16, dither: Dither = Dither.None): EncodeTarget {
+            require(bitDepth == 16 || bitDepth == 20 || bitDepth == 24 || bitDepth == 32) {
+                "AudioKodec writes 16, 20, 24 or 32-bit ALAC, not $bitDepth"
+            }
+            return EncodeTarget(AudioContainer.MP4, AudioCodec.ALAC, bitDepth, 0, dither)
+        }
     }
 }

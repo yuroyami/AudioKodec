@@ -122,6 +122,23 @@ internal class BitWriterMsb(initialCapacity: Int = 4096) {
      */
     fun rawBuffer(): ByteArray = buffer
 
+    /**
+     * Discards everything written after the first [bits] bits, so a coder
+     * that wrote something speculatively can write something else instead.
+     */
+    fun rewindTo(bits: Long) {
+        require(bits in 0..bitLength) { "cannot rewind to bit $bits of $bitLength" }
+        val whole = (bits / 8).toInt()
+        val part = (bits % 8).toInt()
+        pending = if (whole == byteLength) {
+            pending ushr (pendingBits - part)
+        } else {
+            (buffer[whole].toInt() and 0xFF) ushr (8 - part)
+        }
+        byteLength = whole
+        pendingBits = part
+    }
+
     /** Discards everything, keeping the buffer for reuse. */
     fun reset() {
         byteLength = 0

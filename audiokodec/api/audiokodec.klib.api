@@ -676,6 +676,7 @@ final class io.github.yuroyami.audiokodec/EncodeTarget { // io.github.yuroyami.a
         final fun aiffALaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.aiffALaw|aiffALaw(){}[0]
         final fun aiffFloat(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.aiffFloat|aiffFloat(kotlin.Int){}[0]
         final fun aiffMuLaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.aiffMuLaw|aiffMuLaw(){}[0]
+        final fun alac(kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.alac|alac(kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
         final fun au(kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.au|au(kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
         final fun auALaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.auALaw|auALaw(){}[0]
         final fun auFloat(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.auFloat|auFloat(kotlin.Int){}[0]

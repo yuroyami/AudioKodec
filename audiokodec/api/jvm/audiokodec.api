@@ -332,6 +332,8 @@ public final class io/github/yuroyami/audiokodec/EncodeTarget$Companion {
 	public final fun aiffFloat (I)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun aiffFloat$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun aiffMuLaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public final fun alac (ILio/github/yuroyami/audiokodec/Dither;)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public static synthetic fun alac$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;ILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun au (ILio/github/yuroyami/audiokodec/Dither;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun au$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;ILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun auALaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;

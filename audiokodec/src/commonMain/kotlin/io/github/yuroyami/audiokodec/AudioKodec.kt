@@ -343,10 +343,12 @@ public object AudioKodec {
      *
      * The sink is not closed. When it cannot be patched, [PcmSource.frameCount]
      * has to be known in advance, because the header holds lengths that are
-     * otherwise only knowable at the end. [tags] are stored natively in WAV,
-     * AIFF and FLAC; WAV and AIFF also receive an ID3v2.4 chunk so fields their
-     * native text chunks cannot express are retained. AU has no structured tag
-     * format and rejects a non-empty bundle.
+     * otherwise only knowable at the end. ALAC in MP4 always needs a sink that
+     * can be patched, because the size of its compressed audio is only known
+     * at the end. [tags] are stored natively in WAV, AIFF, FLAC and MP4; WAV
+     * and AIFF also receive an ID3v2.4 chunk so fields their native text
+     * chunks cannot express are retained. AU has no structured tag format and
+     * rejects a non-empty bundle.
      */
     public fun encode(
         pcm: PcmSource,

@@ -421,6 +421,7 @@ frame by confirming frames within the first 512 KiB.
 | WAV (RIFF), including WAVE_FORMAT_EXTENSIBLE | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law, IMA ADPCM, Microsoft ADPCM |
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
 | AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law |
+| MP4 and M4A | ALAC 16/20/24/32-bit with one to eight channels, written with packets identical to Apple's reference encoder. Other MP4 codings are read only; see below |
 
 RF64 and BW64 are read, and written automatically when a file passes 4 GiB.
 
@@ -437,7 +438,7 @@ and `42ni` is 24-bit.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| MP4, M4A, M4B, 3GP and QuickTime | ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, AC-3 and AMR are named and not decoded yet. Tags can be rewritten; audio encoding is not implemented |
+| MP4, M4A, M4B, 3GP and QuickTime | ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AAC, AC-3 and AMR are named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 
 ### Named but not decoded
 

@@ -248,7 +248,7 @@ internal object Mp4Metadata {
      * last one at the end of the file, so an end that says otherwise cannot
      * be stored.
      */
-    private fun neroChapters(chapters: List<TagChapter>): ByteArray {
+    fun neroChapters(chapters: List<TagChapter>): ByteArray {
         fun refuse(detail: String): Nothing =
             throw UnsupportedFeatureException("these chapters in an MP4 'chpl' box", detail)
         if (chapters.size > 255) refuse("a 'chpl' box holds at most 255 chapters, and there are ${chapters.size}")

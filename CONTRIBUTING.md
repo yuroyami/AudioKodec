@@ -114,7 +114,7 @@ for Core Audio Format files on macOS. Missing tools produce explicit JUnit
 skips, which must be reported separately from comparisons that ran. CI prepares
 the Linux and macOS dependencies with `.github/scripts/prepare-codec-oracles.sh`
 and checks JVM reports with `.github/scripts/check-oracle-results.py`. Linux
-permits the six macOS-only `afconvert` skips; the macOS job runs them as well.
+permits the seven macOS-only `afconvert` skips; the macOS job runs them as well.
 
 The published FLAC decoder corpus is pinned by commit, byte lengths and
 SHA-256 in `test-data/flac-conformance/manifest.tsv`. Its two small committed

@@ -22,6 +22,7 @@ import io.github.yuroyami.audiokodec.internal.codec.SampleEncoder
 import io.github.yuroyami.audiokodec.internal.flac.FlacDecoder
 import io.github.yuroyami.audiokodec.internal.flac.FlacEncoder
 import io.github.yuroyami.audiokodec.internal.io.SinkWriter
+import io.github.yuroyami.audiokodec.internal.mp4.Mp4AlacWriter
 import io.github.yuroyami.audiokodec.internal.tag.Id3v2Writer
 import io.github.yuroyami.audiokodec.internal.tag.TagWriter
 import io.github.yuroyami.audiokodec.tag.TagBundle
@@ -59,6 +60,10 @@ internal object ContainerWriter {
             ).encode(pcm, tags, sink)
             return
         }
+        if (target.codec == AudioCodec.ALAC) {
+            Mp4AlacWriter(pcm.format, target.bitDepth, target.dither.fresh()).encode(pcm, tags, sink)
+            return
+        }
         writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->
             encodeAll(pcm, encoder, writer)
         }
@@ -70,10 +75,10 @@ internal object ContainerWriter {
         sink: AudioSink,
         tags: TagBundle? = null,
     ) {
-        if (target.codec != AudioCodec.PCM_INTEGER && target.codec != AudioCodec.FLAC) {
+        if (target.codec != AudioCodec.PCM_INTEGER && target.codec != AudioCodec.FLAC && target.codec != AudioCodec.ALAC) {
             throw UnsupportedFeatureException(
                 "integer input for ${target.codec.displayName}",
-                "choose integer WAV, AIFF or AU, or 8/16/24-bit FLAC",
+                "choose integer WAV, AIFF or AU, 8/16/24-bit FLAC, or ALAC",
             )
         }
         validateInput(pcm.format, target, tags)
@@ -86,6 +91,10 @@ internal object ContainerWriter {
                 maxPartitionOrder = partitionOrderFor(target.blockAlign),
                 dither = target.dither.fresh(),
             ).encode(pcm, tags, sink)
+            return
+        }
+        if (target.codec == AudioCodec.ALAC) {
+            Mp4AlacWriter(pcm.format, target.bitDepth, target.dither.fresh()).encode(pcm, tags, sink)
             return
         }
         writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->

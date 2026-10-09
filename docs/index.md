@@ -172,7 +172,22 @@ Create a fresh source for each encoding operation. The sample array is not
 copied, so avoid changing it while an encoding runs.
 
 The targets available are FLAC, integer PCM and IEEE float in WAV, AIFF and AU,
-A-law and mu-law in all three, and IMA or Microsoft ADPCM in WAV.
+A-law and mu-law in all three, IMA or Microsoft ADPCM in WAV, and Apple
+Lossless in an `.m4a` file.
+
+```kotlin
+val m4a = AudioKodec.encode(decoded, EncodeTarget.alac(24), tags = tags)
+```
+
+ALAC is written at 16, 20, 24 or 32 bits with Apple's 4096-frame packets, and
+the packets are the ones Apple's reference encoder writes for the same
+samples. ALAC stores up to eight channels in its own speaker order: one, two,
+three, five and six channels in their canonical layouts map onto it, and four,
+seven or eight channels need a `ChannelLayout` naming ALAC's speakers, centre
+first. Any other layout is refused rather than played from the wrong speakers.
+The `moov` box follows the audio, so the sink must support patching; byte
+arrays and files do. Tags and cover art go into the iTunes item list, and
+chapters into a Nero `chpl` list, as [MP4 metadata](mp4-tags.md) describes.
 
 Reducing the depth of a float or a deeper integer source is where dither
 belongs. It replaces the distortion of plain rounding with a small amount of
@@ -417,7 +432,7 @@ must fit in the supplied window; `probe` and `open` can jump over larger padding
 | Opus | decodes, with seeking |
 | FLAC | decodes, with seeking, exactly |
 | Uncompressed PCM, float, A-law and mu-law | decodes, with seeking, exactly |
-| ALAC | decodes, with seeking, exactly |
+| ALAC | decodes, with seeking, exactly; encodes |
 | MPEG Layers I, II and III | decodes, with seeking and edit-list trimming |
 | AAC, AC-3, AMR | named, not yet decoded |
 
