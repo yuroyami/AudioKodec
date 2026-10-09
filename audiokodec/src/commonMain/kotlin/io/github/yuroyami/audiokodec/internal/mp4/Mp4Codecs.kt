@@ -11,6 +11,7 @@ import io.github.yuroyami.audiokodec.internal.aac.AacPacketCodec
 import io.github.yuroyami.audiokodec.internal.aac.AacStreamConfig
 import io.github.yuroyami.audiokodec.internal.alac.AlacConfig
 import io.github.yuroyami.audiokodec.internal.alac.AlacPacketCodec
+import io.github.yuroyami.audiokodec.internal.amr.AmrPacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.PcmLayout
@@ -63,8 +64,7 @@ internal object Mp4Codecs {
             "mp4a" -> mpeg4Audio(entry, reader, options, firstPacket)
             ".mp3" -> mpeg(entry, reader, options, firstPacket)
             "ac-3", "ec-3" -> named(AudioCodec.AC3, if (entry.format == "ac-3") "AC-3" else "Enhanced AC-3")
-            "samr" -> named(AudioCodec.AMR_NB, "AMR-NB", 1, 8_000)
-            "sawb" -> named(AudioCodec.AMR_WB, "AMR-WB", 1, 16_000)
+            "samr", "sawb" -> amr(entry, options, wide = entry.format == "sawb")
             "alac" -> alac(entry, options)
             "Opus" -> opus(entry, options)
             "fLaC" -> flac(entry, reader, options)
@@ -72,6 +72,23 @@ internal object Mp4Codecs {
                 val pcm = pcmCodec(entry, options) ?: return named(AudioCodec.UNKNOWN, "'${entry.format}'")
                 pcm
             }
+        }
+    }
+
+    /**
+     * AMR as 3GPP TS 26.244 carries it: each sample is one or more frames in
+     * the storage format of RFC 4867, of a single channel at the codec's own
+     * rate, whatever the sample entry states.
+     */
+    private fun amr(entry: Mp4Reader.SampleEntry, options: DecodeOptions, wide: Boolean): Choice {
+        val rate = if (wide) 16_000 else 8_000
+        checkShape(entry, options, rate, 1)
+        val format = AudioFormat(rate, ChannelLayout.MONO)
+        return Choice(if (wide) AudioCodec.AMR_WB else AudioCodec.AMR_NB, if (wide) "AMR-WB" else "AMR-NB", format, null, 0) { largestPacket ->
+            // A frame takes at least its header byte, so a sample holds at most that many frames.
+            val frames = largestPacket.toLong() * AmrPacketCodec.samplesPerFrame(wide)
+            options.checkAllocation(frames * 4, "decoding a $largestPacket-byte AMR sample")
+            AmrPacketCodec(wide, format, intArrayOf(0), frames.toInt())
         }
     }
 

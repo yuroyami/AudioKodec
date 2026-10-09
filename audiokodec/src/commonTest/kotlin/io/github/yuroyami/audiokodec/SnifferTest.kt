@@ -249,7 +249,7 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these fifteen.
+        // The README's read and write tables name exactly these seventeen.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -267,6 +267,8 @@ class SnifferTest {
                 AudioContainer.APE,
                 AudioContainer.TTA,
                 AudioContainer.MUSEPACK,
+                AudioContainer.AMR_NB,
+                AudioContainer.AMR_WB,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -282,7 +284,7 @@ class SnifferTest {
         assertTrue(AudioContainer.FLAC.isDecodable)
         assertTrue(AudioContainer.CAF.isDecodable)
         // Ogg decodes what it carries that AudioKodec has a codec for, which is
-        // Vorbis, Opus and FLAC. A mapping without one is refused by name, and that
+        // Vorbis, Opus, FLAC and Speex. A mapping without one is refused by name, and that
         // is a question about the codec rather than about the container.
         assertTrue(AudioContainer.OGG.isDecodable)
         // MPEG audio decodes all three of its layers.
@@ -297,6 +299,8 @@ class SnifferTest {
         assertTrue(AudioContainer.APE.isDecodable)
         assertTrue(AudioContainer.TTA.isDecodable)
         assertTrue(AudioContainer.MUSEPACK.isDecodable)
+        assertTrue(AudioContainer.AMR_NB.isDecodable)
+        assertTrue(AudioContainer.AMR_WB.isDecodable)
         assertTrue(!AudioContainer.MATROSKA.isDecodable)
     }
 }

@@ -208,8 +208,8 @@ external data references are named and refused.
 
 ALAC, Opus, FLAC, MPEG Layers I, II and III, and QuickTime's uncompressed codings
 decode, seeking included. [MPEG tracks](docs/mpeg-in-mp4.md) share the bare-stream
-frame decoder and apply the MP4 edit list. AAC-LC decodes as described [below](#aac). AC-3 and AMR are named,
-with their length and chapters, and `open` refuses them by name.
+frame decoder and apply the MP4 edit list. AAC-LC decodes as described [below](#aac), and AMR as
+described [below](#amr). AC-3 is named, with its length and chapters, and `open` refuses it by name.
 
 The iTunes item list inside `moov` is read and written, cover art included,
 whatever the coding. A rewrite rebuilds only the `moov` box and copies the
@@ -333,6 +333,19 @@ the test suite checks in every mode. Seeking restarts the decoder a short
 run-up before the target, so the samples after a seek converge on a
 continuous decode rather than equalling it; a seek to the start is exact.
 See [Speex](docs/speex.md).
+
+## AMR
+
+AMR narrowband and AMR wideband decode at every rate each defines, from
+`.amr` and `.awb` files, including the multichannel variant, and from the 3GP
+and MP4 files phones record voice memos and MMS attachments in.
+Discontinuous transmission is decoded into comfort noise, frames that carry
+no data are concealed, and AMR-WB's decoder homing frames reset it. The
+decoders are translated from opencore-amr, Apache-licensed, and keep its
+fixed-point arithmetic, so on every target every sample is exactly the
+integer opencore-amr gives, which the test suite checks at every rate.
+Seeking decodes a half-second run-up before the target and converges on a
+continuous decode; a seek to the start is exact. See [AMR](docs/amr.md).
 
 ## True Audio
 
@@ -539,12 +552,13 @@ and `42ni` is 24-bit.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AC-3 and AMR are named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
+| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB. AC-3 is named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 | ADTS | AAC-LC, with sample-accurate seeking |
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
 | Monkey's Audio | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to eight channels except seven, from version 3.99 on. APEv2 tags are read |
 | True Audio | 8 to 24 bits, exact integers through `IntPcmAccess`, any number of channels. ID3 and APEv2 tags are read |
 | Musepack | Stream version 8, mono and stereo, at 32 to 48 kHz, with the exact length its header states. APEv2 tags are read |
+| AMR-NB and AMR-WB | Every rate, single-channel and multichannel, with comfort noise and concealment, exactly as opencore-amr decodes them |
 
 ### Probed but not decoded
 
@@ -554,7 +568,7 @@ decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 
-Matroska and WebM, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA, MPEG-TS, MIDI,
+Matroska and WebM, DSF, DSDIFF, AC-3, DTS, ASF and WMA, MPEG-TS, MIDI,
 Shorten, OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw

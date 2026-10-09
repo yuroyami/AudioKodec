@@ -42,8 +42,8 @@ audio and Ogg.
 - MP4, M4A, M4B, 3GP and QuickTime, read: the box tree, sample tables, a
   `moov` before or after the audio, fragmented files, edit lists, and
   chapters from a chapter track or a Nero `chpl` list. ALAC, Opus, FLAC and
-  uncompressed audio inside decode and seek; AC-3 and AMR are named with their
-  length and refused.
+  uncompressed audio inside decode and seek, and so does AMR; AC-3 is named
+  with its length and refused.
 - MP4 item lists, read and written: the standard atoms, freeform items,
   track, disc, tempo and compilation numbers, ReplayGain and cover art, with
   unmodelled items kept and only the `moov` box rebuilt. Changed chapters are
@@ -71,6 +71,11 @@ audio and Ogg.
   states, and seeking. Translated from libmpcdec, BSD-licensed, and on the
   JVM identical to it float for float. Stream version 7 and older are refused
   by name.
+- AMR-NB and AMR-WB, decoded at every rate, from `.amr` and `.awb` files,
+  multichannel ones included, and from 3GP and MP4: comfort noise,
+  concealment of frames without data, AMR-WB decoder homing, and seeking.
+  Translated from opencore-amr, Apache-licensed, in its fixed-point
+  arithmetic, and identical to it sample for sample on every target.
 - Speex inside Ogg, decoded: narrowband, wideband and ultra-wideband at every
   quality, variable bitrate, discontinuous transmission and in-band stereo,
   to the samples and length `speexdec` gives, and seeking. Translated from

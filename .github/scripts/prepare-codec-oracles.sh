@@ -146,6 +146,11 @@ reference_checkout reference/speex/src https://github.com/xiph/speex.git 5dceaaf
 command -v speexenc >/dev/null
 command -v speexdec >/dev/null
 
+# opencore-amr and vo-amrwbenc are Apache 2.0; the AMR oracle harnesses are
+# compiled against these sources, and the encoders are only run.
+reference_checkout reference/amr/src https://git.code.sf.net/p/opencore-amr/code 7dba8c32238418ce0b316a852b2224df586ca896
+reference_checkout reference/amr/vo-amrwbenc https://git.code.sf.net/p/opencore-amr/vo-amrwbenc 080af7540562e4adfbd3312837fe5fc6771c4cd0
+
 vectors=reference/opus_testvectors-rfc8251.tar.gz
 if [[ ! -f "$vectors" ]]; then
     curl --fail --show-error --location --retry 2 --max-time 180 \

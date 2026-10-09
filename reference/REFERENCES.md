@@ -80,6 +80,7 @@ Run as programs, never read as source.
 | tta (libtta 2.3) | True Audio, the format authors' encoder and decoder, built from `libtta-c-2.3.tar.gz` (SourceForge, SHA-256 `68ba6db2d494dcd4aa6832a40952b88a3d50ca1174ab0ef1e091db16992303c7`). LGPL, so it is built and run as a program and its source is never opened. Its files at 16, 20 and 24 bits with one to six channels, and ffmpeg's at 8, 16 and 24 bits with up to eight, must decode to exactly the input integers, to exactly what `tta -d` writes and to exactly what ffmpeg decodes. It also writes the password-protected files that must be refused by name |
 | mpcenc and libmpcdec r495 | Musepack: `mpcenc` from the operating system's `musepack-tools` package writes the files, and `mpc_float_oracle.c`, a few lines over libmpcdec's public API compiled against the r495 sources, writes the floats the reference decodes them to. `mpcdec` itself writes only 16-bit samples. Every sample must be the same float, at qualities 0 to 10, at 32, 44.1 and 48 kHz, mono and stereo, with each mid/side mode and with noise substitution. The encoder is LGPL and only run |
 | speexenc, speexdec and libspeex 1.2.1 | Speex: `speexenc` from the operating system's `speex` package writes the files, in all three modes, at every narrowband quality and across the others, with variable and average bitrate, voice activity detection with discontinuous transmission, several frames to a packet, and stereo. `speex_float_oracle.c`, a few lines over libogg and libspeex's public API compiled against the 1.2.1 sources without SSE, writes the floats the reference decodes them to, which every sample must equal. `speexdec` itself writes 16-bit samples from a build with SSE, so it gives only the length, which must be the same |
+| opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -96,7 +97,6 @@ exact commit that gets ported, and its licence recorded here at that point.
 | libopus | BSD-3-Clause | Opus |
 | libFLAC | BSD-3-Clause | FLAC, alongside RFC 9639 |
 | Apple ALAC | Apache-2.0 | ALAC, both directions |
-| opencore-amr | Apache-2.0 | AMR-NB and AMR-WB |
 | libebur128 | MIT | Loudness measurement |
 | libsamplerate | BSD-2-Clause | Resampling |
 | speexdsp | BSD-3-Clause | Resampling, as an alternative |
@@ -665,6 +665,44 @@ is the final granule position long; a stream of one audio page loses nothing
 at the start and runs on for the decoder's lookahead; and either ends where
 the frames run out. Every file in the oracle suite is exactly as long as
 `speexdec`'s output.
+
+## AMR
+
+The decoders are translations of opencore-amr, recorded here before the
+first line was written. opencore-amr packages the AMR and AMR-WB decoders of
+Android's PacketVideo OpenCORE, which are the 3GPP fixed-point reference
+decoders reworked for speed, under the Apache License 2.0; PacketVideo
+obtained the 3GPP Organizational Partners' permission to distribute the
+derived files under it, as each file's header states.
+
+| Field | Value |
+|---|---|
+| Source | https://git.code.sf.net/p/opencore-amr/code, tag v0.1.6, commit `7dba8c32238418ce0b316a852b2224df586ca896` |
+| Licence | Apache License 2.0, `LICENSE` and the header of every file read; the parts of `opencore/NOTICE` that apply to the decoders are reproduced in `NOTICE` |
+| Files | `amrnb/wrapper.cpp` and `amrwb/wrapper.cpp`, which say how a frame in the storage format reaches each decoder; in `opencore/codecs_v2/audio/gsm_amr/amr_nb`, the decoder's sources under `dec/src` that `amrnb/Makefile.am` builds, and under `common` the sources and headers they call; in `amr_wb/dec`, the sources `amrwb/Makefile.am` builds and their headers |
+| Never opened | Nothing in the tree mentions a copyleft licence. The encoders, the ARM assembly variants of the basic operations and the IF2 and ETS frame formats were not read beyond seeing that they are not used |
+| Not ported | The encoders, the frame formats other than RFC 4867's storage format, and the quality bit, which opencore-amr does not consult either |
+
+The basic operations are translated from the portable C forms the x86 build
+compiles, `basic_op_c_equivalent.h` and its neighbours for AMR and
+`pvamrwbdecoder_basic_op_cequivalent.h` for AMR-WB. The two codecs' sets
+differ in how they saturate and shift, and AMR-WB's `norm_s` goes through
+`normalize_amr_wb`, so each decoder has its own. AMR's overflow flag is set
+by the basic operations and read in one place, after a synthesis filter that
+never sets it, so it is left out.
+
+The tables were extracted from the sources by `reference/amr/gen_kotlin.py`,
+so none was typed. The script resolves each table's declared size with the
+definitions in scope for its own file and codec, AMR and AMR-WB defining
+some names differently, and checks every table's length against it. One
+table, `dfh_M14k`, is declared one entry longer than its initialiser, and
+the script fills that entry with the zero C gives it.
+
+The test oracles are opencore-amr's own decoders, through its public
+interfaces in `amr_oracle.c`, and two encoders that are only run: opencore's
+AMR encoder, and vo-amrwbenc for AMR-WB, from the same project at
+https://git.code.sf.net/p/opencore-amr/vo-amrwbenc, tag v0.1.3, commit
+`080af7540562e4adfbd3312837fe5fc6771c4cd0`, Apache License 2.0.
 
 ## True Audio
 

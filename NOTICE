@@ -140,6 +140,46 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+The AMR-NB and AMR-WB decoders are translated from opencore-amr 0.1.6,
+https://git.code.sf.net/p/opencore-amr/code at commit
+7dba8c32238418ce0b316a852b2224df586ca896, licensed under the Apache License,
+Version 2.0. Its NOTICE file states, for the parts that apply to them:
+
+Copyright (C) 2009 PacketVideo
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+express or implied.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+Portions of this file are derived from the following 3GPP standard:
+
+    3GPP TS 26.073
+    ANSI-C code for the Adaptive Multi-Rate (AMR) speech codec
+    Available from http://www.3gpp.org
+
+(C) 2004, 3GPP Organizational Partners (ARIB, ATIS, CCSA, ETSI, TTA, TTC)
+Permission to distribute, modify and use this file under the standard license
+terms listed above has been obtained from the copyright holder.
+
+Portions of this file are derived from the following 3GPP standard:
+
+    3GPP TS 26.173
+    ANSI-C code for the Adaptive Multi-Rate - Wideband (AMR-WB) speech codec
+    Available from http://www.3gpp.org
+
+(C) 2007, 3GPP Organizational Partners (ARIB, ATIS, CCSA, ETSI, TTA, TTC)
+Permission to distribute, modify and use this file under the standard license
+terms listed above has been obtained from the copyright holder.
+
 The True Audio decoder is translated from the TTA Hardware Players Library
 1.2, ttalib-hwplayer-1.2.tgz with SHA-256
 2028573a43c91acf1a6048d1804f60e9a6d28f493cbcc0fed99895fdc88cf26f, under the

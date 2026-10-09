@@ -447,7 +447,8 @@ must fit in the supplied window; `probe` and `open` can jump over larger padding
 | ALAC | decodes, with seeking, exactly; encodes |
 | MPEG Layers I, II and III | decodes, with seeking and edit-list trimming |
 | AAC-LC | decodes, with seeking and edit-list trimming |
-| AC-3, AMR | named, not yet decoded |
+| AMR-NB, AMR-WB | decodes, with seeking that converges after a run-up, exactly |
+| AC-3 | named, not yet decoded |
 
 ```kotlin
 val info = AudioKodec.probe(m4aBytes)
@@ -528,6 +529,14 @@ in-band stereo, to the samples and the length `speexdec` gives. Seeking
 restarts the decoder 25 frames before the target, so the samples after a
 seek converge on a continuous decode; a seek to the start is exact. Bitstream
 versions other than 4 are refused by name. See [Speex](speex.md).
+
+## AMR
+
+AMR narrowband and wideband files decode at every rate, single-channel or
+multichannel, and so do AMR tracks in 3GP and MP4 files, to exactly the
+samples opencore-amr gives. Seeking decodes a half-second run-up before the
+target; a seek to the start is exact. Reserved frame types are refused. See
+[AMR](amr.md).
 
 ## True Audio
 
