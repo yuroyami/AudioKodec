@@ -206,11 +206,11 @@ internal class OggReader(
      * all come before any audio, so this reads pages until it meets one that is
      * not a beginning.
      */
-    fun readStreamHeads(): List<OggPage> {
+    fun readStreamHeads(from: Long = 0L): List<OggPage> {
         val heads = ArrayList<OggPage>()
         val serials = HashSet<Int>()
         var retainedBytes = 0L
-        var at = 0L
+        var at = from
         while (true) {
             val page = try {
                 pageAt(at)
@@ -252,7 +252,8 @@ internal class OggReader(
      * Finds the end page of the logical stream that begins at [from].
      *
      * A backwards serial-number search is not enough: a later chained stream
-     * is allowed to reuse the same serial number. Walking to the first EOS page
+     * may reuse the same serial number in recordings accepted for compatibility.
+     * Walking to the first EOS page
      * keeps the duration of the first stream from accidentally including a
      * later recording.
      */
@@ -300,7 +301,7 @@ internal class OggReader(
             last = page
             if (page.segments.isNotEmpty()) packetOpen = page.segments.last() == 255
             if (page.isLast) {
-                if (!page.endsAPacket && !options.tolerant) {
+                if (packetOpen && !options.tolerant) {
                     throw TruncatedStreamException(
                         "the Ogg logical stream reaches EOS in the middle of a packet",
                         page.offset,

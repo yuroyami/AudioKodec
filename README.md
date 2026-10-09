@@ -178,6 +178,11 @@ Vorbis, Opus and FLAC inside Ogg all decode, seeking included. Speex is
 identified and its headers, length and tags are read; its audio does not
 decode yet, and `open` says so by name rather than failing obscurely.
 
+[Compatible chained links](docs/ogg-chains.md) play in sequence, with each
+link's own decoder state and trimming. Duration and seek positions cover the
+complete recording. A change in sample rate or channel layout is refused
+before playback starts.
+
 Positive stream origins are subtracted from length, and positions and seeks
 start at zero. A Vorbis stream whose only usable granule mixes a positive
 origin with end trim is refused with `UnsupportedFeatureException`.

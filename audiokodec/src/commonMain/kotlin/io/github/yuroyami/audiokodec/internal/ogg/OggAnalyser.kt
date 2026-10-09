@@ -130,8 +130,8 @@ internal object OggAnalyser {
         val headersEndAtPageBoundary: Boolean,
         /** Failure at the end of a salvaged prefix, retained for an empty decode. */
         val terminalFailure: AudioKodecException?,
-        /** Setup already parsed to read Vorbis packet lengths, reused by playback. */
-        val vorbisConfig: VorbisConfig?,
+        /** Setup used to read packet lengths; chains release it before parsing another link. */
+        var vorbisConfig: VorbisConfig?,
     )
 
     private class Headers(
@@ -147,8 +147,8 @@ internal object OggAnalyser {
     fun readTagBlocks(reader: SourceReader, options: DecodeOptions): List<RawTagBlock> =
         readHeaders(reader, options, tagsOnly = true).tagBlocks
 
-    fun parse(reader: SourceReader, options: DecodeOptions): Parsed {
-        val headers = readHeaders(reader, options, tagsOnly = false)
+    fun parse(reader: SourceReader, options: DecodeOptions, from: Long = 0L): Parsed {
+        val headers = readHeaders(reader, options, tagsOnly = false, from = from)
         val audio = headers.audio
         val audioStart = headers.endOffset
         val ogg = OggReader(reader, options)
@@ -173,6 +173,9 @@ internal object OggAnalyser {
             else -> 0L
         }
         val duration = when {
+            // An empty EOS page immediately after the headers represents a
+            // zero-frame link, with no audio packets whose damage EOF could hide.
+            granule == 0L && last?.isLast == true && last.offset == audioStart && last.segments.isEmpty() -> 0L
             // Header-only granules cannot state an audio length. Unknown lets
             // the decoder meet any later damage rather than declaring EOF.
             granule <= 0 -> null
@@ -271,11 +274,11 @@ internal object OggAnalyser {
         }
     }
 
-    private fun readHeaders(reader: SourceReader, options: DecodeOptions, tagsOnly: Boolean): Headers {
+    private fun readHeaders(reader: SourceReader, options: DecodeOptions, tagsOnly: Boolean, from: Long = 0L): Headers {
         val ogg = OggReader(reader, options)
-        val heads = ogg.readStreamHeads()
+        val heads = ogg.readStreamHeads(from)
         if (heads.isEmpty()) {
-            throw CorruptStreamException("the file has no Ogg page at its start", 0)
+            throw CorruptStreamException("the file has no Ogg page at its start", from)
         }
 
         val streams = heads.map { identify(it) }

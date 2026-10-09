@@ -468,14 +468,14 @@ class OggTest {
         val first = stream("First", 1_000)
         val second = stream("Second", 9_000)
         val chained = first + second
-        assertEquals(1_000L, AudioKodec.probe(chained).durationFrames)
+        assertEquals(10_000L, AudioKodec.probe(chained).durationFrames)
 
         val rewritten = AudioKodec.writeTags(
             chained,
             AudioKodec.readTags(chained).edit { set(TagField.TITLE, "Edited") },
         )
         assertContentEquals(second, rewritten.copyOfRange(rewritten.size - second.size, rewritten.size))
-        assertEquals(1_000L, AudioKodec.probe(rewritten).durationFrames)
+        assertEquals(10_000L, AudioKodec.probe(rewritten).durationFrames)
         assertEquals("Edited", AudioKodec.readTags(rewritten)[TagField.TITLE])
     }
 

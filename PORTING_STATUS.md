@@ -28,7 +28,7 @@ wasmWasi (Node), Linux x64, macOS arm64, the iOS simulator and MinGW x64.
 Execution on one host does not establish results on another.
 
 The shared hostile-input sweep covers all ten decodable containers through
-22 short fixtures, including every Ogg codec, all three MPEG layers, CAF
+23 short fixtures, including every Ogg codec, chained Ogg FLAC, all three MPEG layers, CAF
 ALAC/IMA and fragmented MP4. It tests every truncation boundary, all eight
 individual bit flips and an inverted byte at every position, and 100 random
 bodies per fixture behind its format signature. Strict and tolerant probing,
@@ -150,6 +150,14 @@ subject to runner availability, including account billing. Within the suites:
   its length. Opening resolves that duration; seeking and strict EOF agree.
 - Ogg FLAC files from the reference encoder decode **bit-exactly**, seek to the
   sample, and survive a tag rewrite that the reference decoder then accepts.
+- Compatible chained Ogg links decode in sequence with one global timeline.
+  Each link applies its own headers, granule origin, pre-skip and end trim.
+  libopusfile checks complete Opus chains in mono, stereo and 5.1, including
+  changed header gain and trimming. FFmpeg checks Vorbis setup changes and
+  exact 16/24/32-bit FLAC chains. Common tests cover mixed codecs and FLAC
+  depths, empty links, multiplexed group boundaries, source ownership, seeks,
+  allocation limits, first-link tag edits and damaged later links. Output
+  format changes are named and refused before playback.
 - Positive granule origins in Ogg Vorbis and FLAC retain the correct duration,
   end trim, samples and logical seek positions. Common fixtures and shifted
   FFmpeg recordings cover both modes and source sizes. A positive Vorbis origin

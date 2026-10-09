@@ -560,10 +560,9 @@ class OggOracleTest {
     }
 
     @Test
-    fun aChainedFileReadsItsFirstStreamAndSurvivesTagWriting() {
+    fun aChainedFileReadsEveryStreamAndSurvivesTagWriting() {
         val flac = flac ?: return skip()
-        // Two Ogg files joined end to end is a legal chained stream. Reading
-        // the first one is what every player does.
+        // Two complete Ogg files joined end to end form consecutive links.
         val wav = temp("chain-source.wav")
         wav.writeBytes(
             AudioKodec.encode(
@@ -591,8 +590,10 @@ class OggOracleTest {
         val info = AudioKodec.probe(chained.readBytes())
         assertEquals(AudioCodec.FLAC, info.codec)
         val decoded = AudioKodec.decode(chained.readBytes())
-        // The first stream's declared length is what bounds the decode.
-        assertEquals(5_000, decoded.frames)
+        assertEquals(10_000, decoded.frames)
+        assertEquals(10_000L, info.durationFrames)
+        val original = AudioKodec.decode(one.readBytes()).samples
+        TestSignals.assertExact(original + original, decoded.samples)
 
         val rewritten = AudioKodec.writeTags(
             chained.readBytes(),

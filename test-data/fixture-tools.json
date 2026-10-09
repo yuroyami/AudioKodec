@@ -11,7 +11,7 @@
   "macOSBuild": null,
   "opusfileLibrarySha256": "cbb2d87dc3a07096fb942b6baf9d78be10bad59702cabc87d708d0c18bb560aa",
   "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
-  "qualifiedAt": "2026-10-08T23:11:25.524287+00:00",
+  "qualifiedAt": "2026-10-09T00:02:27.127344+00:00",
   "referenceBuildRecipeSha256": "a5bff48e71460bb01746ac8a2451089f64c510dea9b78fc20d4f6cd7f3279670",
   "referenceBuilds": {
     "alac": {
@@ -24,7 +24,7 @@
     }
   },
   "skipped": 5,
-  "testCount": 1000,
+  "testCount": 1013,
   "tools": [
     {
       "path": "ffmpeg",

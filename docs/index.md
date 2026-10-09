@@ -295,6 +295,11 @@ inside it. AudioKodec reads the container in full: pages and their checksums,
 packets reassembled across page boundaries, files carrying several logical
 streams at once, and files chained one after another.
 
+[Chained playback](ogg-chains.md) includes every compatible Vorbis, Opus or
+FLAC link. Each applies its own headers, pre-skip and end trim; durations and
+seek positions count the complete recording. A changed output rate or layout
+is refused before playback, and tags refer to the first link.
+
 Opening a file accepts up to 256 simultaneous logical streams. A larger set
 is refused with `UnsupportedFeatureException`; tolerant mode keeps this limit.
 Stream headers and their serial-number index also respect

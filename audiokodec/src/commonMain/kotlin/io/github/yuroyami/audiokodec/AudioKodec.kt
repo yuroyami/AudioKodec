@@ -14,11 +14,8 @@ import io.github.yuroyami.audiokodec.internal.mpeg.Layer12Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.Mp3Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.MpegStream
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4Container
-import io.github.yuroyami.audiokodec.internal.ogg.OggAnalyser
-import io.github.yuroyami.audiokodec.internal.ogg.OggFlacDecoder
-import io.github.yuroyami.audiokodec.internal.ogg.OggOpusDecoder
+import io.github.yuroyami.audiokodec.internal.ogg.OggChain
 import io.github.yuroyami.audiokodec.internal.tag.TagAssembler
-import io.github.yuroyami.audiokodec.internal.vorbis.VorbisDecoder
 import io.github.yuroyami.audiokodec.internal.tag.TagLocator
 import io.github.yuroyami.audiokodec.internal.tag.TagWriter
 import io.github.yuroyami.audiokodec.tag.TagBundle
@@ -487,20 +484,8 @@ public object AudioKodec {
      * what is inside. Vorbis, Opus and FLAC decode today; the others are named
      * and refused, which is a more useful answer than a generic failure.
      */
-    private fun openOgg(reader: SourceReader, options: DecodeOptions): AudioDecoder {
-        val parsed = OggAnalyser.parse(reader, options)
-        val stream = parsed.audio
-        return when (stream?.codec) {
-            AudioCodec.FLAC -> OggFlacDecoder(reader, parsed, options)
-            AudioCodec.VORBIS -> VorbisDecoder(reader, parsed, options)
-            AudioCodec.OPUS -> OggOpusDecoder(reader, parsed, options)
-            else -> throw UnsupportedFormatException(
-                AudioContainer.OGG,
-                "this Ogg file carries ${stream?.codecName ?: "no audio"}, which AudioKodec " +
-                    "cannot decode yet. Its headers and tags are readable.",
-            )
-        }
-    }
+    private fun openOgg(reader: SourceReader, options: DecodeOptions): AudioDecoder =
+        OggChain.decoder(reader, OggChain.parse(reader, options), options)
 
     /**
      * Reads what an Ogg file's headers say.
@@ -509,43 +494,8 @@ public object AudioKodec {
      * sample rate, the channel count and the length all come from the headers
      * and the last page, none of which needs a codec.
      */
-    private fun oggInfo(reader: SourceReader, options: DecodeOptions): AudioInfo {
-        val parsed = OggAnalyser.parse(reader, options)
-        val stream = parsed.audio ?: throw UnsupportedFormatException(
-            AudioContainer.OGG,
-            "this Ogg file carries no audio AudioKodec recognises",
-        )
-        val duration = parsed.durationFrames
-        val bytes = (parsed.streamEndOffset - parsed.audioStartOffset).coerceAtLeast(0L)
-        val bitrate = if (duration != null && duration > 0 && bytes > 0) {
-            val seconds = duration.toDouble() / stream.sampleRate
-            if (seconds > 0) {
-                (bytes.toDouble() * 8.0 / seconds)
-                    .coerceIn(0.0, Int.MAX_VALUE.toDouble())
-                    .toInt()
-            } else {
-                null
-            }
-        } else {
-            null
-        }
-        return AudioInfo(
-            container = AudioContainer.OGG,
-            codec = stream.codec,
-            format = stream.format,
-            durationFrames = duration,
-            // Only the lossless mapping has a stored bit depth to report.
-            bitDepth = if (stream.codec == AudioCodec.FLAC) {
-                OggAnalyser.flacBitDepth(stream)
-            } else {
-                null
-            },
-            bitrate = bitrate,
-            isVariableBitrate = true,
-            dataOffset = reader.absoluteOffset(parsed.audioStartOffset),
-            dataSize = bytes,
-        )
-    }
+    private fun oggInfo(reader: SourceReader, options: DecodeOptions): AudioInfo =
+        OggChain.parse(reader, options).info(reader)
 
     private class DetectedContainer(
         val container: AudioContainer,

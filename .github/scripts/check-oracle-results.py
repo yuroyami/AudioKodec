@@ -8,7 +8,7 @@ required = {
     "AiffCOracleTest", "AlacOracleTest", "BextOracleTest", "CafOracleTest", "FfmpegOracleTest",
     "FfmpegTagOracleTest", "FlacEncodeOracleTest", "FlacOracleTest", "FlacConformanceTest",
     "IntegerEncodingOracleTest", "Mp4OracleTest", "MpegMp4OracleTest", "MpegCrcOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
-    "OggOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
+    "OggOracleTest", "OggChainOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
     "OpusJoinOracleTest", "OpusMultistreamOracleTest", "OpusOracleTest",
     "SilkDecodeOracleTest", "VorbisOracleTest", "MutagenTagOracleTest",
     "NativeTextTagOracleTest", "NativeTextEncodingOracleTest", "R128TagOracleTest",

@@ -13,6 +13,7 @@ internal object HostileInputFixtures {
             "Ogg Vorbis" to VorbisTest().file(),
             "Ogg FLAC" to OggGranuleFixtures.flac(),
             "Ogg Opus" to OggSharedHeaderFixtures.opus(),
+            "Ogg chained FLAC" to OggChainFixtures.hostile(),
             "CAF ALAC" to CafAlacTest().hostileFixture(),
             "CAF IMA" to CafImaTest().file(1, 4),
             "MP4 MPEG" to MpegMp4Fixtures.file(MpegMp4Fixtures.packets(MpegTest().silentFrames(3, count = 2, compact = true))),
