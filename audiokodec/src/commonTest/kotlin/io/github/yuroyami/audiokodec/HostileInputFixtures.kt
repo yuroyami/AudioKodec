@@ -32,6 +32,8 @@ internal object HostileInputFixtures {
             "DSF" to DsdTest().hostileFixture(),
             "DSDIFF" to DsdTest().hostileDffFixture(),
             "Matroska" to MatroskaTest().hostileFixture(),
+            "AC-3" to Ac3Test().hostileFixture(),
+            "AC-3 every element" to Ac3RandomFixtures.STEREO.bytes,
             "MP4 MPEG" to MpegMp4Fixtures.file(MpegMp4Fixtures.packets(MpegTest().silentFrames(3, count = 2, compact = true))),
         ) + HandBuiltFileTest().hostileFixtures() + Mp4Test().hostileFixtures() +
             (1..3).map { "MPEG Layer $it" to MpegTest().silentFrames(it, count = 2, compact = true) } +

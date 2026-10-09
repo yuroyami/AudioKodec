@@ -27,6 +27,8 @@ The following components were written from published specifications:
                                          and G.726 (12/90)
   iLBC storage format                    IETF RFC 3952, section 4.1
   Matroska and WebM                      IETF RFC 9559 and RFC 8794
+  AC-3                                   ATSC A/52:2012, Digital Audio
+                                         Compression Standard (AC-3, E-AC-3)
   zlib inflate                           IETF RFC 1950 and RFC 1951
 
 Translated components

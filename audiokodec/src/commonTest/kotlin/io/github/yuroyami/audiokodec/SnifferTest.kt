@@ -249,7 +249,7 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these twenty-one.
+        // The README's read and write tables name exactly these twenty-two.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
@@ -273,6 +273,7 @@ class SnifferTest {
                 AudioContainer.DSF,
                 AudioContainer.DFF,
                 AudioContainer.MATROSKA,
+                AudioContainer.AC3,
             ),
             AudioContainer.entries.filter { it.isDecodable }.toSet(),
         )
@@ -311,6 +312,8 @@ class SnifferTest {
         assertTrue(AudioContainer.DFF.isDecodable)
         // Matroska and WebM decode the codings AudioKodec has, as MP4 does.
         assertTrue(AudioContainer.MATROSKA.isDecodable)
+        // AC-3 decodes; Enhanced AC-3, which shares its sync word, is refused by name.
+        assertTrue(AudioContainer.AC3.isDecodable)
     }
 }
 

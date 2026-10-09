@@ -9,6 +9,8 @@ import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.PacketCodec
 import io.github.yuroyami.audiokodec.internal.aac.AacPacketCodec
 import io.github.yuroyami.audiokodec.internal.aac.AacStreamConfig
+import io.github.yuroyami.audiokodec.internal.ac3.Ac3Frame
+import io.github.yuroyami.audiokodec.internal.ac3.Ac3PacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.PcmLayout
 import io.github.yuroyami.audiokodec.internal.flac.FlacFrameReader
@@ -63,7 +65,7 @@ internal object MatroskaCodecs {
             id == "A_MPEG/L1" || id == "A_MPEG/L2" || id == "A_MPEG/L3" -> mpeg(track, options, first)
             id == "A_AAC" || id.startsWith("A_AAC/") -> aac(track, options)
             id == "A_PCM/INT/LIT" || id == "A_PCM/INT/BIG" || id == "A_PCM/FLOAT/IEEE" -> pcm(track, options)
-            id == "A_AC3" || id.startsWith("A_AC3/") -> named(AudioCodec.AC3, "AC-3")
+            id == "A_AC3" || id.startsWith("A_AC3/") -> ac3(track, options, first)
             id == "A_EAC3" -> named(AudioCodec.AC3, "Enhanced AC-3")
             else -> named(AudioCodec.UNKNOWN, "'$id'")
         }
@@ -251,6 +253,24 @@ internal object MatroskaCodecs {
             counter = { FrameCounter { bytes, length, size -> if (length < 4) 0 else MpegPacketCodec.headerOf(bytes, size).samplesPerFrame } },
             decoder = { _ -> MpegPacketCodec(format, header, options) },
             headerBytes = 4,
+        )
+    }
+
+    // AC-3: one syncframe to a Block.
+
+    private fun ac3(track: MatroskaReader.Track, options: DecodeOptions, first: ByteArray?): Choice {
+        val shape = first?.let {
+            if (it.size < Ac3Frame.HEADER_BYTES) throw CorruptStreamException("a Matroska AC-3 frame is shorter than its header")
+            Ac3PacketCodec.shapeOf(it, 0, -1)
+        }
+        val format = shape?.let { AudioFormat(it.sampleRate, it.layout) }
+            ?: AudioFormat(track.sampleRate.toInt(), ChannelLayout.canonical(track.channels))
+        options.checkStreamShape(format.sampleRate, format.channels)
+        return Choice(
+            AudioCodec.AC3, "AC-3", format, null,
+            counter = { FrameCounter { _, _, size -> if (size == 0) 0 else Ac3Frame.FRAMES_PER_SYNCFRAME } },
+            decoder = if (shape == null) null else { _ -> Ac3PacketCodec(shape, options.tolerant) },
+            headerBytes = 0,
         )
     }
 

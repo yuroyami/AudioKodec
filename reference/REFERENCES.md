@@ -55,6 +55,7 @@ can hold checkouts without them ever reaching the repository.
 | Vorbis floor 0 | [Vorbis I specification section 6.2](https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-920006.2), including vector accumulation, extra final vector values, unsigned amplitude and reserved book selectors. Section 6.2.3 and its 2015 Bark-scale erratum define the odd/even products and frequency mapping. Implemented directly from this text, with no implementation source used. `VorbisFloor0Fixtures` assembles complete streams; direct double products independently check synthesis, FFmpeg's native float decoder checks lookup type one, and its public libvorbis wrapper checks lookup type two at 16-bit precision (#45) |
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |
 | Free-format MPEG | ISO/IEC 11172-3 and 13818-3 free bitrate-index syntax, slot padding and constant frame spacing. MPEG-1 free-format Layer II uses Table 3-B.2a; the measured bitrate does not select a declared-rate table. The owned decoder is reused with measured or indexed packet lengths. LAME's public `--freeformat` executable interface generates MP3; [libmpg123 initialisation](https://mpg123.org/api/group__mpg123__init.shtml), [input](https://mpg123.org/api/group__mpg123__input.shtml), [output formats](https://mpg123.org/api/group__mpg123__output.shtml) and [seeking](https://mpg123.org/api/group__mpg123__seek.shtml) document the independent float PCM and exact-length API. Neither tool's implementation source is read. FFmpeg rejects the high-rate free-format fixtures in the qualified environment, so it is not claimed as their decoder oracle (#46) |
+| AC-3 | ATSC A/52:2012, Digital Audio Compression Standard (AC-3, E-AC-3), 17 December 2012; see [AC-3](#ac-3) |
 | AAC-LC | ISO/IEC 14496-3:2009, subpart 4 (4.4.2 syntax, 4.5.2 semantics, 4.6.1 to 4.6.3 quantisation and noiseless coding, 4.6.8 joint stereo, 4.6.9 noise shaping, 4.6.11 filter bank, 4.6.13 noise substitution, Annex 4.A codebooks, Tables 4.129 to 4.141 band offsets, 4.156 and 4.157 noise shaping limits), and subpart 1 (1.6.2.1 AudioSpecificConfig, 1.6.5.2 SBR signalling, Table 1.19 channel configurations, Annex 1.A ADTS). Implemented from the standard in floating point. Every constant table was extracted from the text by script, never typed, and agreed against the PacketVideo decoder below; ffmpeg is an executable oracle only |
 | MPEG audio in MP4 | ISO/IEC 14496-12 sample tables and edit lists, MPEG frame syntax from ISO/IEC 11172-3 and 13818-3, and the [MP4 registration authority's object types](https://mp4ra.org/registered-types/object-types) (`0x69` and `0x6B`). The existing owned frame decoder is shared; no additional implementation source is ported. FFmpeg and LAME are executable oracles only |
 | Format magic numbers | The published headers of each format the sniffer names |
@@ -97,6 +98,7 @@ Run as programs, never read as source.
 | speexdsp 1.2.1 and ffmpeg's soxr | Resampling: `resample_oracle.c` over speexdsp's resampler, built from the pinned sources under `reference/speexdsp` in its float build without SIMD or fused multiply-adds, converts tones and noise at twelve rate pairs, mono and stereo, which `Resampler` must reproduce sample for sample however its input is split into blocks. ffmpeg's `aresample` with soxr at 28 bits converts the same tones, whose level and phase must agree within speexdsp's passband ripple; it is only run |
 | ffmpeg and ffprobe, for DSD | DSF and DSDIFF files the test writes from a sigma delta modulator: ffprobe's rate, channels and duration, and ffmpeg's conversion to PCM, tone by tone in level and phase, within the bound its filter's difference from AudioKodec's sets; the suite also measures ffmpeg's filter itself, from single flipped bits, to confirm its delay. ffmpeg's source is not read |
 | ffmpeg and ffprobe, for Matroska | For each of Opus 2 and 6 channels, Vorbis, FLAC 16 and 24-bit, MP3, AAC and PCM 16, 24 and float: ffmpeg's stream copy of a file it encodes into Matroska or WebM must decode to the length ffmpeg decodes from it and hold the native file's samples whole, and agree with ffprobe's rate, channels and duration to within a packet. A live WebM written to a pipe, whose Segment has no size, must decode as the same audio written to a file, and tags and chapters ffmpeg writes must read back. ffmpeg's source is not read |
+| ffmpeg, for AC-3 | `Ac3DecodeOracleTest` encodes a tone, sweep, noise and click signal at every layout ffmpeg has (mono to 5.1, with and without the LFE), at 32, 44.1 and 48 kHz, from 32 to 640 kbit/s, with and without coupling and rematrixing, in a raw stream, in MP4 and in Matroska, clears the dither flags and repairs the CRCs, and compares ffmpeg's float decode with AudioKodec's: to 1e-6 once ffmpeg's rounding is reproduced, and to 5e-5 without. `Ac3RandomOracleTest` does the same for 192 syncframes whose every element is chosen at random by `Ac3FrameWriter`, which covers what no encoder writes: block switching, delta bit allocation, dynamic range words, phase flags, master coordinates and dual mono. Run as a program; its source stays unopened |
 | ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
 | ffmpeg's G.722 and G.726 | G.722: every sample of the WAV and AU files ffmpeg writes, in all three modes through `-bits_per_codeword`, must equal ffmpeg's. G.726: ffmpeg's encoder writes the WAV and AU files, whose code words must decode to exactly the samples of the decoder `G726ConformanceTest` checks; ffmpeg's own G.726 decoder does not follow the Recommendation, so at 16 to 32 kbit/s its samples only bound the result, and at 40 kbit/s not even that |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
@@ -939,6 +941,59 @@ it, and the 16-bit filter variant used where the SDK uses it, including the
 interim mode it retries a 24-bit frame in when the first decode fails its
 checksum. Where the SDK reads past the end of a damaged frame, the
 translation reads zeros, and the frame checksum reports the result.
+
+## AC-3
+
+The decoder is written from the standard alone; no AC-3 implementation was
+opened.
+
+| Field | Value |
+|---|---|
+| Specification | ATSC A/52:2012, Digital Audio Compression Standard (AC-3, E-AC-3), 17 December 2012, https://www.atsc.org/wp-content/uploads/2015/03/A52-201212-17.pdf, SHA-256 `ea18767975be9f30f62c1ee57fc8c35a94f7112793eda408fb40a81acbe1be90` |
+| Text of it | `reference/ac3/a52.txt`, the PDF's text, SHA-256 `78bfbb76394994c8959c3a03b13adcb54c5a42fe82b9b64672708e5e56197521`, which `reference/ac3/gen_tables.py` reads |
+| Never opened | liba52, libdca, ffmpeg's AC-3 decoder and encoder, and every other AC-3 implementation |
+
+The constant tables in `Ac3Tables.kt` (the decay and gain codes, the band
+tables, the hearing thresholds, the log-addition table, the bit allocation
+pointer table and the frame sizes) were extracted from the text of the
+standard by `gen_tables.py`, so none was typed, and the script checks each
+against a property that does not depend on its digits: the bands are
+contiguous from 0 to 253 and the mask table maps every bin to the band that
+holds it; the log-addition table is the formula it stands for; the pointer
+table never decreases and spans 0 to 15; the hearing thresholds are multiples
+of 16; the 5/8 frame sizes follow from the formula of section 7.10.1; and the
+window of Table 7.33 is the Kaiser-Bessel derived window of alpha 5, which
+the decoder computes in full instead of using the printed five decimals.
+
+The pseudo code of section 7.2.2.4 puts a semicolon after the first condition
+of `calc_lowcomp`, which in C would make `a = 384` unconditional. It is read
+as the `if` it plainly is, and ffmpeg's decode agrees.
+
+ffmpeg was measured, as a program, in five places where it and the standard or
+a reading of it differ, and each is recorded in `docs/ac3.md`:
+
+- with a coarse SNR offset of zero it gives each channel no bits when its own
+  fine offset is zero, where the standard asks that all of them be;
+- it refuses a delta bit allocation that reaches the last band;
+- in a block whose channels switch differently it overlaps one channel with
+  the tail of channel 0's previous block (both its float and fixed decoders);
+- it counts the coupling channel's delta bands from the first band the
+  coupling channel covers, which section 5.4.3.51 supports and the pseudo
+  code of 7.2.2.6 does not say, so AudioKodec follows it;
+- in a dual mono stream it gives the low frequency channel the second dynamic
+  range word, which the standard does not say, so AudioKodec follows it.
+
+ffmpeg's decoder also rounds each coefficient down to a multiple of 2^-23 when
+it is dequantised, again when its coupling coordinate is read, and again when
+it is decoupled, with the sign of a phase-inverted band applied after the
+rounding. That is not a departure from the standard, which defines real
+arithmetic, but it is the difference between the two decoders, and
+`Ac3Probe` reproduces it so that the comparison can be exact. The rules were
+found by comparing the two decoders' output on random frames, down to the
+single coefficient, and each is confirmed by a bound of 2e-6 over 192 frames.
+
+Enhanced AC-3 (A/52 Annex E) shares the sync word and is named and refused,
+not decoded, for the patent tail its issue states.
 
 ## AAC constant tables
 

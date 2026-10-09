@@ -28,6 +28,7 @@ class MatroskaOracleTest {
         Case("FLAC 24-bit", "flac", listOf("-c:a", "flac", "-sample_fmt", "s32", "-bits_per_raw_sample", "24"), AudioCodec.FLAC),
         Case("MP3", "mp3", listOf("-c:a", "libmp3lame", "-b:a", "128k"), AudioCodec.MP3),
         Case("AAC", "m4a", listOf("-c:a", "aac", "-b:a", "128k"), AudioCodec.AAC),
+        Case("AC-3", "ac3", listOf("-c:a", "ac3", "-b:a", "192k"), AudioCodec.AC3),
         Case("PCM 16-bit", "wav", listOf("-c:a", "pcm_s16le"), AudioCodec.PCM_INTEGER),
         Case("PCM 24-bit", "wav", listOf("-c:a", "pcm_s24le"), AudioCodec.PCM_INTEGER),
         Case("PCM float", "wav", listOf("-c:a", "pcm_f32le"), AudioCodec.PCM_FLOAT),

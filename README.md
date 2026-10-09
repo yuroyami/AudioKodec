@@ -211,8 +211,8 @@ external data references are named and refused.
 
 ALAC, Opus, FLAC, MPEG Layers I, II and III, and QuickTime's uncompressed codings
 decode, seeking included. [MPEG tracks](docs/mpeg-in-mp4.md) share the bare-stream
-frame decoder and apply the MP4 edit list. AAC-LC decodes as described [below](#aac), and AMR as
-described [below](#amr). AC-3 is named, with its length and chapters, and `open` refuses it by name.
+frame decoder and apply the MP4 edit list. AAC-LC decodes as described [below](#aac), AC-3 as described [below](#ac-3), and AMR as
+described [below](#amr).
 
 The iTunes item list inside `moov` is read and written, cover art included,
 whatever the coding. A rewrite rebuilds only the `moov` box and copies the
@@ -221,7 +221,7 @@ audio byte for byte. See [MP4 metadata](docs/mp4-tags.md).
 ## Matroska and WebM
 
 Matroska and WebM files decode from their first audio track: Opus, Vorbis,
-FLAC, MPEG audio, AAC-LC and PCM, through the same decoders as in their own
+FLAC, MPEG audio, AAC-LC, AC-3 and PCM, through the same decoders as in their own
 containers. The length is counted frame by frame, with Opus's pre-skip and
 end trim applied from CodecDelay and DiscardPadding, and agrees with ffmpeg's
 decode of the same file; seeking is exact. Live files of unknown size, all
@@ -284,6 +284,29 @@ core. The refusal covers explicit signalling in the MP4 configuration and
 implicit signalling in the stream. AAC Main, SSR and LTP, the 960-sample
 frame and coupling channel elements are refused by name too. See
 [AAC](docs/aac.md).
+
+## AC-3
+
+AC-3, Dolby Digital, decodes from raw `.ac3` streams, from MP4 and QuickTime
+tracks and from Matroska tracks, at 32, 44.1 and 48 kHz, in every coding mode
+from dual mono to 3/2 with the low frequency channel. It is written from ATSC
+A/52:2012 in floating point, as the standard describes it, with the bit
+allocation in the integer arithmetic the standard gives it. Exponent
+strategies, delta bit allocation, channel coupling with its phase flags,
+rematrixing, block switching channel by channel and the dynamic range word
+are all implemented. Channels come out in AudioKodec's speaker order, nothing
+is mixed down, and the stream's length is its syncframes counted. Seeking runs
+one syncframe ahead of its target, which makes it sample-exact.
+
+ffmpeg's encoder writes none of block switching, delta bit allocation, phase
+flags or dual mono, so the test suite also decodes frames of random choices of
+every element and compares them with ffmpeg's decode: with the 24-bit
+fixed-point rounding of ffmpeg's decoder reproduced, the two agree to float
+rounding, and on encoder-written files without it they differ by under
+1.5e-5. Dither is the one place the standard leaves open: a mantissa given no
+bits is replaced by noise, so a file that sets the dither flags differs from
+ffmpeg's decode by noise of the same energy. Enhanced AC-3, which shares the
+sync word, is refused by name. See [AC-3](docs/ac3.md).
 
 ## WavPack
 
@@ -608,9 +631,10 @@ and `42ni` is 24-bit.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit, iLBC |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| Matroska and WebM | Opus, Vorbis, FLAC, MPEG Layers I, II and III, AAC-LC, PCM 8 to 32-bit in both byte orders, IEEE float 32/64-bit, from the first audio track, with zlib and header-stripped frames. Tags and chapters are read. AC-3 is named and not decoded yet |
-| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB, GSM 06.10, iLBC. AC-3 is named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
+| Matroska and WebM | Opus, Vorbis, FLAC, MPEG Layers I, II and III, AAC-LC, AC-3, PCM 8 to 32-bit in both byte orders, IEEE float 32/64-bit, from the first audio track, with zlib and header-stripped frames. Tags and chapters are read |
+| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB, GSM 06.10, iLBC, AC-3. Tags can be rewritten; of these codings only ALAC is encoded |
 | ADTS | AAC-LC, with sample-accurate seeking |
+| AC-3 | Every coding mode from dual mono to 3/2 with the low frequency channel, at 32, 44.1 and 48 kHz, with the exact length and sample-accurate seeking. Enhanced AC-3 is refused by name |
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
 | Monkey's Audio | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to eight channels except seven, from version 3.99 on. APEv2 tags are read |
 | True Audio | 8 to 24 bits, exact integers through `IntPcmAccess`, any number of channels. ID3 and APEv2 tags are read |
@@ -627,7 +651,7 @@ decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 
-AC-3, DTS, ASF and WMA, MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
+DTS, Enhanced AC-3, ASF and WMA, MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw
 `UnsupportedFormatException` for all of these, and the message names the

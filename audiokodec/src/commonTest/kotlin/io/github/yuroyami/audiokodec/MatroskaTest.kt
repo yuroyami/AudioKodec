@@ -135,6 +135,29 @@ class MatroskaTest {
         assertFailsWith<UnsupportedFeatureException> { AudioKodec.probe(encrypted) }
     }
 
+    @Test
+    fun ac3SyncframesDecodeAsTheyDoFromARawStream() {
+        val fixture = Ac3Fixtures.SURROUND
+        val track = element(
+            TRACK_ENTRY,
+            uint(TRACK_NUMBER, 1), uint(TRACK_UID, 77), uint(TRACK_TYPE, 2), text(CODEC_ID, "A_AC3"),
+            element(AUDIO, float(SAMPLING_FREQUENCY, 48_000.0), uint(CHANNELS, 6)),
+        )
+        val file = matroska(track = track, blocks = fixture.frames().map { listOf(it) })
+        val info = AudioKodec.probe(file)
+        assertEquals(AudioContainer.MATROSKA, info.container)
+        assertEquals(AudioCodec.AC3, info.codec)
+        assertEquals(6, info.format.channels)
+        assertEquals(4608L, info.durationFrames)
+        assertEquals(AudioKodec.decode(fixture.bytes).samples.toList(), AudioKodec.decode(file).samples.toList())
+        AudioKodec.open(file).use { decoder ->
+            assertEquals(2000L, decoder.seek(2000))
+            val whole = AudioKodec.decode(fixture.bytes).samples
+            val frame = decoder.nextFrame()!!
+            for (i in 0 until 300 * 6) assertEquals(whole[2000 * 6 + i], frame.samples[i], "seek to 2000, sample $i")
+        }
+    }
+
     internal fun hostileFixture(): ByteArray = matroska(track = pcmTrack(), blocks = List(2) { listOf(pcm(it * 8, 8)) }, lacing = Lacing.NONE)
 
     // Building files.

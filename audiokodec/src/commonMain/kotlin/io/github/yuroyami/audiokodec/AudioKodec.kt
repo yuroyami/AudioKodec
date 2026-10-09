@@ -17,6 +17,8 @@ import io.github.yuroyami.audiokodec.internal.mpeg.Layer12Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.Mp3Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.MpegStream
 import io.github.yuroyami.audiokodec.internal.aac.AacPacketCodec
+import io.github.yuroyami.audiokodec.internal.ac3.Ac3PacketCodec
+import io.github.yuroyami.audiokodec.internal.ac3.Ac3Stream
 import io.github.yuroyami.audiokodec.internal.ape.ApeFile
 import io.github.yuroyami.audiokodec.internal.tta.TtaFile
 import io.github.yuroyami.audiokodec.internal.musepack.MusepackFile
@@ -89,6 +91,7 @@ public object AudioKodec {
             AudioContainer.MP4 -> Mp4Container.info(reader, options)
             AudioContainer.CAF -> CafReader.info(reader, options)
             AudioContainer.ADTS -> AdtsStream.parse(reader, options).info(reader)
+            AudioContainer.AC3 -> Ac3Stream.parse(reader, options).info(reader)
             AudioContainer.ADIF -> AdifReader.info(reader, options)
             AudioContainer.WAVPACK -> WavPackFile.open(reader, options).info
             AudioContainer.APE -> ApeFile.open(reader, options).info
@@ -131,6 +134,7 @@ public object AudioKodec {
             AudioContainer.MP4 -> Mp4Container.decoder(reader, options)
             AudioContainer.CAF -> CafReader.open(reader, options)
             AudioContainer.ADTS -> AacPacketCodec.openAdts(reader, options)
+            AudioContainer.AC3 -> Ac3PacketCodec.openRaw(reader, options)
             AudioContainer.WAVPACK -> WavPackFile.open(reader, options).decoder(reader, options)
             AudioContainer.APE -> ApeFile.open(reader, options).decoder(reader, options)
             AudioContainer.TTA -> TtaFile.open(reader, options).decoder(reader, options)

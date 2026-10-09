@@ -42,8 +42,7 @@ audio and Ogg.
 - MP4, M4A, M4B, 3GP and QuickTime, read: the box tree, sample tables, a
   `moov` before or after the audio, fragmented files, edit lists, and
   chapters from a chapter track or a Nero `chpl` list. ALAC, Opus, FLAC and
-  uncompressed audio inside decode and seek, and so does AMR; AC-3 is named
-  with its length and refused.
+  uncompressed audio inside decode and seek, and so do AMR and AC-3.
 - MP4 item lists, read and written: the standard atoms, freeform items,
   track, disc, tempo and compilation numbers, ReplayGain and cover art, with
   unmodelled items kept and only the `moov` box rebuilt. Changed chapters are
@@ -107,11 +106,21 @@ audio and Ogg.
   tone by tone within the filters' difference. DST compression is refused
   by name.
 - Matroska and WebM, read from RFC 9559: Opus, Vorbis, FLAC, MPEG audio,
-  AAC-LC and PCM from the first audio track, with a length counted from the
-  frames and trimmed by CodecDelay and DiscardPadding that agrees with
+  AAC-LC, AC-3 and PCM from the first audio track, with a length counted from
+  the frames and trimmed by CodecDelay and DiscardPadding that agrees with
   ffmpeg's decode, exact seeking, elements of unknown size, all three lacing
   schemes, zlib-compressed and header-stripped frames, tags and chapters.
-  AC-3 is named and refused, and encrypted tracks are refused by name.
+  Encrypted tracks are refused by name.
+- AC-3, decoded from raw `.ac3` streams, MP4 and Matroska: the three sampling
+  rates, every coding mode from dual mono to 3/2 with the low frequency
+  channel, all three exponent strategies, the parametric bit allocation with
+  delta bit allocation, channel coupling with phase flags and master
+  coordinates, rematrixing, block switching channel by channel, dynamic range
+  words, CRC checks, and exact seeking. Written from ATSC A/52:2012 in float.
+  It agrees with ffmpeg's decoder to within the rounding of that decoder's
+  fixed-point coefficients, and exactly once that rounding is reproduced, on
+  encoder-written files and on frames that use every element of the format.
+  Enhanced AC-3 is refused by name.
 - G.722 and G.726, decoded from WAV and AU files, written from the ITU
   Recommendations and exact on every one of the ITU's test sequences, with
   exact seeking. `DecodeOptions.g722Mode` selects G.722's mode 2 or 3.

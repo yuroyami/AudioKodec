@@ -9,6 +9,8 @@ import io.github.yuroyami.audiokodec.DecodeOptions
 import io.github.yuroyami.audiokodec.internal.PacketCodec
 import io.github.yuroyami.audiokodec.internal.aac.AacPacketCodec
 import io.github.yuroyami.audiokodec.internal.aac.AacStreamConfig
+import io.github.yuroyami.audiokodec.internal.ac3.Ac3Frame
+import io.github.yuroyami.audiokodec.internal.ac3.Ac3PacketCodec
 import io.github.yuroyami.audiokodec.internal.alac.AlacConfig
 import io.github.yuroyami.audiokodec.internal.alac.AlacPacketCodec
 import io.github.yuroyami.audiokodec.internal.amr.AmrPacketCodec
@@ -65,7 +67,8 @@ internal object Mp4Codecs {
         return when (entry.format) {
             "mp4a" -> mpeg4Audio(entry, reader, options, firstPacket)
             ".mp3" -> mpeg(entry, reader, options, firstPacket)
-            "ac-3", "ec-3" -> named(AudioCodec.AC3, if (entry.format == "ac-3") "AC-3" else "Enhanced AC-3")
+            "ac-3" -> ac3(entry, reader, options, firstPacket)
+            "ec-3" -> named(AudioCodec.AC3, "Enhanced AC-3")
             "samr", "sawb" -> amr(entry, options, wide = entry.format == "sawb")
             "agsm" -> gsm(entry, options)
             "ilbc" -> ilbc(entry, options)
@@ -94,6 +97,25 @@ internal object Mp4Codecs {
             options.checkAllocation(frames * 4, "decoding a $largestPacket-byte AMR sample")
             AmrPacketCodec(wide, format, intArrayOf(0), frames.toInt())
         }
+    }
+
+    /** AC-3 as ETSI TS 102 366 annex F carries it: each sample is one syncframe, sync word and all. */
+    private fun ac3(entry: Mp4Reader.SampleEntry, reader: SourceReader, options: DecodeOptions, firstPacket: Pair<Long, Int>?): Choice {
+        val shape = firstPacket?.let { (offset, size) ->
+            reader.seek(offset)
+            val absolute = reader.absoluteOffset(offset)
+            if (size < Ac3Frame.HEADER_BYTES) throw CorruptStreamException("an AC-3 sample is shorter than its frame header", absolute)
+            val bytes = ByteArray(Ac3Frame.HEADER_BYTES)
+            reader.readFully(bytes)
+            Ac3PacketCodec.shapeOf(bytes, 0, absolute)
+        }
+        val rate = shape?.sampleRate ?: entry.sampleRate
+        val format = shape?.let { AudioFormat(it.sampleRate, it.layout) } ?: AudioFormat(rate, ChannelLayout.canonical(entry.channels))
+        checkShape(entry, options, format.sampleRate, format.channels)
+        if (shape != null && entry.channels != 0 && entry.channels != format.channels) {
+            throw CorruptStreamException("the AC-3 frame and sample entry disagree about the channels", entry.offset)
+        }
+        return Choice(AudioCodec.AC3, "AC-3", format, null, 0, if (shape == null) null else { _ -> Ac3PacketCodec(shape, options.tolerant) })
     }
 
     /** GSM 06.10 as QuickTime carries it: plain 33-byte frames of one channel. */

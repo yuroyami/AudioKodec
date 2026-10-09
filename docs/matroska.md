@@ -26,7 +26,8 @@ println(tags.chapters)
 | `A_MPEG/L1`, `A_MPEG/L2`, `A_MPEG/L3` | MPEG audio, each frame counted from its own header |
 | `A_AAC`, `A_AAC/...` | AAC-LC, from the AudioSpecificConfig in CodecPrivate. Spectral band replication is refused by name, as everywhere |
 | `A_PCM/INT/LIT`, `A_PCM/INT/BIG`, `A_PCM/FLOAT/IEEE` | Linear PCM at the track's BitDepth, channels in WAV's default order |
-| `A_AC3`, `A_EAC3` | Named, not decoded yet (#42) |
+| `A_AC3` | AC-3, each syncframe counted as 1536 samples per channel. See [AC-3](ac3.md) |
+| `A_EAC3` | Named as Enhanced AC-3 and refused |
 
 Any other codec ID is reported as such, and `open` refuses it by name;
 `probe`, tags and chapters still work.

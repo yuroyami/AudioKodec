@@ -450,7 +450,7 @@ must fit in the supplied window; `probe` and `open` can jump over larger padding
 | MPEG Layers I, II and III | decodes, with seeking and edit-list trimming |
 | AAC-LC | decodes, with seeking and edit-list trimming |
 | AMR-NB, AMR-WB | decodes, with seeking that converges after a run-up, exactly |
-| AC-3 | named, not yet decoded |
+| AC-3 | decodes, with seeking |
 
 ```kotlin
 val info = AudioKodec.probe(m4aBytes)
@@ -501,12 +501,23 @@ the cover atom can hold, and when the audio moves.
 ## Matroska and WebM
 
 Matroska and WebM files decode from their first audio track: Opus, Vorbis,
-FLAC, MPEG audio, AAC-LC and PCM. The length is counted from the frames
+FLAC, MPEG audio, AAC-LC, AC-3 and PCM. The length is counted from the frames
 themselves, with CodecDelay and DiscardPadding trimming the ends, and agrees
 with ffmpeg's decode of the same file; seeking is exact. Elements of unknown
 size, all three lacing schemes, and zlib and header-stripped frames are read,
-as are tags and the first edition's chapters. AC-3 is named and refused, and
+as are tags and the first edition's chapters. AC-3 decodes too, and
 tags cannot be written yet. See [Matroska and WebM](matroska.md).
+
+## AC-3
+
+AC-3, Dolby Digital, decodes from raw `.ac3` streams, from MP4 and QuickTime
+tracks and from Matroska tracks, in every coding mode from dual mono to 3/2
+with the low frequency channel, at 32, 44.1 and 48 kHz. The length is the
+syncframes counted, channels come out in AudioKodec's order with nothing mixed
+down, and seeking runs one syncframe ahead of its target, which makes it
+sample-exact. A syncframe that fails its CRC throws `CorruptStreamException`
+unless `tolerant` is set. Enhanced AC-3, which shares AC-3's sync word, is
+refused by name. See [AC-3](ac3.md).
 
 ## WavPack
 
