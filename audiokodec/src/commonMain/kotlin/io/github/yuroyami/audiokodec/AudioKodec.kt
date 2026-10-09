@@ -15,6 +15,7 @@ import io.github.yuroyami.audiokodec.internal.mpeg.Mp3Decoder
 import io.github.yuroyami.audiokodec.internal.mpeg.MpegStream
 import io.github.yuroyami.audiokodec.internal.aac.AacPacketCodec
 import io.github.yuroyami.audiokodec.internal.ape.ApeFile
+import io.github.yuroyami.audiokodec.internal.tta.TtaFile
 import io.github.yuroyami.audiokodec.internal.container.AdifReader
 import io.github.yuroyami.audiokodec.internal.container.AdtsStream
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4Container
@@ -86,6 +87,7 @@ public object AudioKodec {
             AudioContainer.ADIF -> AdifReader.info(reader, options)
             AudioContainer.WAVPACK -> WavPackFile.open(reader, options).info
             AudioContainer.APE -> ApeFile.open(reader, options).info
+            AudioContainer.TTA -> TtaFile.open(reader, options).info
             else -> parse(reader, options, detected.container).toInfo(reader)
         }
     }
@@ -122,6 +124,7 @@ public object AudioKodec {
             AudioContainer.ADTS -> AacPacketCodec.openAdts(reader, options)
             AudioContainer.WAVPACK -> WavPackFile.open(reader, options).decoder(reader, options)
             AudioContainer.APE -> ApeFile.open(reader, options).decoder(reader, options)
+            AudioContainer.TTA -> TtaFile.open(reader, options).decoder(reader, options)
             AudioContainer.ADIF -> {
                 // The header is read so that damage is reported as damage;
                 // only then is the framing refused.

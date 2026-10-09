@@ -77,6 +77,7 @@ Run as programs, never read as source.
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, encodes the files that check the iTunes gapless record, and encodes and decodes the AAC files that check AudioKodec's AAC decoder against Apple's |
 | wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form |
 | mac | Monkey's Audio, built from the SDK the port follows, at every compression level from fast to insane, 8, 16, 24 and 32-bit integers and 32-bit float, one to eight channels except seven; every file must decode to exactly the input integers and to exactly what `mac -d` writes |
+| tta (libtta 2.3) | True Audio, the format authors' encoder and decoder, built from `libtta-c-2.3.tar.gz` (SourceForge, SHA-256 `68ba6db2d494dcd4aa6832a40952b88a3d50ca1174ab0ef1e091db16992303c7`). LGPL, so it is built and run as a program and its source is never opened. Its files at 16, 20 and 24 bits with one to six channels, and ffmpeg's at 8, 16 and 24 bits with up to eight, must decode to exactly the input integers, to exactly what `tta -d` writes and to exactly what ffmpeg decodes. It also writes the password-protected files that must be refused by name |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -589,6 +590,31 @@ damaged bitstream it starts again from the beginning and lets the block
 checksum catch the result; the translation reads zeros there, which the
 checksum catches the same way, and a block the reference would mute is an
 error instead.
+
+## True Audio
+
+The True Audio format page on the authors' site could not be reached while
+the decoder was written, and libtta, their current library, is LGPL, so it
+was never opened. The decoder is a translation of the authors' earlier
+decoder for hardware players instead, which is BSD-licensed and decodes the
+same `TTA1` format, recorded here before the first line was written.
+
+| Field | Value |
+|---|---|
+| Download | https://sourceforge.net/projects/tta/files/tta/ttalib-hwplayer/ttalib-hwplayer-1.2.tgz/download |
+| Version | 1.2, SHA-256 `2028573a43c91acf1a6048d1804f60e9a6d28f493cbcc0fed99895fdc88cf26f`, the value SourceForge publishes for the file |
+| Licence | BSD 3-Clause, in the header of every source file and the `README`, reproduced in `NOTICE` |
+| Files | `ttadec.c`, `ttadec.h`, `filter.h` and `ttalib.h` |
+| Not ported | The player's own limits, which reject sample rates outside a fixed list and more than eight channels, and its ID3 reading, which AudioKodec's tag readers already do |
+
+The arithmetic is the reference's: 32-bit and wrapping in the filter, with
+the Rice sums unsigned. Where the reference would read past the end of a
+damaged frame, or mute a sample out of range, the translation reports the
+frame as damaged; the frame CRC is checked before decoding, as the
+reference checks it after. The reference predates 20-bit files, and its
+range check would mute them; the format codes a 20-bit sample as the 24-bit
+value the WAV file held, which `tta -d` and ffmpeg both give back, so the
+check is made against the whole bytes instead.
 
 ## Monkey's Audio
 

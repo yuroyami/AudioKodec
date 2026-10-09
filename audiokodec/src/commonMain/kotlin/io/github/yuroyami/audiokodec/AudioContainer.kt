@@ -114,7 +114,7 @@ public enum class AudioContainer(
          * unit test, so the documentation cannot claim a decoder that does
          * not exist.
          */
-        val DECODABLE = setOf(WAV, RF64, WAVE64, AIFF, AU, FLAC, CAF, OGG, MPEG_AUDIO, MP4, ADTS, WAVPACK, APE)
+        val DECODABLE = setOf(WAV, RF64, WAVE64, AIFF, AU, FLAC, CAF, OGG, MPEG_AUDIO, MP4, ADTS, WAVPACK, APE, TTA)
     }
 }
 

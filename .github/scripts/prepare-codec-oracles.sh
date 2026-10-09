@@ -96,6 +96,26 @@ fi
 cmake -S reference/ape/sdk -B reference/ape/build -DCMAKE_BUILD_TYPE=Release
 cmake --build reference/ape/build --target macutil -j4
 
+# libtta is LGPL: it is built and run as a program, and its source is never opened.
+tta_source=reference/tta/libtta/libtta-c-2.3.tar.gz
+if [[ ! -f "$tta_source" ]]; then
+    mkdir -p reference/tta/libtta
+    curl --fail --show-error --location --retry 2 --max-time 180 \
+        https://downloads.sourceforge.net/project/tta/tta/libtta/libtta-c-2.3.tar.gz -o "$tta_source.part"
+    mv "$tta_source.part" "$tta_source"
+fi
+python3 - "$tta_source" <<'PY'
+import hashlib, sys
+with open(sys.argv[1], 'rb') as stream:
+    digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+assert digest == '68ba6db2d494dcd4aa6832a40952b88a3d50ca1174ab0ef1e091db16992303c7', 'libtta checksum mismatch'
+PY
+if [[ ! -x reference/tta/libtta/build/console/tta ]]; then
+    tar -xzf "$tta_source" -C reference/tta/libtta
+    mkdir -p reference/tta/libtta/build
+    (cd reference/tta/libtta/build && ../libtta-c-2.3/configure --disable-shared && make -j4)
+fi
+
 vectors=reference/opus_testvectors-rfc8251.tar.gz
 if [[ ! -f "$vectors" ]]; then
     curl --fail --show-error --location --retry 2 --max-time 180 \

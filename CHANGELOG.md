@@ -67,6 +67,11 @@ audio and Ogg.
   `IntPcmAccess`, block checksums verified, and exact seeking. Hybrid files
   decode to their lossy stream. Translated from WavPack 5.9.0 and identical
   to `wvunpack`. DSD inside WavPack is refused by name.
+- True Audio, decoded: 8 to 24 bits including 20-bit audio, any number of
+  channels, exact integers through `IntPcmAccess`, every CRC verified, and
+  exact seeking. Translated from the format authors' BSD-licensed decoder
+  and identical to both `tta -d` and ffmpeg. Password-protected files are
+  refused by name.
 - Monkey's Audio, decoded: every compression level from fast to insane, 8 to
   32 bits and 32-bit float, one to eight channels in AudioKodec's speaker
   order except seven, exact integers through `IntPcmAccess`, frame checksums

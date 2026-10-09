@@ -308,6 +308,20 @@ every level and depth. Files from encoders older than version 3.99, from
 2004, are refused by name, as are seven channels, which the SDK cannot decode
 either. See [Monkey's Audio](docs/ape.md).
 
+## True Audio
+
+True Audio decodes at 8 to 24 bits, including 20-bit audio, with any number
+of channels and at any sample rate, with exact integers through
+`IntPcmAccess`. The header, the seek table and every frame are checked
+against their CRCs. Frames stand alone, so seeking is exact and needs no
+run-up. The decoder is translated from the format authors' BSD-licensed
+decoder for hardware players.
+
+Every file the authors' `tta` tool and ffmpeg write in the test suite
+decodes to exactly the integers that went in, and to exactly what `tta -d`
+and ffmpeg give. Password-protected files are refused by name. See
+[True Audio](docs/tta.md).
+
 ## MPEG audio
 
 MP3 and its two older layers have no file header at all: a file is a run of
@@ -503,6 +517,7 @@ and `42ni` is 24-bit.
 | ADTS | AAC-LC, with sample-accurate seeking |
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
 | Monkey's Audio | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to eight channels except seven, from version 3.99 on. APEv2 tags are read |
+| True Audio | 8 to 24 bits, exact integers through `IntPcmAccess`, any number of channels. ID3 and APEv2 tags are read |
 
 ### Probed but not decoded
 
@@ -512,8 +527,8 @@ decoding the whole stream. `open` refuses it by name.
 
 ### Named but not decoded
 
-Matroska and WebM, Musepack, True Audio, DSF, DSDIFF, AMR, AC-3, DTS, ASF and
-WMA, MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
+Matroska and WebM, Musepack, DSF, DSDIFF, AMR, AC-3, DTS, ASF and WMA,
+MPEG-TS, MIDI, Shorten, OptimFROG and TAK.
 
 Sniffing is not decoding. `probe` and `open` throw
 `UnsupportedFormatException` for all of these, and the message names the

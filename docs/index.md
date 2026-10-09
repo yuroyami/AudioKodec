@@ -514,6 +514,14 @@ frames stand alone. Files from before version 3.99 and files with seven
 channels are refused by name. APEv2 tags are read as for any file. See
 [Monkey's Audio](ape.md).
 
+## True Audio
+
+True Audio files decode at 8 to 24 bits with exact integers through
+`IntPcmAccess`, and their header, seek table and frames are checked against
+their CRCs. Seeking is exact because frames stand alone. Password-protected
+files are refused by name. ID3 and APEv2 tags are read as for any file. See
+[True Audio](tta.md).
+
 ## MPEG audio
 
 An MP3 has no file header. It is a run of frames, each one carrying its own
