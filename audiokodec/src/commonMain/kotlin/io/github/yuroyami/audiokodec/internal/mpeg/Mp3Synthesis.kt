@@ -344,12 +344,19 @@ internal class Mp3Synthesis(private val channels: Int) {
     }
 
     private fun longTransform(spectrum: DoubleArray, offset: Int, window: Int, out: DoubleArray) {
+        val shape = WINDOWS[window]
         for (i in 0 until 36) {
-            var sum = 0.0
-            for (k in 0 until 18) {
-                sum += spectrum[offset + k] * COS36[i][k]
+            val row = COS36[i]
+            // Two running sums, so that an addition need not wait for the one before it.
+            var even = 0.0
+            var odd = 0.0
+            var k = 0
+            while (k < 18) {
+                even += spectrum[offset + k] * row[k]
+                odd += spectrum[offset + k + 1] * row[k + 1]
+                k += 2
             }
-            out[i] = sum * WINDOWS[window][i]
+            out[i] = (even + odd) * shape[i]
         }
     }
 

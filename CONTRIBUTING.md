@@ -108,6 +108,11 @@ For tests without provenance recording:
 ./gradlew :audiokodec:macosArm64Test
 ```
 
+`./gradlew :sample:benchmark` measures decode speed against the floors recorded
+in [PORTING_STATUS.md](PORTING_STATUS.md#decode-speed) and `./gradlew :sample:test`
+checks the benchmark's own helpers. A change to a decoder's inner loops should
+be measured before and after.
+
 The oracle suites compare against outside tools: `ffmpeg` and `ffprobe`
 for most formats, the reference `flac` tools for FLAC, and Apple's `afconvert`
 for Core Audio Format files on macOS. Missing tools produce explicit JUnit

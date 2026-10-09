@@ -67,6 +67,9 @@ jobs:
       - name: Core tests (native)
         run: ./gradlew :audiokodec:linuxX64Test :audiokodec-io:linuxX64Test --stacktrace
 
+      - name: Sample module tests
+        run: ./gradlew :sample:test --stacktrace
+
       - name: Public API check
         run: ./gradlew checkKotlinAbi --stacktrace
 

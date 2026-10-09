@@ -132,6 +132,54 @@ class BitReaderTest {
     }
 
     @Test
+    fun everyWidthAtEveryAlignmentMatchesReadingBitByBitInsideARegion() {
+        // A region in the middle of a larger array: the fast path must stop at the region's end, not the array's.
+        val bytes = ByteArray(40) { (it * 151 + 29).toByte() }
+        val offset = 5
+        val length = 23
+        for (width in 1..32) {
+            for (start in 0 until 16) {
+                val whole = BitReaderMsb(bytes, offset, length)
+                val bitwise = BitReaderMsb(bytes, offset, length)
+                whole.seekBits(start)
+                bitwise.seekBits(start)
+                var position = start
+                while (position + width <= whole.bitLength) {
+                    var expected = 0
+                    repeat(width) { expected = (expected shl 1) or bitwise.readBit() }
+                    assertEquals(expected, whole.readBits(width), "width $width from bit $start, at $position")
+                    assertEquals(bitwise.bitPosition, whole.bitPosition)
+                    position += width
+                }
+                assertFailsWith<TruncatedStreamException> { whole.readBits(width) }
+            }
+        }
+    }
+
+    @Test
+    fun unaryCountsAgreeWithCountingBitByBitAcrossBytesAndAtTheEnd() {
+        for (zeros in listOf(0, 1, 6, 7, 8, 9, 15, 16, 17, 23, 24, 40)) {
+            for (start in 0 until 8) {
+                val total = start + zeros + 1 + 9
+                val bits = BooleanArray(total + 8) { false }
+                bits[start + zeros] = true
+                val bytes = ByteArray((bits.size + 7) / 8)
+                for (i in bits.indices) if (bits[i]) bytes[i / 8] = (bytes[i / 8].toInt() or (0x80 ushr (i % 8))).toByte()
+                val reader = BitReaderMsb(bytes)
+                reader.seekBits(start)
+                assertEquals(zeros, reader.readUnary(), "$zeros zeros from bit $start")
+                assertEquals(start + zeros + 1, reader.bitPosition)
+            }
+        }
+        // No one bit before the region ends.
+        val silent = BitReaderMsb(ByteArray(3))
+        silent.seekBits(5)
+        assertFailsWith<TruncatedStreamException> { silent.readUnary() }
+        val inside = BitReaderMsb(byteArrayOf(0, 0, 0, 0x80.toByte()), 0, 3)
+        assertFailsWith<TruncatedStreamException> { inside.readUnary() }
+    }
+
+    @Test
     fun bitWindowsAndWriterRangesRejectInvalidArguments() {
         assertFailsWith<IllegalArgumentException> {
             BitReaderMsb(ByteArray(4), offset = 3, length = 2)

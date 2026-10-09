@@ -69,6 +69,15 @@ internal class BitReaderMsb(
                 "wanted $count bits at $bitPosition but the region holds $bitLength",
             )
         }
+        // Up to 25 bits never reach past the fourth byte from the one they start in, so one load of four serves.
+        val first = offset + (bitPosition ushr 3)
+        if (count <= 25 && first + 4 <= offset + length) {
+            val window = ((data[first].toInt() and 0xFF) shl 24) or ((data[first + 1].toInt() and 0xFF) shl 16) or
+                ((data[first + 2].toInt() and 0xFF) shl 8) or (data[first + 3].toInt() and 0xFF)
+            val value = (window shl (bitPosition and 7)) ushr (32 - count)
+            bitPosition += count
+            return value
+        }
         var result = 0
         var left = count
         while (left > 0) {
@@ -134,8 +143,21 @@ internal class BitReaderMsb(
     /** Counts zero bits up to the next one bit, and consumes that one bit. */
     fun readUnary(): Int {
         var zeros = 0
-        while (readBit() == 0) zeros++
-        return zeros
+        var position = bitPosition
+        while (position < bitLength) {
+            // The bits left in this byte, moved to the top of an eight-bit window.
+            val window = (data[offset + (position ushr 3)].toInt() shl (position and 7)) and 0xFF
+            if (window != 0) {
+                val leading = window.countLeadingZeroBits() - 24
+                bitPosition = position + leading + 1
+                return zeros + leading
+            }
+            val step = 8 - (position and 7)
+            zeros += step
+            position += step
+        }
+        bitPosition = bitLength
+        throw TruncatedStreamException("ran out of bits after $bitLength")
     }
 
     /** Moves to the next byte boundary. Returns the bits skipped. */

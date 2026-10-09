@@ -52,26 +52,43 @@ internal class PolyphaseFilter(private val channels: Int) {
     ) {
         for (subband in 0 until 32) slot[subband] = input[inOffset + subband * inStride]
 
+        // Every sum below runs in two or four accumulators instead of one. A single running sum makes each
+        // addition wait for the one before, and these sums are the cost of the whole decoder; the order of
+        // the additions is not part of the standard's definition, and the difference is far below a float.
         val buffer = history[channel]
-        var at = (historyAt[channel] - 64) and 1023
+        val matrix = MATRIX
+        val at = (historyAt[channel] - 64) and 1023
         for (i in 0 until 64) {
-            var sum = 0.0
-            for (k in 0 until 32) sum += slot[k] * MATRIX[i][k]
-            buffer[(at + i) and 1023] = sum
+            val row = i shl 5
+            var s0 = 0.0
+            var s1 = 0.0
+            var s2 = 0.0
+            var s3 = 0.0
+            var k = 0
+            while (k < 32) {
+                s0 += slot[k] * matrix[row + k]
+                s1 += slot[k + 1] * matrix[row + k + 1]
+                s2 += slot[k + 2] * matrix[row + k + 2]
+                s3 += slot[k + 3] * matrix[row + k + 3]
+                k += 4
+            }
+            buffer[(at + i) and 1023] = (s0 + s1) + (s2 + s3)
         }
 
         // The window runs over sixteen half-blocks of the history, taken from
         // alternating halves of each pair of blocks. That shuffle is what the
         // standard writes as building U from V.
+        val window = Mp3Tables.SYNTHESIS_WINDOW
         var write = outOffset
         for (j in 0 until 32) {
-            var sum = 0.0
+            var even = 0.0
+            var odd = 0.0
             for (m in 0 until 8) {
                 val base = at + (m shl 7)
-                sum += buffer[(base + j) and 1023] * Mp3Tables.SYNTHESIS_WINDOW[j + 64 * m]
-                sum += buffer[(base + 96 + j) and 1023] * Mp3Tables.SYNTHESIS_WINDOW[j + 32 + 64 * m]
+                even += buffer[(base + j) and 1023] * window[j + 64 * m]
+                odd += buffer[(base + 96 + j) and 1023] * window[j + 32 + 64 * m]
             }
-            out[write] = sum.toFloat()
+            out[write] = (even + odd).toFloat()
             write += outStride
         }
         historyAt[channel] = at
@@ -79,8 +96,6 @@ internal class PolyphaseFilter(private val channels: Int) {
 
     private companion object {
         /** The matrixing step, thirty-two inputs into sixty-four. */
-        val MATRIX = Array(64) { i ->
-            DoubleArray(32) { k -> cos((16 + i) * (2 * k + 1) * PI / 64.0) }
-        }
+        val MATRIX = DoubleArray(64 * 32) { n -> cos((16 + n / 32) * (2 * (n % 32) + 1) * PI / 64.0) }
     }
 }

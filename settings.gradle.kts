@@ -31,3 +31,9 @@ include(":audiokodec")
 // the classpath of consumers that already have their own byte plumbing. Its
 // target list is kotlinx-io's, which is smaller than the core's.
 include(":audiokodec-io")
+
+// :sample is a desktop application and the benchmark task. It is never
+// published and is not part of the library's API: it exists to be run, to show
+// what the library does with a file, and to measure decode speed against the
+// floors the library set for itself.
+include(":sample")

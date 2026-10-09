@@ -10,6 +10,7 @@ plugins {
     // to sibling modules makes publishAndReleaseToMavenCentral fail.
     alias(libs.plugins.vanniktech.publish).apply(false)
     alias(libs.plugins.kotlin.multiplatform).apply(false)
+    alias(libs.plugins.kotlin.jvm).apply(false)
     alias(libs.plugins.android.kmp.library).apply(false)
     // Applied (not deferred) at the root so `dokkaGenerate` aggregates every
     // library module into one API site at build/dokka/html.

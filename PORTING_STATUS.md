@@ -459,6 +459,66 @@ A 13 MiB image also checks streaming allocations and an exact metaflac export.
 | Allocation ceiling checked before every buffer is sized | ✅ |
 | Read size scaled down to fit a small allocation ceiling | ✅ |
 
+## Decode speed
+
+`./gradlew :sample:benchmark` decodes thirty seconds of a fixed stereo test
+signal in each coding through the streaming decoder with buffer reuse on, after
+three discarded runs, and reports the median of seven as a multiple of real
+time. FLAC, ALAC and WAV are encoded by the library; every other input is
+written by ffmpeg, used as a program, so the numbers are for ffmpeg 6.1.1's
+encoders and a machine without ffmpeg measures fewer codings. `--enforce`
+exits with status 1 when a floor is missed.
+
+The library committed to floors of 100 times real time for MPEG audio, 200 for
+FLAC, 50 for Opus and 100 for the resampler, on a laptop-class machine in a
+release build. They are sanity floors, there to catch an accidental quadratic
+loop, not marketing numbers, so these figures stay out of the README until they
+have been measured on continuous integration hardware. The run below is a
+shared four-processor Intel Xeon at 2.8 GHz under Java 21, which is slower than
+a laptop.
+
+| Coding | Times real time | Floor |
+|---|---|---|
+| WAV 16-bit PCM | 2400x | none |
+| FLAC 16-bit | 245x | 200x |
+| ALAC 16-bit | 243x | none |
+| MPEG Layer II, 192 kbit/s | 249x | 100x |
+| MPEG Layer III, 128 kbit/s | 115x | 100x |
+| MPEG Layer III, 320 kbit/s | 118x | 100x |
+| Opus, 96 kbit/s | 260x | 50x |
+| Opus, 32 kbit/s | 338x | 50x |
+| AAC-LC, 128 kbit/s in MP4 | 381x | none |
+| Vorbis, quality 4 | 355x | none |
+| AC-3, 192 kbit/s | 326x | none |
+| AC-3 5.1, 448 kbit/s | 141x | none |
+| WavPack | 195x | none |
+| True Audio | 179x | none |
+| Resampler, linear, 44.1 to 48 kHz | 1255x | 100x |
+| Resampler, sinc, 44.1 to 48 kHz and 48 to 44.1 kHz | 11x | 100x, **missed** |
+| Resampler, sinc, 44.1 to 96 kHz | 6x | 100x, **missed** |
+
+The first run found three misses, which is what the benchmark is for. FLAC
+decoded at 145 times real time and Layer III at 88 to 96, both short of their
+floors. Part of the cost was in code every decoder shares: the MSB-first bit
+reader read a multi-bit field a byte at a time and a unary code a bit at a time,
+and the polyphase filter and the long-block inverse MDCT of MPEG audio summed
+each output in one running total, so every addition waited for the one before.
+A four-byte load for fields of up to 25 bits, a byte-wise unary count and
+several accumulators in those sums brought FLAC to 245 times and Layer III to
+115 and 118, without changing what any file decodes to.
+
+The sinc resampler is the miss that stays. It is speexdsp's quality 10 filter,
+sample for sample: 256 taps, and above 32 distinct fractional positions it
+interpolates between four neighbouring table rows with four double
+accumulators, which is a thousand multiply-adds for every output sample of every
+channel. The sum is in double precision, in the reference's order, and
+reordering it could change the last bit of a sample; the JVM does not vectorise it, and Kotlin
+Multiplatform has no portable SIMD to write it in. Profiling put the whole of
+the time in that loop. A floor of 100 is out of reach for this filter without
+changing its arithmetic or offering a cheaper filter, and the
+linear mode clears the floor by an order of magnitude. Converting an hour of
+stereo takes about five minutes at 11 times real time.
+
 ## Sniffing
 
 29 formats are named: WAV, RF64, Wave64, AIFF, AU, CAF, FLAC, Ogg, MPEG audio,
