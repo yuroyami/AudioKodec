@@ -13,6 +13,7 @@ import io.github.yuroyami.audiokodec.internal.alac.AlacConfig
 import io.github.yuroyami.audiokodec.internal.alac.AlacPacketCodec
 import io.github.yuroyami.audiokodec.internal.amr.AmrPacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
+import io.github.yuroyami.audiokodec.internal.codec.GsmPacketCodec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.PcmLayout
 import io.github.yuroyami.audiokodec.internal.codec.SampleCodec
@@ -65,6 +66,7 @@ internal object Mp4Codecs {
             ".mp3" -> mpeg(entry, reader, options, firstPacket)
             "ac-3", "ec-3" -> named(AudioCodec.AC3, if (entry.format == "ac-3") "AC-3" else "Enhanced AC-3")
             "samr", "sawb" -> amr(entry, options, wide = entry.format == "sawb")
+            "agsm" -> gsm(entry, options)
             "alac" -> alac(entry, options)
             "Opus" -> opus(entry, options)
             "fLaC" -> flac(entry, reader, options)
@@ -89,6 +91,17 @@ internal object Mp4Codecs {
             val frames = largestPacket.toLong() * AmrPacketCodec.samplesPerFrame(wide)
             options.checkAllocation(frames * 4, "decoding a $largestPacket-byte AMR sample")
             AmrPacketCodec(wide, format, intArrayOf(0), frames.toInt())
+        }
+    }
+
+    /** GSM 06.10 as QuickTime carries it: plain 33-byte frames of one channel. */
+    private fun gsm(entry: Mp4Reader.SampleEntry, options: DecodeOptions): Choice {
+        checkShape(entry, options, entry.sampleRate, 1)
+        val format = AudioFormat(entry.sampleRate, ChannelLayout.MONO)
+        return Choice(AudioCodec.GSM, "GSM 06.10", format, null, 0) { largestPacket ->
+            val frames = (largestPacket / GsmPacketCodec.FRAME_BYTES).coerceAtLeast(1).toLong() * GsmPacketCodec.FRAME_SAMPLES
+            options.checkAllocation(frames * 4, "decoding a $largestPacket-byte GSM 06.10 sample")
+            GsmPacketCodec(format, frames.toInt())
         }
     }
 

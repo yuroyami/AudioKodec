@@ -146,6 +146,26 @@ reference_checkout reference/speex/src https://github.com/xiph/speex.git 5dceaaf
 command -v speexenc >/dev/null
 command -v speexdec >/dev/null
 
+# libgsm is under its authors' permissive notice; the GSM oracle harness is
+# compiled against these sources.
+gsm_source=reference/gsm/gsm-1.0.22.tar.gz
+if [[ ! -f "$gsm_source" ]]; then
+    mkdir -p reference/gsm
+    curl --fail --show-error --location --retry 2 --max-time 180 \
+        "https://www.quut.com/gsm/gsm-1.0.22.tar.gz" -o "$gsm_source.part"
+    mv "$gsm_source.part" "$gsm_source"
+fi
+python3 - "$gsm_source" <<'PY'
+import hashlib, sys
+with open(sys.argv[1], 'rb') as stream:
+    digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+assert digest == 'f0072e91f6bb85a878b2f6dbf4a0b7c850c4deb8049d554c65340b3bf69df0ac', 'libgsm checksum mismatch'
+PY
+if [[ ! -d reference/gsm/src ]]; then
+    mkdir -p reference/gsm/src
+    tar -xzf "$gsm_source" -C reference/gsm/src
+fi
+
 # opencore-amr and vo-amrwbenc are Apache 2.0; the AMR oracle harnesses are
 # compiled against these sources, and the encoders are only run.
 reference_checkout reference/amr/src https://git.code.sf.net/p/opencore-amr/code 7dba8c32238418ce0b316a852b2224df586ca896

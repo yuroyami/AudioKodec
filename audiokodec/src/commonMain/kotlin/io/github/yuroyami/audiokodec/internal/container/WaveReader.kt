@@ -10,6 +10,7 @@ import io.github.yuroyami.audiokodec.TruncatedStreamException
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
 import io.github.yuroyami.audiokodec.internal.ParsedStream
 import io.github.yuroyami.audiokodec.internal.codec.G711Codec
+import io.github.yuroyami.audiokodec.internal.codec.GsmCodec
 import io.github.yuroyami.audiokodec.internal.codec.ImaAdpcmWavCodec
 import io.github.yuroyami.audiokodec.internal.codec.LinearPcmCodec
 import io.github.yuroyami.audiokodec.internal.codec.MsAdpcmCodec
@@ -34,6 +35,7 @@ internal object WaveReader {
     private const val FORMAT_ALAW = 0x0006
     private const val FORMAT_MULAW = 0x0007
     private const val FORMAT_IMA_ADPCM = 0x0011
+    private const val FORMAT_GSM610 = 0x0031
     private const val FORMAT_EXTENSIBLE = 0xFFFE
 
     /**
@@ -468,6 +470,30 @@ internal object WaveReader {
                 }
                 WaveFormat(
                     codec = AudioCodec.MS_ADPCM,
+                    audioFormat = audioFormat,
+                    sampleCodec = codec,
+                    storedBitDepth = null,
+                )
+            }
+
+            FORMAT_GSM610 -> {
+                // Microsoft's GSM 06.10 packs two frames into each 65-byte block of
+                // 320 samples, of one channel at whatever rate the header states.
+                if (channels != 1) {
+                    throw UnsupportedFeatureException(
+                        "GSM 06.10 in $channels channels",
+                        "this WAV file states GSM 06.10 in $channels channels; the coding is defined for one",
+                    )
+                }
+                val codec = GsmCodec(wav49 = true)
+                if (extra.size >= 2 && readU16Le(extra, 0) != codec.framesPerBlock) {
+                    throw CorruptStreamException(
+                        "GSM 06.10 samples-per-block of ${readU16Le(extra, 0)} is not the 320 its blocks hold",
+                        start,
+                    )
+                }
+                WaveFormat(
+                    codec = AudioCodec.GSM,
                     audioFormat = audioFormat,
                     sampleCodec = codec,
                     storedBitDepth = null,

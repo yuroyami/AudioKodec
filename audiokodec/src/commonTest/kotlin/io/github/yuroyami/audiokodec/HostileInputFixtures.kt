@@ -25,6 +25,7 @@ internal object HostileInputFixtures {
             "Ogg Speex" to SpeexTest().hostileFixture(),
             "AMR" to AmrTest().hostileFixture(),
             "AMR-WB" to AmrTest().hostileWidebandFixture(),
+            "WAV GSM 06.10" to GsmTest().hostileFixture(),
             "MP4 MPEG" to MpegMp4Fixtures.file(MpegMp4Fixtures.packets(MpegTest().silentFrames(3, count = 2, compact = true))),
         ) + HandBuiltFileTest().hostileFixtures() + Mp4Test().hostileFixtures() +
             (1..3).map { "MPEG Layer $it" to MpegTest().silentFrames(it, count = 2, compact = true) } +

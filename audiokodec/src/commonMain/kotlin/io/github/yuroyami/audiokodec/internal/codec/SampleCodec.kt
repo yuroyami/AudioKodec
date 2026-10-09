@@ -28,6 +28,16 @@ internal interface SampleCodec {
     val storedBitDepth: Int?
 
     /**
+     * Blocks to decode and throw away before a seek target, for a codec that
+     * carries state from block to block; zero for one whose blocks stand
+     * alone, which is every codec but GSM 06.10.
+     */
+    val preRollBlocks: Int get() = 0
+
+    /** Forgets the state carried from block to block, before decoding from somewhere new. */
+    fun reset() = Unit
+
+    /**
      * Decodes [blocks] blocks starting at [srcOffset] into interleaved
      * Float32 at [outOffset], and returns the frames written.
      *

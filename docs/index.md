@@ -538,6 +538,13 @@ samples opencore-amr gives. Seeking decodes a half-second run-up before the
 target; a seek to the start is exact. Reserved frame types are refused. See
 [AMR](amr.md).
 
+## GSM 06.10
+
+GSM 06.10 decodes from WAV files, in Microsoft's 65-byte blocks, and from
+QuickTime and MP4 files, in the plain 33-byte frames, to exactly the samples
+libgsm gives. Seeking decodes a half-second run-up before the target. See
+[GSM 06.10](gsm.md).
+
 ## True Audio
 
 True Audio files decode at 8 to 24 bits with exact integers through

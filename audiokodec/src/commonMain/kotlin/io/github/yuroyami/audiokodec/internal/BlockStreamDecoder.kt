@@ -169,14 +169,25 @@ internal open class BlockStreamDecoder(
         private set
 
     override fun nextFrame(): AudioFrame? {
-        val read = readBlocks() ?: return null
-        val buffer = floatBufferOf(read.blocks * framesPerBlock * channels)
-        val blocks = decodeCheckingBlocks(read) { first, count ->
-            codec.decode(encoded, first * blockBytes, count, buffer, first * framesPerBlock * channels)
+        while (true) {
+            val read = readBlocks() ?: return null
+            val buffer = floatBufferOf(read.blocks * framesPerBlock * channels)
+            val blocks = decodeCheckingBlocks(read) { first, count ->
+                codec.decode(encoded, first * blockBytes, count, buffer, first * framesPerBlock * channels)
+            }
+            if (blocks == 0) return null
+            val decodedFrames = blocks * framesPerBlock
+            // A seek's run-up can take more than one read to throw away.
+            if (skipWhole(decodedFrames)) continue
+            return finishFloat(buffer, decodedFrames, minOf(read.limitFrames, decodedFrames))
         }
-        if (blocks == 0) return null
-        val decodedFrames = blocks * framesPerBlock
-        return finishFloat(buffer, decodedFrames, minOf(read.limitFrames, decodedFrames))
+    }
+
+    /** Throws away the whole of a decoded run that lies inside a seek's run-up, and returns whether it did. */
+    private fun skipWhole(decodedFrames: Int): Boolean {
+        if (pendingSkip < decodedFrames) return false
+        pendingSkip -= decodedFrames
+        return true
     }
 
     /**
@@ -224,13 +235,19 @@ internal open class BlockStreamDecoder(
     protected fun nextIntFrameInternal(): IntAudioFrame? {
         val bitDepth = codec.storedBitDepth
             ?: throw UnsupportedOperationException("this codec has no exact integer form")
-        val read = readBlocks() ?: return null
-        val buffer = intBufferOf(read.blocks * framesPerBlock * channels)
-        val blocks = decodeCheckingBlocks(read) { first, count ->
-            codec.decodeInt(encoded, first * blockBytes, count, buffer, first * framesPerBlock * channels)
-        }
-        if (blocks == 0) return null
-        val decodedFrames = blocks * framesPerBlock
+        var read: ReadResult
+        var buffer: IntArray
+        var decodedFrames: Int
+        do {
+            read = readBlocks() ?: return null
+            val run = intBufferOf(read.blocks * framesPerBlock * channels)
+            buffer = run
+            val blocks = decodeCheckingBlocks(read) { first, count ->
+                codec.decodeInt(encoded, first * blockBytes, count, run, first * framesPerBlock * channels)
+            }
+            if (blocks == 0) return null
+            decodedFrames = blocks * framesPerBlock
+        } while (skipWhole(decodedFrames))
         val skip = pendingSkip
         pendingSkip = 0
         val usable = (decodedFrames - skip).coerceAtMost(read.limitFrames)
@@ -342,8 +359,11 @@ internal open class BlockStreamDecoder(
             "frameIndex $frameIndex plus $trimStartFrames priming frames overflows 64 bits"
         }
         val codedTarget = trimStartFrames + target
-        nextBlock = codedTarget / framesPerBlock
-        pendingSkip = (codedTarget % framesPerBlock).toInt()
+        val targetBlock = codedTarget / framesPerBlock
+        // A codec that carries state between blocks starts afresh a run-up before the target.
+        codec.reset()
+        nextBlock = (targetBlock - codec.preRollBlocks).coerceAtLeast(0L)
+        pendingSkip = (codedTarget - nextBlock * framesPerBlock).toInt()
         // A corrupt block ended the stream where it was; elsewhere may be fine.
         corruptionReached = false
         positionFrames = target

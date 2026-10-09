@@ -81,6 +81,7 @@ Run as programs, never read as source.
 | mpcenc and libmpcdec r495 | Musepack: `mpcenc` from the operating system's `musepack-tools` package writes the files, and `mpc_float_oracle.c`, a few lines over libmpcdec's public API compiled against the r495 sources, writes the floats the reference decodes them to. `mpcdec` itself writes only 16-bit samples. Every sample must be the same float, at qualities 0 to 10, at 32, 44.1 and 48 kHz, mono and stereo, with each mid/side mode and with noise substitution. The encoder is LGPL and only run |
 | speexenc, speexdec and libspeex 1.2.1 | Speex: `speexenc` from the operating system's `speex` package writes the files, in all three modes, at every narrowband quality and across the others, with variable and average bitrate, voice activity detection with discontinuous transmission, several frames to a packet, and stereo. `speex_float_oracle.c`, a few lines over libogg and libspeex's public API compiled against the 1.2.1 sources without SSE, writes the floats the reference decodes them to, which every sample must equal. `speexdec` itself writes 16-bit samples from a build with SSE, so it gives only the length, which must be the same |
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
+| libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
 | libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
 | Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
@@ -703,6 +704,26 @@ interfaces in `amr_oracle.c`, and two encoders that are only run: opencore's
 AMR encoder, and vo-amrwbenc for AMR-WB, from the same project at
 https://git.code.sf.net/p/opencore-amr/vo-amrwbenc, tag v0.1.3, commit
 `080af7540562e4adfbd3312837fe5fc6771c4cd0`, Apache License 2.0.
+
+## GSM 06.10
+
+The decoder is a translation of libgsm, recorded here before the first line
+was written.
+
+| Field | Value |
+|---|---|
+| Download | https://www.quut.com/gsm/gsm-1.0.22.tar.gz |
+| Version | 1.0.22, SHA-256 `f0072e91f6bb85a878b2f6dbf4a0b7c850c4deb8049d554c65340b3bf69df0ac` |
+| Licence | The authors' permission in `COPYRIGHT`: use, copying, modification and distribution for any purpose, provided the notice stays and the authors are not held responsible. Reproduced in `NOTICE` |
+| Files | `src/decode.c`, `gsm_decode.c`, `rpe.c`, `long_term.c` and `short_term.c` for their decoding halves, `add.c`, `table.c`, `gsm_create.c`, and `inc/private.h` and `inc/gsm.h` |
+| Not ported | The encoder, the `toast` tool, and the floating-point shortcuts `FAST` and `USE_FLOAT_MUL` select, which the library's own build leaves off |
+
+The library is built with `SASR`, so a right shift of a negative value is
+arithmetic, as Kotlin's is, and with `WAV49`, which compiles in Microsoft's
+layout. That layout stores the same fields in the same order as the plain
+one, least significant bit first and two frames to a 65-byte block, so both
+are read by one field reader rather than by the reference's two unrolled
+unpackers.
 
 ## True Audio
 

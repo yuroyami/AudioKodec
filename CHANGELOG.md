@@ -71,6 +71,10 @@ audio and Ogg.
   states, and seeking. Translated from libmpcdec, BSD-licensed, and on the
   JVM identical to it float for float. Stream version 7 and older are refused
   by name.
+- GSM 06.10, decoded from WAV files in Microsoft's layout and from
+  QuickTime and MP4 in the plain one, translated from libgsm in its
+  fixed-point arithmetic and identical to it sample for sample on every
+  target, with seeking.
 - AMR-NB and AMR-WB, decoded at every rate, from `.amr` and `.awb` files,
   multichannel ones included, and from 3GP and MP4: comfort noise,
   concealment of frames without data, AMR-WB decoder homing, and seeking.

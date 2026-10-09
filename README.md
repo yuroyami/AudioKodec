@@ -347,6 +347,15 @@ integer opencore-amr gives, which the test suite checks at every rate.
 Seeking decodes a half-second run-up before the target and converges on a
 continuous decode; a seek to the start is exact. See [AMR](docs/amr.md).
 
+## GSM 06.10
+
+GSM 06.10, the original mobile telephone speech coding, decodes from WAV
+files in Microsoft's two-frame blocks and from QuickTime and MP4 files in its
+plain frames. The decoder is translated from libgsm and keeps its fixed-point
+arithmetic, so every sample is exactly the integer libgsm gives, on every
+target. Seeking decodes a half-second run-up and converges on a continuous
+decode; a seek to the start is exact. See [GSM 06.10](docs/gsm.md).
+
 ## True Audio
 
 True Audio decodes at 8 to 24 bits, including 20-bit audio, with any number
@@ -532,7 +541,7 @@ frame by confirming frames within the first 512 KiB.
 | Container | Codings |
 |---|---|
 | FLAC | FLAC, 8 to 32-bit on read and 8, 16 or 24-bit on write |
-| WAV (RIFF), including WAVE_FORMAT_EXTENSIBLE | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law, IMA ADPCM, Microsoft ADPCM |
+| WAV (RIFF), including WAVE_FORMAT_EXTENSIBLE | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law, IMA ADPCM, Microsoft ADPCM; GSM 06.10 is read |
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
 | AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law |
 | MP4 and M4A | ALAC 16/20/24/32-bit with one to eight channels, written with packets identical to Apple's reference encoder. Other MP4 codings are read only; see below |
@@ -552,7 +561,7 @@ and `42ni` is 24-bit.
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
-| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB. AC-3 is named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
+| MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law. AMR-NB and AMR-WB, GSM 06.10. AC-3 is named and not decoded yet. Tags can be rewritten; of these codings only ALAC is encoded |
 | ADTS | AAC-LC, with sample-accurate seeking |
 | WavPack | Lossless at 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid lossy without its correction file. APEv2 tags are read |
 | Monkey's Audio | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to eight channels except seven, from version 3.99 on. APEv2 tags are read |
