@@ -87,13 +87,10 @@ internal class OggReader(
         val total = headerSize + payloadSize
         options.checkAllocation(total.toLong(), "reading an Ogg page of $total bytes")
 
-        // The checksum covers the header and the payload together, so both are
-        // gathered before it can be checked.
-        val whole = ByteArray(total)
-        header.copyInto(whole, 0, 0, headerSize)
+        val payload = ByteArray(payloadSize)
         val payloadAt = checkedOffset(at, headerSize)
         reader.seek(payloadAt)
-        val payloadBytes = reader.readSome(whole, headerSize, payloadSize)
+        val payloadBytes = reader.readSome(payload, 0, payloadSize)
         if (payloadBytes < payloadSize) {
             return truncatedPage(
                 "the Ogg page payload is cut short: wanted $payloadSize bytes, found $payloadBytes",
@@ -101,7 +98,9 @@ internal class OggReader(
             )
         }
 
-        val actualCrc = OggCrc.ofPage(whole, 0, total, 22)
+        // The checksum runs over the header, its own four bytes zeroed, and on
+        // into the payload, so the two never have to be joined in one array.
+        val actualCrc = OggCrc.update(OggCrc.ofPage(header, 0, headerSize, 22), payload, 0, payloadSize)
         if (actualCrc != storedCrc) {
             throw CorruptStreamException(
                 "the page checksum is $storedCrc but the page hashes to $actualCrc", at,
@@ -115,7 +114,7 @@ internal class OggReader(
             serialNumber = serial,
             sequenceNumber = sequence,
             segments = segments,
-            payload = whole.copyOfRange(headerSize, total),
+            payload = payload,
             byteLength = total,
         )
     }
@@ -395,7 +394,9 @@ internal class OggReader(
                 }
 
                 if (complete) {
-                    val bytes = pending
+                    // The packet gets an array of its own exact size, and the
+                    // assembly buffer stays for the next packet.
+                    val bytes = pending.copyOf(pendingLength)
                     val length = pendingLength
                     val startOffset = pendingStartOffset
                     val endOffset = payloadPosition(page, payloadOffset)
@@ -554,7 +555,6 @@ internal class OggReader(
         }
 
         private fun clearPending() {
-            pending = ByteArray(0)
             pendingLength = 0
             pendingStartOffset = -1L
         }

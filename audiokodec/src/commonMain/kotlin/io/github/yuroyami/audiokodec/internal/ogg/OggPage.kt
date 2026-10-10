@@ -12,7 +12,7 @@ package io.github.yuroyami.audiokodec.internal.ogg
  */
 internal object OggCrc {
 
-    private val TABLE: IntArray = IntArray(256) { index ->
+    private val T0: IntArray = IntArray(256) { index ->
         var value = index shl 24
         repeat(8) {
             value = if (value and 0x8000_0000.toInt() != 0) {
@@ -24,12 +24,46 @@ internal object OggCrc {
         value
     }
 
-    fun of(bytes: ByteArray, from: Int, to: Int): Int {
-        var crc = 0
-        for (i in from until to) {
-            crc = (crc shl 8) xor TABLE[((crc ushr 24) xor (bytes[i].toInt() and 0xFF)) and 0xFF]
+    // Tk[b] is the checksum of byte b followed by k zero bytes. Together the
+    // eight tables fold eight bytes into the checksum in one step.
+    private val T1 = shifted(T0)
+    private val T2 = shifted(T1)
+    private val T3 = shifted(T2)
+    private val T4 = shifted(T3)
+    private val T5 = shifted(T4)
+    private val T6 = shifted(T5)
+    private val T7 = shifted(T6)
+
+    private fun shifted(previous: IntArray): IntArray =
+        IntArray(256) { (previous[it] shl 8) xor T0[previous[it] ushr 24] }
+
+    fun of(bytes: ByteArray, from: Int, to: Int): Int = update(0, bytes, from, to)
+
+    /** Continues the checksum [crc] over `from until to`. */
+    fun update(crc: Int, bytes: ByteArray, from: Int, to: Int): Int {
+        var value = crc
+        var i = from
+        while (i <= to - 8) {
+            val word = value xor
+                ((bytes[i].toInt() and 0xFF) shl 24) xor
+                ((bytes[i + 1].toInt() and 0xFF) shl 16) xor
+                ((bytes[i + 2].toInt() and 0xFF) shl 8) xor
+                (bytes[i + 3].toInt() and 0xFF)
+            value = T7[word ushr 24] xor
+                T6[(word ushr 16) and 0xFF] xor
+                T5[(word ushr 8) and 0xFF] xor
+                T4[word and 0xFF] xor
+                T3[bytes[i + 4].toInt() and 0xFF] xor
+                T2[bytes[i + 5].toInt() and 0xFF] xor
+                T1[bytes[i + 6].toInt() and 0xFF] xor
+                T0[bytes[i + 7].toInt() and 0xFF]
+            i += 8
         }
-        return crc
+        while (i < to) {
+            value = (value shl 8) xor T0[((value ushr 24) xor (bytes[i].toInt() and 0xFF)) and 0xFF]
+            i++
+        }
+        return value
     }
 
     /**
@@ -41,12 +75,11 @@ internal object OggCrc {
      * bytes are skipped instead.
      */
     fun ofPage(bytes: ByteArray, from: Int, to: Int, checksumAt: Int): Int {
-        var crc = 0
-        for (i in from until to) {
-            val byte = if (i in checksumAt until checksumAt + 4) 0 else bytes[i].toInt() and 0xFF
-            crc = (crc shl 8) xor TABLE[((crc ushr 24) xor byte) and 0xFF]
-        }
-        return crc
+        val skipFrom = checksumAt.coerceIn(from, to)
+        val skipTo = (checksumAt + 4).coerceIn(skipFrom, to)
+        var crc = update(0, bytes, from, skipFrom)
+        repeat(skipTo - skipFrom) { crc = (crc shl 8) xor T0[crc ushr 24] }
+        return update(crc, bytes, skipTo, to)
     }
 }
 
