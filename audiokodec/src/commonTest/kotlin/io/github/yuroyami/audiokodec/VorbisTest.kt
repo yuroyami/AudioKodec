@@ -109,6 +109,15 @@ class VorbisTest {
     }
 
     @Test
+    fun aStreamThatReusesAKeptSetupDecodesTheSame() {
+        // The second decode is handed the setup the first one parsed.
+        val first = AudioKodec.decode(file())
+        val second = AudioKodec.decode(file())
+        assertEquals(first.frames, second.frames, "frames")
+        assertTrue(first.samples.contentEquals(second.samples), "a kept setup changed the samples")
+    }
+
+    @Test
     fun aTruncatedVorbisFileFailsInsteadOfLying() {
         val whole = file()
         for (keep in intArrayOf(20, 200, 900, 1_500, 2_400, 2_800)) {

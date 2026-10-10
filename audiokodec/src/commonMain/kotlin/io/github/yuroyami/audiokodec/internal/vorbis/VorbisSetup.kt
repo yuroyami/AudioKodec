@@ -53,7 +53,10 @@ internal class VorbisMode(
  * Written from the Vorbis I specification, section 4.
  */
 internal class VorbisConfig(
-    val identification: VorbisIdentification,
+    /** The channel count this setup was parsed for. With the block sizes, it is all a setup depends on. */
+    val channels: Int,
+    val shortBlock: Int,
+    val longBlock: Int,
     val codebooks: Array<VorbisCodebook>,
     val floors: Array<VorbisFloor>,
     val residues: Array<VorbisResidue>,
@@ -64,7 +67,16 @@ internal class VorbisConfig(
     /** Bits needed to name a mode, which is how every audio packet starts. */
     val modeBits: Int = VorbisCodebook.ilog(modes.size - 1)
 
-    private val shortWindow = window(identification.shortBlock, identification.shortBlock / 2, identification.shortBlock / 2)
+    /** The largest amount the allocation guard checked during the parse, so a kept setup respects a stricter ceiling. */
+    val guardedBytes: Long = maxOf(
+        codebooks.sumOf { VorbisCodebook.codewordBytes(it.entries) },
+        codebooks.maxOfOrNull { it.guardedBytes } ?: 0L,
+    )
+
+    /** Roughly what this setup holds in memory. */
+    val retainedBytes: Long = codebooks.sumOf { it.retainedBytes } + (shortBlock + 4L * longBlock) * Float.SIZE_BYTES
+
+    private val shortWindow = window(shortBlock, shortBlock / 2, shortBlock / 2)
 
     /**
      * The four long-block windows, by whether the block before and after are
@@ -77,9 +89,9 @@ internal class VorbisConfig(
     private val longWindows: Array<FloatArray> = Array(4) { index ->
         val previousLong = index and 1 != 0
         val nextLong = index and 2 != 0
-        val n = identification.longBlock
-        val left = if (previousLong) n / 2 else identification.shortBlock / 2
-        val right = if (nextLong) n / 2 else identification.shortBlock / 2
+        val n = longBlock
+        val left = if (previousLong) n / 2 else shortBlock / 2
+        val right = if (nextLong) n / 2 else shortBlock / 2
         window(n, left, right)
     }
 
@@ -245,7 +257,9 @@ internal class VorbisConfig(
             }
 
             return VorbisConfig(
-                identification = identification,
+                channels = identification.channels,
+                shortBlock = identification.shortBlock,
+                longBlock = identification.longBlock,
                 codebooks = codebooks,
                 floors = floors,
                 residues = residues,

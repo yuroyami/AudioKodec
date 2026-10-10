@@ -48,9 +48,11 @@ internal class VorbisDecoder(
     private val identification: VorbisIdentification =
         VorbisConfig.parseIdentification(headerPacket(0), options, stream.firstPageOffset)
 
-    private val config: VorbisConfig = parsed.vorbisConfig ?: VorbisConfig.parseSetup(
-        headerPacket(2), identification, options, stream.firstPageOffset,
-    )
+    private val config: VorbisConfig = parsed.vorbisConfig ?: headerPacket(2).let { setup ->
+        VorbisSetupCache.configFor(setup, identification, options) {
+            VorbisConfig.parseSetup(setup, identification, options, stream.firstPageOffset)
+        }
+    }
 
     private val channels = identification.channels
     private val longBlock = identification.longBlock

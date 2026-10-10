@@ -20,6 +20,7 @@ import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
 import io.github.yuroyami.audiokodec.internal.vorbis.VorbisDecoder
 import io.github.yuroyami.audiokodec.internal.vorbis.VorbisBitReader
 import io.github.yuroyami.audiokodec.internal.vorbis.VorbisConfig
+import io.github.yuroyami.audiokodec.internal.vorbis.VorbisSetupCache
 import io.github.yuroyami.audiokodec.tag.RawTagBlock
 import io.github.yuroyami.audiokodec.tag.RawTagEntry
 import io.github.yuroyami.audiokodec.tag.TagFormat
@@ -210,7 +211,10 @@ internal object OggAnalyser {
     /** Damaged or unsupported setup can still be probed; playback retains its typed failure. */
     private fun readVorbisConfig(headers: Headers, options: DecodeOptions): VorbisConfig? = try {
         val id = VorbisConfig.parseIdentification(headers.packets[0], options, headers.audio.firstPageOffset)
-        VorbisConfig.parseSetup(headers.packets[2], id, options, headers.audio.firstPageOffset)
+        val setup = headers.packets[2]
+        VorbisSetupCache.configFor(setup, id, options) {
+            VorbisConfig.parseSetup(setup, id, options, headers.audio.firstPageOffset)
+        }
     } catch (_: CorruptStreamException) {
         null
     } catch (_: TruncatedStreamException) {
@@ -253,7 +257,7 @@ internal object OggAnalyser {
                     if (bits.readBits(1) != 0) continue
                     val mode = bits.readBits(config.modeBits)
                     if (bits.endOfPacket || mode >= config.modes.size) return 0L
-                    val block = if (config.modes[mode].longBlock) config.identification.longBlock else config.identification.shortBlock
+                    val block = if (config.modes[mode].longBlock) config.longBlock else config.shortBlock
                     val count = if (previousBlock > 0) (previousBlock + block) / 4 else 0
                     previousBlock = block
                     count

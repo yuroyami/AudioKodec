@@ -47,6 +47,14 @@ internal class VorbisCodebook private constructor(
     /** Every entry's vector, expanded up front when that is not too large. */
     private var expanded: FloatArray? = null
 
+    /** The largest single allocation this book cleared with the allocation guard while it was parsed. */
+    val guardedBytes: Long
+        get() = maxOf(lookupValues.toLong() * 4, (expanded?.size ?: 0).toLong() * Float.SIZE_BYTES)
+
+    /** Roughly what this book holds in memory once parsed. */
+    val retainedBytes: Long
+        get() = codewordBytes(entries) + fastEntry.size * 8L + multiplicands.size * 4L + (expanded?.size ?: 0) * 4L
+
     /**
      * Reads one entry number.
      *
