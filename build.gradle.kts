@@ -19,7 +19,8 @@ plugins {
 
 allprojects {
     group = "io.github.yuroyami"
-    version = "0.1.0"
+    // A pre-release can be published under its own version with -Paudiokodec.version.
+    version = providers.gradleProperty("audiokodec.version").getOrElse("0.1.0")
 }
 
 // Attribution accompanies every Maven archive, including native/JS/Wasm KLIBs,
