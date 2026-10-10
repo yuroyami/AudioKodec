@@ -83,6 +83,13 @@ internal class VorbisBitReader(
     fun readBits(count: Int): Int {
         require(count in 0..32) { "count must be 0..32, was $count" }
         if (count == 0) return 0
+        val position = bitPosition
+        val byteIndex = position ushr 3
+        if (byteIndex + 5 <= length) {
+            // Five bytes hold any 32 bits at any bit offset, so one read covers the field.
+            bitPosition = position + count
+            return ((window(byteIndex) ushr (position and 7)) and ((1L shl count) - 1)).toInt()
+        }
         if (count > bitsRemaining) {
             // Consume what is there, so the caller's position is honest, and
             // report the shortfall.
@@ -120,6 +127,10 @@ internal class VorbisBitReader(
      */
     fun peekBits(count: Int): Int {
         require(count in 0..32) { "count must be 0..32, was $count" }
+        val byteIndex = bitPosition ushr 3
+        if (byteIndex + 5 <= length) {
+            return ((window(byteIndex) ushr (bitPosition and 7)) and ((1L shl count) - 1)).toInt()
+        }
         var result = 0
         var filled = 0
         var at = bitPosition
@@ -152,6 +163,17 @@ internal class VorbisBitReader(
     /** Marks the packet as ended, for a caller that found a value it cannot use. */
     fun markEndOfPacket() {
         endOfPacket = true
+    }
+
+    /** Five bytes from [byteIndex], lowest first, which is the order the bits arrive in. */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun window(byteIndex: Int): Long {
+        val bytes = data
+        return (bytes[byteIndex].toLong() and 0xFF) or
+            ((bytes[byteIndex + 1].toLong() and 0xFF) shl 8) or
+            ((bytes[byteIndex + 2].toLong() and 0xFF) shl 16) or
+            ((bytes[byteIndex + 3].toLong() and 0xFF) shl 24) or
+            ((bytes[byteIndex + 4].toLong() and 0xFF) shl 32)
     }
 
     private companion object {
