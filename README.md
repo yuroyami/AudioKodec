@@ -5,6 +5,9 @@ read and write FLAC, WAV, AIFF and AU; decode FLAC, Vorbis, every MPEG audio
 layer and the uncompressed family to Float32 PCM; edit tags without re-encoding
 the audio; and run the same code on every target.
 
+<sub>AI tools wrote much of the code, tests and documentation in this project, under the
+direction and review of its author.</sub>
+
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Targets](https://img.shields.io/badge/targets-22-blue)](#targets)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
