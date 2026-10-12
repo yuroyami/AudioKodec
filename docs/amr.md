@@ -41,10 +41,10 @@ significant bits and AMR-WB samples 14.
 
 A multichannel AMR file stores one frame per channel for each 20 ms, in the
 speaker order of RFC 3551 section 4.1. AudioKodec reorders them into its own
-channel order: a four-channel file's left, centre, right and surround come out
-as front left, front right, front centre and back centre, and a six-channel
-file's six as front left, front right, front centre, front left of centre,
-front right of centre and back centre. A file of more than six channels, which
+channel order: a four-channel file's left, center, right and surround come out
+as front left, front right, front center and back center, and a six-channel
+file's six as front left, front right, front center, front left of center,
+front right of center and back center. A file of more than six channels, which
 RFC 3551 gives no speakers for, comes out in file order with unknown speakers.
 
 ## Seeking

@@ -31,7 +31,7 @@ does.
 ## What is decoded
 
 The decoder is a translation of WebRTC's fixed-point iLBC decoder, as
-libilbc 3.0.4 packages it under its BSD licence, with the enhancer that
+libilbc 3.0.4 packages it under its BSD license, with the enhancer that
 WebRTC turns on. Every sample is exactly the 16-bit integer WebRTC gives,
 on every target, divided by 32768.
 

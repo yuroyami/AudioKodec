@@ -73,7 +73,7 @@ internal fun decodeAll(bytes: ByteArray): Long {
     return frames
 }
 
-/** A table in the form PORTING_STATUS.md holds, one row to a measurement. */
+/** A table in the form docs/support.md holds, one row to a measurement. */
 internal fun table(results: List<Result>): String = buildString {
     appendLine("| Coding | Audio | Median | Best | Times real time | Floor |")
     appendLine("|---|---|---|---|---|---|")

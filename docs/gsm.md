@@ -32,7 +32,7 @@ decode rather than equalling them; a seek to the start is exact.
 
 ## What is not read
 
-Raw `.gsm` files of plain frames have no header to recognise them by, and
+Raw `.gsm` files of plain frames have no header to recognize them by, and
 are not identified. AIFF-C files compressed as `GSM ` are refused by name,
 since no writer at hand produces them to check how they count their frames.
 

@@ -22,7 +22,7 @@ AudioKodec.open(ttaBytes).use { decoder ->
 Files in the `TTA1` format with integer samples, the format True Audio's own
 encoder and ffmpeg's write:
 
-- 8 to 24 bits, including depths that do not fill their bytes such as 20
+- 1 to 24 bits, including depths that do not fill their bytes such as 20
   bits;
 - any number of channels, in the order the WAV file the encoder read had
   them, which AudioKodec reports as the default layout for the count;

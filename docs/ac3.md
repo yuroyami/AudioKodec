@@ -6,7 +6,7 @@ tracks, and from Matroska tracks, through the same API as every other coding.
 ```kotlin
 val info = AudioKodec.probe(ac3Bytes)
 println(info.codec)                  // AC3
-println(info.format.channelLayout)   // FRONT_LEFT, FRONT_RIGHT, FRONT_CENTER, LOW_FREQUENCY, SIDE_LEFT, SIDE_RIGHT
+println(info.format.channelLayout)   // ChannelLayout(FRONT_LEFT, FRONT_RIGHT, FRONT_CENTER, LOW_FREQUENCY, SIDE_LEFT, SIDE_RIGHT)
 println(info.bitrate)                // 448000
 
 AudioKodec.open(ac3Bytes).use { decoder ->
@@ -32,7 +32,7 @@ section 7, in full:
   standard gives it, including delta bit allocation, fast and slow leak, the
   coupling channel's own start, and the low frequency channel's special case;
 - mantissas of every size, with the groups of three, three and two that the
-  smallest quantisers share across channels;
+  smallest quantizers share across channels;
 - channel coupling, with coordinates, master coordinates, bands that share a
   coordinate, and the phase flags of stereo;
 - rematrixing, in the bands below coupling;
@@ -55,7 +55,7 @@ The standard defines decoding in real arithmetic and AudioKodec decodes in
 float, so a file decodes to the same samples ffmpeg gives to within the
 rounding of ffmpeg's decoder, which holds each coefficient as a 24-bit
 fixed-point integer. That rounding cuts a coefficient to a multiple of 2^-23
-when it is dequantised, when its coupling coordinate is read, and when it is
+when it is dequantized, when its coupling coordinate is read, and when it is
 decoupled, and it leaves a difference of up to 1.5e-5 on the encoder-written
 files the test suite compares, 96 dB below full scale. The test suite also
 reproduces that rounding exactly in a test-only mode of the decoder, and
@@ -112,7 +112,7 @@ thrown.
 | Stream | Result |
 |---|---|
 | Enhanced AC-3 (`bsid` 11 to 16), which shares AC-3's sync word, in a raw stream, MP4 or Matroska | `UnsupportedFormatException` naming Enhanced AC-3. Plain AC-3 decodes |
-| `bsid` 9 and 10 | `UnsupportedFeatureException`: the standard tells decoders built to it not to decode them |
+| `bsid` 9 and 10, and 17 and above | `UnsupportedFeatureException`: the standard tells decoders built to it not to decode them |
 | A syncframe header with a reserved sampling rate or frame size code | `CorruptStreamException` |
 
 `probe` reports the sampling rate, the channels, the bit rate of the first
@@ -120,10 +120,10 @@ syncframe and the exact length, for plain AC-3 only.
 
 ## Channel order
 
-Dolby Digital stores its channels as left, centre, right, left surround,
+Dolby Digital stores its channels as left, center, right, left surround,
 right surround and the low frequency channel. They come out in AudioKodec's
-order: front left, front right, centre, low frequency, then the surround
-pair. A single surround channel (3/1 and 2/1) is reported as the back centre,
+order: front left, front right, center, low frequency, then the surround
+pair. A single surround channel (3/1 and 2/1) is reported as the back center,
 and a surround pair as the side pair, as ffmpeg labels them.
 
 A test writes a different tone into each channel of every layout and finds

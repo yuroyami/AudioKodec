@@ -51,7 +51,7 @@ fs/128 and fs/64 the response falls away: that band holds the noise a DSD
 modulator pushes out of the audio band, which a PCM signal at full scale
 would otherwise carry.
 
-The filters are linear phase and the cascade is centred, so output sample k
+The filters are linear phase and the cascade is centered, so output sample k
 is the signal at bit 32k, with no delay. The taps come from
 `design-dsd-filters.py` in the repository, which checks each stage's
 response before printing it.

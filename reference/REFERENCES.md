@@ -3,24 +3,24 @@
 What AudioKodec was written from, and what it may be written from next.
 
 Nothing listed here is redistributed. Specifications are read; implementations
-are either studied under a permissive licence or left unopened. The
+are either studied under a permissive license or left unopened. The
 `reference/` folder is ignored by git apart from this file, so a working copy
 can hold checkouts without them ever reaching the repository.
 
 ## Rules
 
-1. A source tree under GPL, LGPL or any other copyleft licence is never
+1. A source tree under GPL, LGPL or any other copyleft license is never
    opened, never read, and never used as a guide. The list of those is below
    so the boundary is explicit rather than remembered.
 2. A permissively licensed source tree may be ported from. Record the exact
-   commit and its licence text here before writing a line.
+   commit and its license text here before writing a line.
 3. A specification may always be implemented from. That is the preferred route
    even when a permissive implementation exists, because it produces code that
    reads like Kotlin instead of like translated C.
-4. A tool may be used as a test oracle whatever its licence, because running a
+4. A tool may be used as a test oracle whatever its license, because running a
    program is not deriving from it. Its source stays unopened.
 
-## Specifications used in this release
+## Specifications
 
 | Format | Specification |
 |---|---|
@@ -49,14 +49,14 @@ can hold checkouts without them ever reaching the repository.
 | MP4 and QuickTime containers | Apple QuickTime File Format documentation; [ISO/IEC 14496-12:2005](https://studylib.net/doc/26307294/mp4), clauses 8.31, 8.35 and 8.36 for per-track fragment defaults and data offsets |
 | MP4 sample ownership | [Apple data references](https://developer.apple.com/documentation/quicktime-file-format/Media_data_reference_atom/Data_references), for self-reference flags and alias/URL entries. Packet ranges are checked against declared media-data payloads; external files and resource-fork references are refused |
 | FLAC | [RFC 9639](https://www.rfc-editor.org/rfc/rfc9639.html), including sections 8.1 and 8.8 for the metadata body limit and native PICTURE layout |
-| Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex. Section 4's complete BOS/EOS groups and RFC 7845 section 7.2's per-link Opus pre-skip underpin chained playback; `OggChainOracleTest` checks independent libopusfile output and duration, FFmpeg's two-tone reproducer, changed Vorbis setups and exact 16/24/32-bit FLAC chains (#87). Serial reuse across complete boundaries is an explicit compatibility extension, not permission in RFC 3533. The shared final header/audio page regression in `OggHeaderBoundaryWriteTest` assembles and checksums pages from these specifications; `OggOracleTest` independently verifies all 56 packets of an FFmpeg-generated Opus file and byte-identical FFmpeg PCM after that boundary mutation. Tag writing refuses this layout before output (#92). `OggPageDamageTest` and the same oracle suite verify complete-prefix playback for checksum damage, missing pages and broken continuations against FFmpeg-generated Opus, Vorbis and FLAC recordings (#104) |
+| Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex. Section 4's complete BOS/EOS groups and RFC 7845 section 7.2's per-link Opus pre-skip underpin chained playback; `OggChainOracleTest` checks independent libopusfile output and duration, FFmpeg's two-tone reproducer, changed Vorbis setups and exact 16/24/32-bit FLAC chains. Serial reuse across complete boundaries is an explicit compatibility extension, not permission in RFC 3533. The shared final header/audio page regression in `OggHeaderBoundaryWriteTest` assembles and checksums pages from these specifications; `OggOracleTest` independently verifies all 56 packets of an FFmpeg-generated Opus file and byte-identical FFmpeg PCM after that boundary mutation. Tag writing refuses this layout before output. `OggPageDamageTest` and the same oracle suite verify complete-prefix playback for checksum damage, missing pages and broken continuations against FFmpeg-generated Opus, Vorbis and FLAC recordings |
 | R128 gain tags | [RFC 7845 section 5.2.1](https://www.rfc-editor.org/rfc/rfc7845#section-5.2.1), for the signed 16-bit range, six-character ASCII grammar and gain reference |
-| Vorbis | Xiph.Org Vorbis I specification; [comment specification](https://xiph.org/vorbis/doc/v-comment.html) for counted vectors, repeated names and the separate vendor header. The Vorbis I Ogg mapping's nonzero initial PCM granule and RFC 9639's Ogg FLAC granules underpin `OggGranuleOffsetTest`; FFmpeg-generated recordings with independently shifted page positions retain identical FFmpeg PCM, and the oracle suite checks logical duration and seeks (#103) |
-| Vorbis floor 0 | [Vorbis I specification section 6.2](https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-920006.2), including vector accumulation, extra final vector values, unsigned amplitude and reserved book selectors. Section 6.2.3 and its 2015 Bark-scale erratum define the odd/even products and frequency mapping. Implemented directly from this text, with no implementation source used. `VorbisFloor0Fixtures` assembles complete streams; direct double products independently check synthesis, FFmpeg's native float decoder checks lookup type one, and its public libvorbis wrapper checks lookup type two at 16-bit precision (#45) |
+| Vorbis | Xiph.Org Vorbis I specification; [comment specification](https://xiph.org/vorbis/doc/v-comment.html) for counted vectors, repeated names and the separate vendor header. The Vorbis I Ogg mapping's nonzero initial PCM granule and RFC 9639's Ogg FLAC granules underpin `OggGranuleOffsetTest`; FFmpeg-generated recordings with independently shifted page positions retain identical FFmpeg PCM, and the oracle suite checks logical duration and seeks |
+| Vorbis floor 0 | [Vorbis I specification section 6.2](https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-920006.2), including vector accumulation, extra final vector values, unsigned amplitude and reserved book selectors. Section 6.2.3 and its 2015 Bark-scale erratum define the odd/even products and frequency mapping. Implemented directly from this text, with no implementation source used. `VorbisFloor0Fixtures` assembles complete streams; direct double products independently check synthesis, FFmpeg's native float decoder checks lookup type one, and its public libvorbis wrapper checks lookup type two at 16-bit precision |
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |
-| Free-format MPEG | ISO/IEC 11172-3 and 13818-3 free bitrate-index syntax, slot padding and constant frame spacing. MPEG-1 free-format Layer II uses Table 3-B.2a; the measured bitrate does not select a declared-rate table. The owned decoder is reused with measured or indexed packet lengths. LAME's public `--freeformat` executable interface generates MP3; [libmpg123 initialisation](https://mpg123.org/api/group__mpg123__init.shtml), [input](https://mpg123.org/api/group__mpg123__input.shtml), [output formats](https://mpg123.org/api/group__mpg123__output.shtml) and [seeking](https://mpg123.org/api/group__mpg123__seek.shtml) document the independent float PCM and exact-length API. Neither tool's implementation source is read. FFmpeg rejects the high-rate free-format fixtures in the qualified environment, so it is not claimed as their decoder oracle (#46) |
+| Free-format MPEG | ISO/IEC 11172-3 and 13818-3 free bitrate-index syntax, slot padding and constant frame spacing. MPEG-1 free-format Layer II uses Table 3-B.2a; the measured bitrate does not select a declared-rate table. The owned decoder is reused with measured or indexed packet lengths. LAME's public `--freeformat` executable interface generates MP3; [libmpg123 initialization](https://mpg123.org/api/group__mpg123__init.shtml), [input](https://mpg123.org/api/group__mpg123__input.shtml), [output formats](https://mpg123.org/api/group__mpg123__output.shtml) and [seeking](https://mpg123.org/api/group__mpg123__seek.shtml) document the independent float PCM and exact-length API. Neither tool's implementation source is read. FFmpeg rejects the high-rate free-format fixtures in the qualified environment, so it is not claimed as their decoder oracle |
 | AC-3 | ATSC A/52:2012, Digital Audio Compression Standard (AC-3, E-AC-3), 17 December 2012; see [AC-3](#ac-3) |
-| AAC-LC | ISO/IEC 14496-3:2009, subpart 4 (4.4.2 syntax, 4.5.2 semantics, 4.6.1 to 4.6.3 quantisation and noiseless coding, 4.6.8 joint stereo, 4.6.9 noise shaping, 4.6.11 filter bank, 4.6.13 noise substitution, Annex 4.A codebooks, Tables 4.129 to 4.141 band offsets, 4.156 and 4.157 noise shaping limits), and subpart 1 (1.6.2.1 AudioSpecificConfig, 1.6.5.2 SBR signalling, Table 1.19 channel configurations, Annex 1.A ADTS). Implemented from the standard in floating point. Every constant table was extracted from the text by script, never typed, and agreed against the PacketVideo decoder below; ffmpeg is an executable oracle only |
+| AAC-LC | ISO/IEC 14496-3:2009, subpart 4 (4.4.2 syntax, 4.5.2 semantics, 4.6.1 to 4.6.3 quantization and noiseless coding, 4.6.8 joint stereo, 4.6.9 noise shaping, 4.6.11 filter bank, 4.6.13 noise substitution, Annex 4.A codebooks, Tables 4.129 to 4.141 band offsets, 4.156 and 4.157 noise shaping limits), and subpart 1 (1.6.2.1 AudioSpecificConfig, 1.6.5.2 SBR signaling, Table 1.19 channel configurations, Annex 1.A ADTS). Implemented from the standard in floating point. Every constant table was extracted from the text by script, never typed, and agreed against the PacketVideo decoder below; ffmpeg is an executable oracle only |
 | MPEG audio in MP4 | ISO/IEC 14496-12 sample tables and edit lists, MPEG frame syntax from ISO/IEC 11172-3 and 13818-3, and the [MP4 registration authority's object types](https://mp4ra.org/registered-types/object-types) (`0x69` and `0x6B`). The existing owned frame decoder is shared; no additional implementation source is ported. FFmpeg and LAME are executable oracles only |
 | Format magic numbers | The published headers of each format the sniffer names |
 | Sniffing past ID3 metadata | [ID3v2.4 structure](https://id3.org/id3v2.4.0-structure) sections 3 and 5 for headers, synchsafe lengths, footers and metadata placement. The [public Mutagen ID3 API](https://mutagen.readthedocs.io/en/latest/api/id3.html) supplies independent tags and [FFprobe](https://ffmpeg.org/ffprobe.html) names complete files; no implementation source is read |
@@ -65,9 +65,9 @@ can hold checkouts without them ever reaching the repository.
 | Native text charsets | [RIFF CSET definition](https://www.robotplanet.dk/audio/wav_meta_data/riff_mci.pdf), page 2-16; AIFF 1.3 text chunk definition; [Microsoft code page identifiers](https://learn.microsoft.com/en-us/windows/win32/intl/code-page-identifiers) and [published Windows-1252 mapping data](https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WINDOWS/CP1252.TXT). Executable FFmpeg, ExifTool and Python charset codec checks use only public interfaces |
 | Tag membership | [NIST AVL tree definition](https://xlinux.nist.gov/dads/HTML/avltree.html), for bounded comparison-based lookup and insertion; implemented directly, with no implementation source used |
 | ID3 genres | [ID3v2.2](https://id3.org/id3v2-00) and [ID3v2.3](https://id3.org/id3v2.3.0) section 4.2.1; [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) section 4.2.3 |
-| ID3v2.2 upgrades | The frame catalogues and payload definitions in [ID3v2.2](https://id3.org/id3v2-00) and [ID3v2.3](https://id3.org/id3v2.3.0), plus the [ID3v2.4 replacements](https://id3.org/id3v2.4.0-changes). Identifier mapping, slash lists and linked identifiers are implemented from those specifications. Mutagen's public ID3 API independently reads both the input and the upgraded output |
+| ID3v2.2 upgrades | The frame catalogs and payload definitions in [ID3v2.2](https://id3.org/id3v2-00) and [ID3v2.3](https://id3.org/id3v2.3.0), plus the [ID3v2.4 replacements](https://id3.org/id3v2.4.0-changes). Identifier mapping, slash lists and linked identifiers are implemented from those specifications. Mutagen's public ID3 API independently reads both the input and the upgraded output |
 | ID3 identities and MusicBrainz | [ID3v2.3](https://id3.org/id3v2.3.0) sections 4.1 and 4.2; [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) sections 4.1 and 4.2; [Picard tag mapping](https://picard-docs.musicbrainz.org/en/v3.0/_static/MusicBrainz_Picard_Tag_Map.html) |
-| ID3 date precision | ID3v2.2/v2.3 year, date, time and recording-date definitions; [ID3v2.4 timestamp grammar](https://id3.org/id3v2.4.0-structure) section 4 and [deprecated frame replacements](https://id3.org/id3v2.4.0-changes) section 4. Implemented from the specifications; Mutagen's public API and FFprobe check native split/merge behaviour without using implementation source |
+| ID3 date precision | ID3v2.2/v2.3 year, date, time and recording-date definitions; [ID3v2.4 timestamp grammar](https://id3.org/id3v2.4.0-structure) section 4 and [deprecated frame replacements](https://id3.org/id3v2.4.0-changes) section 4. Implemented from the specifications; Mutagen's public API and FFprobe check native split/merge behavior without using implementation source |
 | Encoding software and credits | ID3v2.2/v2.3/v2.4 `TSS`/`TSSE` and `TEN`/`TENC` definitions; [Picard tag mapping](https://picard-docs.musicbrainz.org/en/v3.0/_static/MusicBrainz_Picard_Tag_Map.html) and [TagLib property mapping](https://taglib.org/api/p_propertymapping.html) for native aliases. Separate explicit settings use an ID3 user-text description instead of guessing how to split a combined encoder string |
 | ID3 text lists | [ID3v2.4 frames](https://id3.org/id3v2.4.0-frames) sections 4.2 and 4.2.6, with the [structure specification](https://id3.org/id3v2.4.0-structure) for text encodings, byte orders and terminators |
 | ID3 chapter preservation | [Chapter addendum](https://id3.org/id3v2-chapters-1.0), with the v2.3/v2.4 frame layouts, structure flags and deprecated-frame changes. Embedded frame parsing and conversion follow the specifications. [Mutagen chapter API](https://mutagen.readthedocs.io/en/latest/user/id3.html#chapter-extension) is used only as an executable oracle |
@@ -80,8 +80,8 @@ Run as programs, never read as source.
 
 | Tool | Used for |
 |---|---|
-| ffmpeg | Cross-checking every decoder in this release, and reading back what the encoders write. `IntegerEncodingOracleTest` compares exact 32-bit WAV/AIFF/AU transcodes, every integer target depth and channel count, and independent PCM depth reduction; the reference FLAC executable also verifies the integer-input files' samples and MD5 |
-| flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks (#115). `FlacBinarySeekTest` measures source bytes at 10%, 50% and 90% of an unindexed recording, and exercises CRC-8-valid fake headers embedded in RFC 9639 verbatim samples; the oracle suite repeats the read bounds on reference FLAC output and verifies the embedded-header PCM with FFmpeg (#116) |
+| ffmpeg | Cross-checking every decoder, and reading back what the encoders write. `IntegerEncodingOracleTest` compares exact 32-bit WAV/AIFF/AU transcodes, every integer target depth and channel count, and independent PCM depth reduction; the reference FLAC executable also verifies the integer-input files' samples and MD5 |
+| flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks. `FlacBinarySeekTest` measures source bytes at 10%, 50% and 90% of an unindexed recording, and exercises CRC-8-valid fake headers embedded in RFC 9639 verbatim samples; the oracle suite repeats the read bounds on reference FLAC output and verifies the embedded-header PCM with FFmpeg |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, encodes the files that check the iTunes gapless record, and encodes and decodes the AAC files that check AudioKodec's AAC decoder against Apple's |
 | wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form |
@@ -93,7 +93,7 @@ Run as programs, never read as source.
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
 | libilbc 3.0.4 | iLBC: `ilbc_oracle.c`, a few lines over libilbc's public interface built from the pinned sources under `reference/ilbc`, encodes speech, silence, clipping, noise and bursts in both frame sizes and decodes them; the test wraps the frames in the storage format of RFC 3952 and ffmpeg copies them into CAF and QuickTime files. Every sample must be libilbc's integer, also for runs of random frames, which exercise concealment, and for frames altered to state the codebook index libilbc refuses, which must be refused at the same frame |
 | libogg, for multiplexed Ogg tag writing | `ogg_packets.c` over libogg's public interface lists every packet of every logical stream with its granule position, length and hash, and fails on a bad page checksum or a hole in any stream. `OggMultiplexTagOracleTest` writes tags into files ffmpeg made with two interleaved streams and requires every packet but the rewritten comment back unchanged and in order, and the same samples from AudioKodec and from ffmpeg. libogg's source is not read |
-| libebur128 1.2.6 and ffmpeg's `ebur128` | Loudness: `ebur128_oracle.c` over libebur128's public interface, built from the pinned sources under `reference/ebur128`, measures tones and programmes at 32 to 96 kHz in mono, stereo and 5.1, whose integrated, momentary and short-term loudness, loudness range and sample peaks `LoudnessMeter` must equal within double rounding, fed in blocks of random size. ffmpeg's `ebur128` filter, an independent implementation, must agree on integrated loudness within 0.1 LU. Only run |
+| libebur128 1.2.6 and ffmpeg's `ebur128` | Loudness: `ebur128_oracle.c` over libebur128's public interface, built from the pinned sources under `reference/ebur128`, measures tones and programs at 32 to 96 kHz in mono, stereo and 5.1, whose integrated, momentary and short-term loudness, loudness range and sample peaks `LoudnessMeter` must equal within double rounding, fed in blocks of random size. ffmpeg's `ebur128` filter, an independent implementation, must agree on integrated loudness within 0.1 LU. Only run |
 | ffmpeg's channel mixing | `ChannelMixOracleTest` mixes a different tone in every channel through 24 layout conversions, from 7.1, 6.1, 5.1, 5.0, quad, 3.0 and stereo down, and mono and stereo up, which `Pcm.mixChannels` must match sample for sample within float rounding. Only run |
 | speexdsp 1.2.1 and ffmpeg's soxr | Resampling: `resample_oracle.c` over speexdsp's resampler, built from the pinned sources under `reference/speexdsp` in its float build without SIMD or fused multiply-adds, converts tones and noise at twelve rate pairs, mono and stereo, which `Resampler` must reproduce sample for sample however its input is split into blocks. ffmpeg's `aresample` with soxr at 28 bits converts the same tones, whose level and phase must agree within speexdsp's passband ripple; it is only run |
 | ffmpeg and ffprobe, for DSD | DSF and DSDIFF files the test writes from a sigma delta modulator: ffprobe's rate, channels and duration, and ffmpeg's conversion to PCM, tone by tone in level and phase, within the bound its filter's difference from AudioKodec's sets; the suite also measures ffmpeg's filter itself, from single flipped bits, to confirm its delay. ffmpeg's source is not read |
@@ -102,23 +102,8 @@ Run as programs, never read as source.
 | ITU-T G.726 and G.722 Appendix II test sequences | G.726: the code words and A-law and mu-law output words of all 80 sequences, at every rate, from reset and after homing, which `G726ConformanceTest` reproduces with the Recommendation's log PCM output stage added on top of the decoder. G.722: the sub-band decoders' output words for the encoder's output on tones, d.c., noise and overflow and for an artificial sequence, in every mode, which `G722ConformanceTest` reproduces with the QMF bypassed. Test data, fetched by CI and never committed |
 | ffmpeg's G.722 and G.726 | G.722: every sample of the WAV and AU files ffmpeg writes, in all three modes through `-bits_per_codeword`, must equal ffmpeg's. G.726: ffmpeg's encoder writes the WAV and AU files, whose code words must decode to exactly the samples of the decoder `G726ConformanceTest` checks; ffmpeg's own G.726 decoder does not follow the Recommendation, so at 16 to 32 kbit/s its samples only bound the result, and at 40 kbit/s not even that |
 | alacconvert and ALACEncoder API | ALAC, built from Apple's reference at the commit the port follows; the direct API checks 20-bit audio. Both also check that AudioKodec's encoder writes the reference's packets byte for byte, and `alacconvert` decodes AudioKodec's packets and magic cookie moved into its own CAF layout |
-| libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain (#87). RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
-| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodelled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
-
-## Permissively licensed implementations for the work still to come
-
-None of these has been opened yet. Each entry has to be checked against the
-exact commit that gets ported, and its licence recorded here at that point.
-
-| Reference | Licence to verify | For |
-|---|---|---|
-| minimp3 | CC0 | MP3, cross-check only so far |
-| libvorbis | BSD-3-Clause | Vorbis encoding, if that is ever wanted. The decoder in this release was written from the specification and never opened one |
-| libopus | BSD-3-Clause | Opus |
-| libFLAC | BSD-3-Clause | FLAC, alongside RFC 9639 |
-| Apple ALAC | Apache-2.0 | ALAC, both directions |
-| libebur128 | MIT | Loudness measurement |
-| libgsm | MIT-style | GSM 06.10 |
+| libopusfile 0.12 | [Public gain helpers and tag parsing API](https://opus-codec.org/docs/opusfile_api-0.12/group__header__info.html) and [OpusTags layout](https://opus-codec.org/docs/opusfile_api-0.12/structOpusTags.html), called through Python ctypes for conforming R128 values, overflow and rewritten Opus tags. The public [open/close](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__open__close.html), [decoding](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__decoding.html) and [stream information](https://opus-codec.org/docs/opusfile_api-0.12/group__stream__info.html) APIs independently check chained Opus duration and float PCM, including surround order, per-link pre-skip, end trim and header gain. RFC syntax takes precedence over the helper's malformed-value acceptance. No implementation source is read |
+| Mutagen 1.47.0 | ID3 `UFID` owners, case-sensitive MusicBrainz `TXXX` descriptions, multi-value text frames including empty values and v2.3 slash pieces, `TCON.genres`, large FLAC value lists, ordered unknown FLAC comments and vendor headers, comment/lyric text and identities, and unmodeled ID3/APE loudness names. Mixed artwork tests also check APIC identities, chapter-local APIC frames and standard APE picture-role keys in both directions through the public APIs. The [public APE API](https://mutagen.readthedocs.io/en/latest/api/ape.html) checks empty text pieces, repeated values and binary items. Used as an executable oracle; no implementation source is read |
 
 ## Layer III constant tables
 
@@ -127,22 +112,21 @@ implementation, and four independent renderings of them were compared before
 any were used. All 4994 entries across all 34 tables agree, every table's Kraft
 sum is exactly 1, and no codeword is a prefix of another.
 
-| Rendering | Licence | Form |
+| Rendering | License | Form |
 |---|---|---|
 | ISO/MPEG dist10 `tables/huffcode` | ISO/MPEG reference software, reproducing ISO/IEC 11172-3 Annex B Table 3-B.7 | The canonical `x y hlen hcod` listing |
 | ISO/MPEG dist10 `tables/huffdec` | as above | The same tables as decode trees |
 | PDMP3 | Unlicense, public domain | Decode trees as C arrays |
 | minimp3 | CC0, public domain | Multi-level flat lookup tables |
 
-Only dist10's data files were read, not its C code. The extracted tables and
-the scripts that verified them are in `reference/mp3-wip/`, which git ignores.
+Only dist10's data files were read, not its C code.
 
 The remaining Layer III constants were gathered the same way and compared
 across eight renderings: the 512-entry synthesis window, the scalefactor band
 boundaries for all nine sample rates in both block shapes, the pre-emphasis
 table, the alias coefficients and the scalefactor length tables.
 
-| Rendering | Licence |
+| Rendering | License |
 |---|---|
 | minimp3 | CC0 |
 | PDMP3 | Unlicense |
@@ -166,8 +150,7 @@ rather than genuine ambiguity about the standard:
 
 No PDF of ISO/IEC 11172-3 reachable online carries Annex B: every mirror is
 front matter or main body stopping before the annexes. The annex survives as a
-Word document inside an old zip of the standard, and a copy is in
-`reference/iso/` for anyone continuing this work. MPEG-2.5 was never in an ISO
+Word document inside an old zip of the standard. MPEG-2.5 was never in an ISO
 document at all, so its tables can only come from code.
 
 Two things about the synthesis window, Table 3-B.3, worth knowing before
@@ -185,7 +168,7 @@ negative, and says nothing anywhere about a sign convention. Use them as
 printed.
 
 A note on the ISO/MPEG dist10 reference software, which several of the
-renderings above were checked against. Its own licence is not permissive, so
+renderings above were checked against. Its own license is not permissive, so
 only its bare numeric data files were read, never a line of its code. Those
 files are verbatim the tables the standard prints, which rule 3 above allows.
 Anyone uncomfortable with even that has three permissively licensed copies of
@@ -194,12 +177,12 @@ puremp3 under MIT or CC0.
 
 ## MPEG Layer I and Layer II tables
 
-The five bit allocation tables, the 63 scalefactors, the seventeen quantisation
+The five bit allocation tables, the 63 scalefactors, the seventeen quantization
 classes, the scalefactor selection rules and the joint stereo bound were each
 checked against at least two independent renderings, most against four or more.
 
 The primary source turned out to be the same archived Word copy of ISO/IEC
-11172-3 already in `reference/iso/`: its Annex B carries Tables 3-B.1 through
+11172-3: its Annex B carries Tables 3-B.1 through
 3-B.5 in full, so the MPEG-1 tables came from the standard rather than from
 code. Cross-checks came from ETSI TS 103 466, ETSI ETS 300 401 and ETSI EN
 300 401, which reproduce the Layer II algorithm normatively and are freely
@@ -221,14 +204,14 @@ Things that look like transcription errors and are not:
 - The standard prints two of the seventeen C constants truncated rather than
   rounded: 1.77777777777 where correct rounding gives ...778, and 1.06666666666
   where it gives ...667. This is the same class of tie as D[196] above. AudioKodec
-  computes the dequantisation rather than transcribing it, which sidesteps both.
+  computes the dequantization rather than transcribing it, which sidesteps both.
 
 One source disagreement found, recorded because it is exactly the failure mode
 this file exists to prevent. In the MPEG-1 low rate tables, subbands 0 and 1 at
 allocation code 15: six sources including the standard itself say 32767, while
 kjmp2 says 65535, and jsmpeg carries the same value because it is a port of
 kjmp2 rather than an independent reading. 32767 is correct. Note also that
-kjmp2 is zlib licensed rather than public domain, and that its dequantiser is a
+kjmp2 is zlib licensed rather than public domain, and that its dequantizer is a
 deliberate approximation its own README owns.
 
 ## minimp3 cross-check
@@ -421,7 +404,7 @@ The MPEG side information and published Huffman codewords generate 270 highest
 band comparisons and 18 MPEG-1 illegal coded-position controls against FFmpeg's public
 `mp3float` decoder, covering all nine rates, long, short and mixed blocks,
 mid-side enabled and disabled, and both MPEG-2 gain ladders. The 44.1 kHz long
-case places its coefficient at line 500, reproducing issue #78. The original
+case places its coefficient at line 500. The original
 ISO/IEC 11172-3 and 13818-3 stereo arrangement remains the model; no source is
 translated. A local call to libmpg123's public float output API also checks the
 MPEG-2 highest-band value when the preceding two-bit position is 3. It
@@ -442,7 +425,7 @@ Specifications: RFC 6716 (the codec) and RFC 7845 (Ogg encapsulation). Both are
 freely published and may be implemented from without qualification.
 
 RFC 6716 also carries the complete reference implementation in its body, under a
-BSD-style licence stated in the RFC itself, and the same code is published as
+BSD-style license stated in the RFC itself, and the same code is published as
 libopus under BSD-3-Clause. That is permissive and not on the never-opened list,
 so it may be ported from. Where AudioKodec follows it rather than the prose, the
 comment says so.
@@ -456,19 +439,18 @@ is what stops it silently becoming wrong if the widths ever change.
 
 ### The libopus port
 
-The decoder is a translation of libopus, recorded here before the first line
-was written, as rule 2 asks.
+The decoder is a translation of libopus.
 
 | Field | Value |
 |---|---|
 | Repository | https://github.com/xiph/opus |
 | Tag | v1.5.2 |
 | Commit | `ddbe48383984d56acd9e1ab6a090c54ca6b735a6` |
-| Licence | BSD-3-Clause, the `COPYING` file at that commit |
+| License | BSD-3-Clause, the `COPYING` file at that commit |
 | Files | `celt/` and `silk/` decoder sources, `src/opus_decoder.c`, `src/opus_multistream_decoder.c`, `src/opus_projection_decoder.c`, `src/mapping_matrix.c` |
 | Not ported | Every encoder source, the `dnn/` tree (deep PLC, DRED and OSCE), and the architecture-specific `x86/`, `arm/` and `mips/` variants |
 
-The licence text, which a binary release of AudioKodec has to carry because
+The license text, which a binary release of AudioKodec has to carry because
 the port is a derivative of it:
 
 ```
@@ -507,17 +489,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 The same file ends by noting that Opus is subject to royalty-free patent
-licences from Xiph.Org, Microsoft and Broadcom, published as IETF IPR
+licenses from Xiph.Org, Microsoft and Broadcom, published as IETF IPR
 disclosures 1524, 1914 and 1526. Those grants cover implementations of the
 format, this one included, and are the caller's to read, not the code's.
 
-Arithmetic follows the default float build, as AGENTS.md asks of every port:
+Arithmetic follows the default float build:
 CELT is ported in `Float` from its float path, and SILK, whose decoder is
 fixed point in every build, in `Int` and `Long` with its own 32-bit wrapping
 where the C relies on it.
 
 Concentus, the managed-language translation of libopus, was not used. Both
-layers are translated from libopus itself, so no licence beyond the one above
+layers are translated from libopus itself, so no license beyond the one above
 applies to them.
 
 The test oracles for this work are the reference programs built from the same
@@ -527,7 +509,7 @@ multistream and projection API written for these tests
 
 `opus_compare.c` is also translated, into the test suite as `OpusCompare.kt`,
 because its measure is part of the specification rather than a tool around it:
-RFC 6716 defines conformance by it. It is the same commit and the same licence
+RFC 6716 defines conformance by it. It is the same commit and the same license
 as above. The translation evaluates the spectrum with an FFT where the C sums
 each bin directly, which changes only the rounding, and scores identically to
 the program on the vectors.
@@ -538,8 +520,8 @@ The vectors it scores are the RFC 8251 set:
 |---|---|
 | Archive | https://opus-codec.org/static/testvectors/opus_testvectors-rfc8251.tar.gz |
 | SHA-256 | `6b26a22f9ba87b2b836906a9bb7afec5f8e54d49553b1200382520ee6fedfa55` |
-| Licence | None stated in the archive |
-| Committed | No: no licence travels with them, and the references run to about 120 MB |
+| License | None stated in the archive |
+| Committed | No: no license travels with them, and the references run to about 120 MB |
 
 `OpusConformanceTest` uses an unpacked copy in `reference/opus_newvectors`, or
 the archive in `reference/` or the build directory, or downloads the archive
@@ -548,27 +530,26 @@ there and checks its digest, and skips itself when none of that is possible.
 ## ALAC
 
 There is no published specification of Apple Lossless beyond its source code,
-which Apple released under the Apache License 2.0, the licence AudioKodec
-ships under. The decoder is a translation of it, recorded here before the
-first line was written.
+which Apple released under the Apache License 2.0, the license AudioKodec
+ships under. The decoder and the encoder are translations of it.
 
 | Field | Value |
 |---|---|
 | Repository | https://github.com/macosforge/alac |
 | Commit | `c38887c5c5e64a4b31108733bd79ca9b2496d987` |
-| Licence | Apache-2.0, the `LICENSE` file at that commit and the header of every source file |
-| Files | `codec/ALACDecoder.cpp`, `ag_dec.c`, `dp_dec.c`, `matrix_dec.c`, `ALACBitUtilities.c` and their headers, and `ALACMagicCookieDescription.txt` for the configuration and channel orders. `codec/ALACEncoder.h` and `codec/ALACAudioTypes.h` describe the oracle's public API |
-| Not ported | The encoder, until the decoder passes; the `convert-utility` command line |
+| License | Apache-2.0, the `LICENSE` file at that commit and the header of every source file |
+| Files | `codec/ALACDecoder.cpp`, `ag_dec.c`, `dp_dec.c`, `matrix_dec.c`, `ALACBitUtilities.c` and their headers, and `ALACMagicCookieDescription.txt` for the configuration and channel orders. The encoder follows `codec/ALACEncoder.cpp` with `ag_enc.c`, `dp_enc.c` and `matrix_enc.c`. `codec/ALACEncoder.h` and `codec/ALACAudioTypes.h` describe the oracle's public API |
+| Not ported | The `convert-utility` command line |
 
 The `codec` folder also holds a copy of the Apple Public Source License 2.0,
 left from the code's first release. Every source file states Apache-2.0 in its
-own header, and so does the repository, so that is the licence that applies.
+own header, and so does the repository, so that is the license that applies.
 Apache-2.0 asks a redistribution to keep the copyright notices, which the
 ported files do in their headers, and to state changes, which is what a
 translation into Kotlin is.
 
 The integer arithmetic is the reference's, 32-bit and wrapping where it
-wraps. Two places in the C rely on behaviour the language leaves undefined:
+wraps. Two places in the C rely on behavior the language leaves undefined:
 a shift of `1` by `-1` when a predictor's denominator shift is zero, and
 shifts by 32 or more when a stream's mixing shift is that large. Both are
 reproduced as x86 executes them, which masks the count to its low five bits,
@@ -591,14 +572,13 @@ order declared in Apple's public header independently of the Kotlin decoder.
 
 WavPack's format is documented in prose (`doc/WavPack5FileFormat.pdf`) for
 its blocks and metadata, and by its source for everything inside them. The
-decoder is a translation of the reference library's decoding half, recorded
-here before the first line was written.
+decoder is a translation of the reference library's decoding half.
 
 | Field | Value |
 |---|---|
 | Repository | https://github.com/dbry/WavPack |
 | Tag | `5.9.0`, commit `5803634a030e2a11dba602ba057b89cc34486c67` |
-| Licence | BSD 3-Clause, the `COPYING` file at that commit, reproduced in `NOTICE` |
+| License | BSD 3-Clause, the `COPYING` file at that commit, reproduced in `NOTICE` |
 | Files | `src/unpack.c`, `src/read_words.c`, `src/entropy_utils.c`, `src/decorr_utils.c`, `src/unpack_floats.c`, the block and metadata handling in `src/open_utils.c` and `src/unpack_utils.c`, `src/wavpack_local.h`, `include/wavpack.h`, and `doc/WavPack5FileFormat.pdf` |
 | Not ported | Pre-4.0 files (`unpack3.c`), DSD (`unpack_dsd.c`), the correction file of hybrid lossless mode, the encoder, and the assembly versions of the decorrelation loops, which compute the same as the C |
 
@@ -613,8 +593,7 @@ error instead.
 
 ## Musepack
 
-The decoder is a translation of libmpcdec, recorded here before the first
-line was written. Musepack's last source release is SVN revision 475; the
+The decoder is a translation of libmpcdec. Musepack's last source release is SVN revision 475; the
 decoder follows revision 495, which Debian and Ubuntu ship and whose
 `mpcenc` the oracle runs. Beyond comments, the two revisions' decoders
 differ only in the stream version 7 header reader, which is not ported, and
@@ -624,7 +603,7 @@ in the demuxer's handling of a frame that yields no samples after a seek.
 |---|---|
 | Download | http://archive.ubuntu.com/ubuntu/pool/universe/libm/libmpc/libmpc_0.1~r495.orig.tar.gz |
 | Version | SVN revision 495, SHA-256 `5182d7a30eec1b338cafc9c1706d663a6c8dc217b1d90187054512074f662202`, which Ubuntu's `libmpc_0.1~r495-2build1.dsc` also states |
-| Licence | BSD 3-Clause, `libmpcdec/COPYING` and the header of every file read, reproduced in `NOTICE` |
+| License | BSD 3-Clause, `libmpcdec/COPYING` and the header of every file read, reproduced in `NOTICE` |
 | Files | `libmpcdec/mpc_decoder.c`, `mpc_demux.c`, `streaminfo.c`, `mpc_bits_reader.c` and `.h`, `huffman.c` and `.h`, `requant.c` and `.h`, `synth_filter.c`, `mpcdec_math.h`, `decoder.h`, `internal.h`, and `include/mpc/mpcdec.h`, `reader.h` and `streaminfo.h` |
 | Never opened | `include/mpc/mpc_types.h`, `mpcmath.h`, `minimax.h` and `datatypes.h`, which are LGPL, and everything outside `libmpcdec` |
 | Not ported | Stream versions 7 and older, the fixed-point build, replay gain applied to the output, and chapters |
@@ -637,28 +616,27 @@ part of libmpcdec and was not read; it is the standard CRC-32, which every
 file the encoder writes passes.
 
 The tables were extracted from `huffman.c` and `synth_filter.c` by
-`reference/mpc/gen_kotlin.py`, so none was typed. Every canonical Huffman
+a script, so none was typed. Every canonical Huffman
 table fills its code space exactly and maps every code to a symbol inside
 its symbol table. The synthesis window `Di_opt` is the MPEG-1 window that
 the MPEG decoder already uses, entry for entry, and the decoder takes it
 from there. The tables a formula defines are computed rather than copied,
 after the script showed that each formula reproduces the C table: the
 binomials of the enumerative coder and their code lengths, the bundled
-quantiser triples, the parity table. One entry differs: `Cnk_lost`, which
+quantizer triples, the parity table. One entry differs: `Cnk_lost`, which
 counts the short codes of a combination's rank, is declared with 512
-entries and initialised with 511, so its entry for 16 of 32 is 0 rather than
+entries and initialized with 511, so its entry for 16 of 32 is 0 rather than
 472661434. The entry is used when 16 of 32 bands are coded mid and side, so
 the decoder keeps the reference's 0.
 
 ## Speex
 
-The decoder is a translation of libspeex and speexdec, recorded here before
-the first line was written.
+The decoder is a translation of libspeex and speexdec.
 
 | Field | Value |
 |---|---|
 | Source | https://github.com/xiph/speex.git, tag Speex-1.2.1, commit `5dceaaf3e23ee7fd17c80cb5f02a838fd6c18e01` |
-| Licence | BSD 3-Clause, `COPYING` and the header of every file read, reproduced in `NOTICE` |
+| License | BSD 3-Clause, `COPYING` and the header of every file read, reproduced in `NOTICE` |
 | Files | In `libspeex`: `bits.c`, `nb_celp.c` and `.h`, `sb_celp.c` and `.h`, `modes.c`, `modes_wb.c` and `modes.h`, `filters.c` and `.h`, `lsp.c` and `.h`, `quant_lsp.c` and `.h`, `ltp.c` and `.h`, `cb_search.c` and `.h`, `stereo.c`, `speex.c`, `speex_callbacks.c`, `speex_header.c`, `arch.h`, `math_approx.h`, `stack_alloc.h` and `os_support.h`, and the table files `exc_*_table.c`, `gain_table.c`, `gain_table_lbr.c`, `hexc_table.c`, `hexc_10_32_table.c`, `high_lsp_tables.c` and `lsp_tables_nb.c`; `include/speex/*.h`; and `src/speexdec.c` for how the tool sets up the decoder and trims its output |
 | Never opened | `libspeex/bfin.h`, `libspeex/fftwrap.c`, `libspeex/quant_lsp_bfin.h` and `src/getopt*`, which mention the GPL, and everything else outside the decoder |
 | Not ported | The encoder, the fixed-point build, the SSE and Blackfin kernels, packet loss concealment, the jitter buffer and speexdsp |
@@ -671,7 +649,7 @@ double because of a double constant, the translation computes in double too
 and rounds where C stores to a float.
 
 The tables were extracted from the table files and from `nb_celp.c`,
-`sb_celp.c`, `filters.c` and `stereo.c` by `reference/speex/gen_kotlin.py`, so none was typed; the script checks every
+`sb_celp.c`, `filters.c` and `stereo.c` by a script, so none was typed; the script checks every
 table's length against the size its declaration states, and writes float
 constants with the precision C gives them, single where the literal has an
 `f` and rounded from double where it has none.
@@ -686,8 +664,7 @@ the frames run out. Every file in the oracle suite is exactly as long as
 
 ## AMR
 
-The decoders are translations of opencore-amr, recorded here before the
-first line was written. opencore-amr packages the AMR and AMR-WB decoders of
+The decoders are translations of opencore-amr. opencore-amr packages the AMR and AMR-WB decoders of
 Android's PacketVideo OpenCORE, which are the 3GPP fixed-point reference
 decoders reworked for speed, under the Apache License 2.0; PacketVideo
 obtained the 3GPP Organizational Partners' permission to distribute the
@@ -696,9 +673,9 @@ derived files under it, as each file's header states.
 | Field | Value |
 |---|---|
 | Source | https://git.code.sf.net/p/opencore-amr/code, tag v0.1.6, commit `7dba8c32238418ce0b316a852b2224df586ca896` |
-| Licence | Apache License 2.0, `LICENSE` and the header of every file read; the parts of `opencore/NOTICE` that apply to the decoders are reproduced in `NOTICE` |
+| License | Apache License 2.0, `LICENSE` and the header of every file read; the parts of `opencore/NOTICE` that apply to the decoders are reproduced in `NOTICE` |
 | Files | `amrnb/wrapper.cpp` and `amrwb/wrapper.cpp`, which say how a frame in the storage format reaches each decoder; in `opencore/codecs_v2/audio/gsm_amr/amr_nb`, the decoder's sources under `dec/src` that `amrnb/Makefile.am` builds, and under `common` the sources and headers they call; in `amr_wb/dec`, the sources `amrwb/Makefile.am` builds and their headers |
-| Never opened | Nothing in the tree mentions a copyleft licence. The encoders, the ARM assembly variants of the basic operations and the IF2 and ETS frame formats were not read beyond seeing that they are not used |
+| Never opened | Nothing in the tree mentions a copyleft license. The encoders, the ARM assembly variants of the basic operations and the IF2 and ETS frame formats were not read beyond seeing that they are not used |
 | Not ported | The encoders, the frame formats other than RFC 4867's storage format, and the quality bit, which opencore-amr does not consult either |
 
 The basic operations are translated from the portable C forms the x86 build
@@ -709,11 +686,11 @@ differ in how they saturate and shift, and AMR-WB's `norm_s` goes through
 by the basic operations and read in one place, after a synthesis filter that
 never sets it, so it is left out.
 
-The tables were extracted from the sources by `reference/amr/gen_kotlin.py`,
+The tables were extracted from the sources by a script,
 so none was typed. The script resolves each table's declared size with the
 definitions in scope for its own file and codec, AMR and AMR-WB defining
 some names differently, and checks every table's length against it. One
-table, `dfh_M14k`, is declared one entry longer than its initialiser, and
+table, `dfh_M14k`, is declared one entry longer than its initializer, and
 the script fills that entry with the zero C gives it.
 
 The test oracles are opencore-amr's own decoders, through its public
@@ -724,14 +701,13 @@ https://git.code.sf.net/p/opencore-amr/vo-amrwbenc, tag v0.1.3, commit
 
 ## GSM 06.10
 
-The decoder is a translation of libgsm, recorded here before the first line
-was written.
+The decoder is a translation of libgsm.
 
 | Field | Value |
 |---|---|
 | Download | https://www.quut.com/gsm/gsm-1.0.22.tar.gz |
 | Version | 1.0.22, SHA-256 `f0072e91f6bb85a878b2f6dbf4a0b7c850c4deb8049d554c65340b3bf69df0ac` |
-| Licence | The authors' permission in `COPYRIGHT`: use, copying, modification and distribution for any purpose, provided the notice stays and the authors are not held responsible. Reproduced in `NOTICE` |
+| License | The authors' permission in `COPYRIGHT`: use, copying, modification and distribution for any purpose, provided the notice stays and the authors are not held responsible. Reproduced in `NOTICE` |
 | Files | `src/decode.c`, `gsm_decode.c`, `rpe.c`, `long_term.c` and `short_term.c` for their decoding halves, `add.c`, `table.c`, `gsm_create.c`, and `inc/private.h` and `inc/gsm.h` |
 | Not ported | The encoder, the `toast` tool, and the floating-point shortcuts `FAST` and `USE_FLOAT_MUL` select, which the library's own build leaves off |
 
@@ -744,29 +720,28 @@ unpackers.
 
 ## iLBC
 
-The decoder is a translation of WebRTC's fixed-point iLBC decoder, recorded
-here before the first line was written. libilbc packages WebRTC's iLBC on its
+The decoder is a translation of WebRTC's fixed-point iLBC decoder. libilbc packages WebRTC's iLBC on its
 own, with the signal processing functions it calls.
 
 | Field | Value |
 |---|---|
 | Source | https://github.com/TimothyGu/libilbc, tag v3.0.4, commit `cd064edf2c6c104a4e1fd87b34fd24cfa6dbe401`, with its `abseil-cpp` submodule at `1bae23e32ba1f1af7c7d1488a69a351ec96dc98d` for the headers the build needs |
-| Licence | BSD 3-Clause, `COPYING`, with Google's additional patent grant in `PATENTS`; both reproduced in `NOTICE`. `common_audio/third_party/spl_sqrt_floor` is Wilco Dijkstra's public domain square root, as its header and `LICENSE` record |
+| License | BSD 3-Clause, `COPYING`, with Google's additional patent grant in `PATENTS`; both reproduced in `NOTICE`. `common_audio/third_party/spl_sqrt_floor` is Wilco Dijkstra's public domain square root, as its header and `LICENSE` record |
 | Files | In `modules/audio_coding/codecs/ilbc`, `ilbc.c` for the decoder's interface, `defines.h`, `constants.c`, and every file the decoder reaches: `decode.c`, `unpack_bits.c`, `swap_bytes.c`, `index_conv_dec.c`, `simple_lsf_dequant.c`, `lsf_check.c`, `decoder_interpolate_lsf.c`, `lsf_interpolate_to_poly_dec.c`, `interpolate.c`, `lsf_to_poly.c`, `lsf_to_lsp.c`, `get_lsp_poly.c`, `bw_expand.c`, `decode_residual.c`, `state_construct.c`, `cb_construct.c`, `gain_dequant.c`, `get_cd_vec.c`, `create_augmented_vec.c`, `do_plc.c`, `comp_corr.c`, `hp_output.c`, `xcorr_coef.c`, `init_decode.c`, `enhancer_interface.c`, `enhancer.c`, `get_sync_seq.c`, `nearest_neighbor.c`, `refiner.c`, `my_corr.c`, `enh_upsample.c`, `smooth.c` and `smooth_out_data.c`; in `common_audio/signal_processing`, the portable C forms of the functions those call and `include/signal_processing_library.h` and `spl_inl.h` for its macros; and `spl_sqrt_floor.c` |
-| Never opened | Nothing in the tree mentions a copyleft licence. abseil, Apache 2.0, supplies headers to the oracle build only and was not read. ffmpeg's own iLBC decoder, which does not give WebRTC's samples, was only run |
+| Never opened | Nothing in the tree mentions a copyleft license. abseil, Apache 2.0, supplies headers to the oracle build only and was not read. ffmpeg's own iLBC decoder, which does not give WebRTC's samples, was only run |
 | Not ported | The encoder, the decoder without its enhancer, which `WebRtcIlbcfix_DecoderInit` never selects, and the branch for a previous enhancer state of 2, which only WebRTC's NetEq concealment entry point sets |
 
 The decoder's set of functions was found by linking a decode-only program
 over the library with unused sections removed, so nothing it reaches was
 missed. The tables were extracted from `constants.c` by
-`reference/ilbc/gen_kotlin.py`, which checks each table's length against its
+a script, which checks each table's length against its
 declared size, so none was typed.
 
 ## G.722 and G.726
 
 Both decoders are written from the Recommendations, with no implementation
 read. The ITU's reference code for them is part of the Software Tool Library,
-whose licence does not allow an Apache-2.0 port, and it was never opened.
+whose license does not allow an Apache-2.0 port, and it was never opened.
 
 | Field | Value |
 |---|---|
@@ -777,7 +752,7 @@ whose licence does not allow an Apache-2.0 port, and it was never opened.
 | Never opened | The Software Tool Library (ITU-T G.191) and its G.722 and G.726 modules, spandsp, and ffmpeg's source |
 
 Every constant table was extracted from the Recommendations' text by
-`reference/g72x/gen_tables.py`, which checks each against a property it
+a script, which checks each against a property it
 must have: G.722's inverse quantizer outputs lie inside their decision
 intervals, its 5-bit and 4-bit outputs are the 6-bit quantizer's decision
 levels, its log-to-linear table is 2048 times 2 to the power i/32, and every
@@ -833,7 +808,7 @@ implementation was opened, nor any inflate implementation.
 | Never opened | libebml, libmatroska, mkvtoolnix, ffmpeg's Matroska demuxer, zlib's source and every other inflate |
 
 The element IDs in `MatroskaIds.kt` were extracted from the text of RFC 9559
-by `reference/matroska/gen_ids.py`, so none was typed. The length and
+by a script, so none was typed. The length and
 distance tables of the inflate are computed from the rules of RFC 1951,
 section 3.2.5, rather than written out.
 
@@ -853,21 +828,20 @@ read.
 | Never opened | ffmpeg's source, whose mixing for positions BS.775 does not cover was measured by running it |
 
 BS.775 covers 3/2 material without a low-frequency channel. The rules for
-the side, back centre, front centre pair and top front positions were
+the side, back center, front center pair and top front positions were
 measured from ffmpeg's float mixing with a different tone in every input
 channel, and the oracle suite holds AudioKodec to them.
 
 ## Loudness
 
-The loudness meter is a translation of libebur128, recorded here before the
-first line was written.
+The loudness meter is a translation of libebur128.
 
 | Field | Value |
 |---|---|
 | Source | https://github.com/jiixyj/libebur128, tag v1.2.6, commit `67b33abe1558160ed76ada1322329b0e9e058b02` |
-| Licence | MIT, in `COPYING`, reproduced in `NOTICE` |
+| License | MIT, in `COPYING`, reproduced in `NOTICE` |
 | Files | `ebur128/ebur128.c` and `ebur128/ebur128.h`; `ebur128/queue/sys/queue.h`, BSD, only to build the oracle |
-| Never opened | Nothing in the tree mentions a copyleft licence. ffmpeg's `ebur128` filter was only run |
+| Never opened | Nothing in the tree mentions a copyleft license. ffmpeg's `ebur128` filter was only run |
 | Not ported | The histogram mode, the change of parameters mid-stream, the integer sample paths, and the 49-tap true peak interpolator, replaced by AudioKodec's own resampler |
 
 The figures the tests expect come from EBU Tech 3341 (2023), Table 1, cases
@@ -877,14 +851,13 @@ and EBU Tech 3342 (2023), Table 1, case 1, SHA-256
 
 ## Resampling
 
-The sinc resampler is a translation of speexdsp's, recorded here before the
-first line was written. speexdsp is the signal processing half of Speex, and
+The sinc resampler is a translation of speexdsp's. speexdsp is the signal processing half of Speex, and
 its resampler stands on its own in one file.
 
 | Field | Value |
 |---|---|
 | Source | https://github.com/xiph/speexdsp, tag SpeexDSP-1.2.1, commit `1b28a0f61bc31162979e1f26f3981fc3637095c8` |
-| Licence | BSD 3-Clause, in `COPYING`, which is the same text as libspeex's, and the notice at the head of `resample.c`; both reproduced in `NOTICE` |
+| License | BSD 3-Clause, in `COPYING`, which is the same text as libspeex's, and the notice at the head of `resample.c`; both reproduced in `NOTICE` |
 | Files | `libspeexdsp/resample.c`, in its floating-point build without SIMD, with `libspeexdsp/arch.h` for the float forms of its arithmetic macros and `include/speex/speex_resampler.h` for its interface |
 | Never opened | `libspeexdsp/fftwrap.c` and `configure.ac`, which mention the GPL as a build option, and everything else outside the resampler |
 | Not translated | The fixed-point build, the SSE and NEON inner loops, and the handling of a rate or quality change mid-stream; none changes a sample of a stream at a fixed rate |
@@ -893,22 +866,21 @@ libsamplerate, BSD 2-Clause since 2016, was the other candidate. speexdsp was
 chosen because its resampler is one self-contained file that computes its
 filter per stream, where libsamplerate's best converter carries large
 precomputed coefficient tables, and because the Speex decoder already
-translates code from the same authors under the same licence. The
+translates code from the same authors under the same license. The
 straight-line mode is AudioKodec's own and follows no reference.
 
 ## True Audio
 
-The True Audio format page on the authors' site could not be reached while
-the decoder was written, and libtta, their current library, is LGPL, so it
-was never opened. The decoder is a translation of the authors' earlier
-decoder for hardware players instead, which is BSD-licensed and decodes the
-same `TTA1` format, recorded here before the first line was written.
+libtta, the current library of the format's authors, is LGPL, so it was
+never opened. The decoder is a translation of the authors' earlier decoder
+for hardware players instead, which is BSD-licensed and decodes the same
+`TTA1` format.
 
 | Field | Value |
 |---|---|
 | Download | https://sourceforge.net/projects/tta/files/tta/ttalib-hwplayer/ttalib-hwplayer-1.2.tgz/download |
 | Version | 1.2, SHA-256 `2028573a43c91acf1a6048d1804f60e9a6d28f493cbcc0fed99895fdc88cf26f`, the value SourceForge publishes for the file |
-| Licence | BSD 3-Clause, in the header of every source file and the `README`, reproduced in `NOTICE` |
+| License | BSD 3-Clause, in the header of every source file and the `README`, reproduced in `NOTICE` |
 | Files | `ttadec.c`, `ttadec.h`, `filter.h` and `ttalib.h` |
 | Not ported | The player's own limits, which reject sample rates outside a fixed list and more than eight channels, and its ID3 reading, which AudioKodec's tag readers already do |
 
@@ -924,16 +896,15 @@ check is made against the whole bytes instead.
 ## Monkey's Audio
 
 Monkey's Audio has no format document beyond its SDK, so the decoder is a
-translation of the SDK's decoding half, recorded here before the first line
-was written.
+translation of the SDK's decoding half.
 
 | Field | Value |
 |---|---|
 | Download | https://monkeysaudio.com/files/MAC_1327_SDK.zip, linked from https://monkeysaudio.com/developers.html |
 | Version | 13.27, SHA-256 `c47c6b36f6a7bd50d990f2eb36a70915c0074a7b9634be396c94464905e76686` |
-| Licence | BSD 3-Clause, `License.txt` in the archive, reproduced in `NOTICE` |
+| License | BSD 3-Clause, `License.txt` in the archive, reproduced in `NOTICE` |
 | Files | `Source/MACLib/APEHeader.cpp`, `APEInfo.cpp`, `APEDecompress.cpp`, `APEDecompressCore.cpp`, `UnBitArrayBase.cpp`, `UnBitArray.cpp`, `NewPredictor.cpp`, `NNFilter.cpp`, `NNFilterGeneric.cpp`, `ScaledFirstOrderFilter.h`, `Prepare.cpp`, `FloatTransform.cpp` and the CRC in `Source/Shared` |
-| Not ported | Files from before version 3.99 (`Source/MACLib/Old`), the encoder, MD5 checking of the whole file, and the vectorised filter loops, which compute the same as the generic one |
+| Not ported | Files from before version 3.99 (`Source/MACLib/Old`), the encoder, MD5 checking of the whole file, and the vectorized filter loops, which compute the same as the generic one |
 
 The arithmetic is the SDK's: 32-bit and wrapping in the predictors and
 filters, with the 64-bit predictor kept for 32-bit audio where the SDK keeps
@@ -950,13 +921,13 @@ opened.
 | Field | Value |
 |---|---|
 | Specification | ATSC A/52:2012, Digital Audio Compression Standard (AC-3, E-AC-3), 17 December 2012, https://www.atsc.org/wp-content/uploads/2015/03/A52-201212-17.pdf, SHA-256 `ea18767975be9f30f62c1ee57fc8c35a94f7112793eda408fb40a81acbe1be90` |
-| Text of it | `reference/ac3/a52.txt`, the PDF's text, SHA-256 `78bfbb76394994c8959c3a03b13adcb54c5a42fe82b9b64672708e5e56197521`, which `reference/ac3/gen_tables.py` reads |
+| Text of it | The PDF's text, SHA-256 `78bfbb76394994c8959c3a03b13adcb54c5a42fe82b9b64672708e5e56197521`, which the table script reads |
 | Never opened | liba52, libdca, ffmpeg's AC-3 decoder and encoder, and every other AC-3 implementation |
 
 The constant tables in `Ac3Tables.kt` (the decay and gain codes, the band
 tables, the hearing thresholds, the log-addition table, the bit allocation
 pointer table and the frame sizes) were extracted from the text of the
-standard by `gen_tables.py`, so none was typed, and the script checks each
+standard by a script, so none was typed, and the script checks each
 against a property that does not depend on its digits: the bands are
 contiguous from 0 to 253 and the mask table maps every bin to the band that
 holds it; the log-addition table is the formula it stands for; the pointer
@@ -984,7 +955,7 @@ a reading of it differ, and each is recorded in `docs/ac3.md`:
   range word, which the standard does not say, so AudioKodec follows it.
 
 ffmpeg's decoder also rounds each coefficient down to a multiple of 2^-23 when
-it is dequantised, again when its coupling coordinate is read, and again when
+it is dequantized, again when its coupling coordinate is read, and again when
 it is decoupled, with the sign of a phase-inverted band applied after the
 rounding. That is not a departure from the standard, which defines real
 arithmetic, but it is the difference between the two decoders, and
@@ -993,7 +964,7 @@ found by comparing the two decoders' output on random frames, down to the
 single coefficient, and each is confirmed by a bound of 2e-6 over 192 frames.
 
 Enhanced AC-3 (A/52 Annex E) shares the sync word and is named and refused,
-not decoded, for the patent tail its issue states.
+not decoded.
 
 ## AAC constant tables
 
@@ -1009,7 +980,7 @@ not used as a guide.
 | Repository | https://github.com/aosp-mirror/platform_frameworks_base |
 | Tag | `android-2.3.7_r1`, commit `3f2821425f1ab6eddb76a8725e3f2c3edb5d8b07` |
 | Path | `media/libstagefright/codecs/aacdec` |
-| Licence | Apache-2.0, stated in the header of every file |
+| License | Apache-2.0, stated in the header of every file |
 | Agreed | All 1362 codewords of the twelve Huffman codebooks, by compiling its codeword lookup functions in a harness and running every codeword through them; all thirteen band offset tables against `sfb.cpp`; the noise shaping band limits against `get_tns.cpp`; and the computed sine and Kaiser-Bessel windows against its Q15 tables in `window_tables_fxp.cpp`, to within one step of their rounding |
 
 The extraction found no disagreement. Table 4.141 is identical to Table
@@ -1026,7 +997,7 @@ FDK-AAC, liba52, libdca, libebml, libmatroska, mkvtoolnix, taglib, mutagen,
 jaudiotagger, JLayer, FluidSynth, libopenmpt, the sox source tree, spandsp,
 and the ITU-T Software Tool Library.
 
-If a search result shows code from any of them, stop at the licence header.
+If a search result shows code from any of them, stop at the license header.
 
 
 ## FLAC decoder conformance corpus (CC0-1.0)
@@ -1037,7 +1008,7 @@ https://github.com/ietf-wg-cellar/flac-test-files. Pinned commit:
 and their documentation are covered by the repository's CC0 waiver.
 `test-data/flac-conformance/manifest.tsv` records every byte length and SHA-256.
 Two small vectors are committed; the complete corpus is downloaded on demand
-and verified against that manifest. Complete upstream licence text:
+and verified against that manifest. Complete upstream license text:
 
 ```text
 Creative Commons Legal Code

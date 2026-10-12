@@ -4,7 +4,7 @@
 
 Read [reference/REFERENCES.md](reference/REFERENCES.md). It lists the source
 trees this project may be written from and the ones it must never open. That
-boundary is what keeps the Apache-2.0 licence honest, and a contribution that
+boundary is what keeps the Apache-2.0 license honest, and a contribution that
 crosses it cannot be accepted whatever its quality.
 
 Prefer implementing from a specification over porting from an implementation,
@@ -28,10 +28,10 @@ C.
 3. Seeking and duration tests where the format supports them.
 4. Tag round-trips where the format carries tags, with the audio payload
    proved byte-identical across a tag write.
-5. An entry in [PORTING_STATUS.md](PORTING_STATUS.md), and a README update if
-   the README's claims change.
+5. An entry in [docs/support.md](docs/support.md) and [docs/formats.md](docs/formats.md),
+   and a README update if the README's claims change.
 6. A page in `docs/` for anything a caller would have to guess at.
-7. `./gradlew updateLegacyAbi` run and the result committed.
+7. `./gradlew updateKotlinAbi` run and the result committed.
 
 A decoder ships before its encoder, always. The decoder is the encoder's first
 test harness, and an encoder whose output nothing can read is untestable.
@@ -43,9 +43,9 @@ issues is a label, and the tracking issue inside it, where one exists, holds
 the order and the hazards. Do not open work in the next group while the
 current one has a failing test on any target.
 
-The library uses `0.x` versions with an honest feature table. `1.0.0` waits for
-the container and codec set the README lists to be complete, with no known
-conformance failure open against any of it.
+The library uses `0.x` versions with an honest feature table. `1.0.0` waits
+until no known conformance failure is open against any format that the docs
+list.
 
 ## Dependencies
 
@@ -54,12 +54,11 @@ target still builds and the suite still passes on all of them.
 
 ## Style
 
-[KITE.md](../KITE.md) in the workspace root governs the documentation, and it
-is binding. The two rules that catch people out: no em dashes anywhere, and no
-claim that the committed code does not support.
+Two documentation rules catch people out: no em dashes anywhere, and no claim
+that the committed code does not support. The documentation uses American
+spelling.
 
-Code follows the official Kotlin style. Spelling is British throughout the
-repository.
+Code follows the official Kotlin style.
 
 ## Running the tests
 
@@ -77,7 +76,7 @@ later, downloads the pinned FLAC corpus, gives the test JVM a fresh temporary
 directory, and forces both JVM suites to execute. Recording directories must
 be empty. `--tests '*VorbisOracleTest*'` selects a smaller recipe; repeat the
 option for several suites. Matching versions and build identities are required
-for a byte-for-byte comparison. A mismatch saves both normalised manifests
+for a byte-for-byte comparison. A mismatch saves both normalized manifests
 for inspection rather than overwriting an earlier recording.
 
 `test-data/fixture-tools.json` states the last locally qualified versions and
@@ -109,7 +108,7 @@ For tests without provenance recording:
 ```
 
 `./gradlew :sample:benchmark` measures decode speed against the floors recorded
-in [PORTING_STATUS.md](PORTING_STATUS.md#decode-speed) and `./gradlew :sample:test`
+in [docs/support.md](docs/support.md#decode-speed) and `./gradlew :sample:test`
 checks the benchmark's own helpers. A change to a decoder's inner loops should
 be measured before and after.
 

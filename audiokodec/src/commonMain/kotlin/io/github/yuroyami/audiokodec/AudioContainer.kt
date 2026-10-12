@@ -113,9 +113,8 @@ public enum class AudioContainer(
         /**
          * The formats with a decoder in this build.
          *
-         * A README table and this set are checked against each other by a
-         * unit test, so the documentation cannot claim a decoder that does
-         * not exist.
+         * A unit test pins this set to the tables of docs/formats.md, so the
+         * documentation cannot claim a decoder that does not exist.
          */
         val DECODABLE = setOf(WAV, RF64, WAVE64, AIFF, AU, FLAC, CAF, OGG, MPEG_AUDIO, MP4, ADTS, WAVPACK, APE, TTA, MUSEPACK, AMR_NB, AMR_WB, ILBC, DSF, DFF, MATROSKA, AC3)
     }

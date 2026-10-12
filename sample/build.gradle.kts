@@ -9,7 +9,7 @@ plugins {
  * which is all a demonstration or a benchmark needs.
  *
  * `./gradlew :sample:benchmark` measures decode speed against the floors
- * PORTING_STATUS.md records; see Benchmark.kt for what it decodes.
+ * docs/support.md records; see Benchmark.kt for what it decodes.
  */
 kotlin {
     jvmToolchain(21)

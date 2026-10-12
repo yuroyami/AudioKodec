@@ -1,13 +1,6 @@
-# Shared MkDocs base for the Kite family.
-#
-# This is a template, not a live config: AudioKodec / Audio containers and codecs in pure Kotlin for Kotlin Multiplatform / AudioKodec are
-# substituted per repository. Each repo keeps its own mkdocs.yml so it still
-# builds standalone from a fresh clone; this file is the thing to edit when the
-# whole family should change.
-
 site_name: AudioKodec
 site_url: https://yuroyami.github.io/AudioKodec/
-site_description: Audio containers and codecs in pure Kotlin for Kotlin Multiplatform
+site_description: Audio containers, codecs and tags written in Kotlin for Kotlin Multiplatform. Decode, encode and edit tags from common code.
 site_author: yuroyami
 copyright: Apache-2.0
 
@@ -77,4 +70,38 @@ plugins:
 
 nav:
   - Home: index.md
-  - API reference: https://yuroyami.github.io/AudioKodec/api/
+  - Guides:
+      - Decoding: decoding.md
+      - Encoding: encoding.md
+      - Exact integer PCM: integer-pcm.md
+      - Tags: tags.md
+      - MP4 metadata: mp4-tags.md
+      - Broadcast Wave metadata: broadcast-wave.md
+      - Files and kotlinx-io: files.md
+      - Seekable file input: file-input.md
+  - Processing:
+      - Change the sample rate: resample.md
+      - Mix channels: mix.md
+      - Measure loudness: loudness.md
+      - Draw a waveform: waveform.md
+      - Levels, fades and test signals: levels.md
+  - Formats:
+      - Overview: formats.md
+      - Format support: support.md
+      - AAC: aac.md
+      - AC-3: ac3.md
+      - AMR: amr.md
+      - DSD: dsd.md
+      - G.722 and G.726: g722-g726.md
+      - GSM 06.10: gsm.md
+      - iLBC: ilbc.md
+      - Matroska and WebM: matroska.md
+      - Monkey's Audio: ape.md
+      - MPEG audio in MP4: mpeg-in-mp4.md
+      - Free-format MPEG audio: mpeg-free-format.md
+      - Musepack: musepack.md
+      - Chained Ogg: ogg-chains.md
+      - Speex: speex.md
+      - True Audio: tta.md
+      - Vorbis floor zero: vorbis-floor-zero.md
+      - WavPack: wavpack.md

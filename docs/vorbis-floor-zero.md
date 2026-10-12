@@ -26,7 +26,7 @@ zero order/rate/Bark-map size and non-finite coefficients or curves raise
 `DecodeOptions.maxAllocationBytes`. Floor type 1 follows its existing path.
 
 Duration, seeking, buffer reuse, chained links and tag editing use the existing
-Vorbis and Ogg behaviour. Tag edits retain all coded audio packets and decoded
+Vorbis and Ogg behavior. Tag edits retain all coded audio packets and decoded
 samples. Each chained link can supply a different floor-zero setup.
 
 The implementation follows section 6.2 of the Vorbis I specification, including

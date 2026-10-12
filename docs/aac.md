@@ -6,7 +6,7 @@ through the same API as every other coding.
 ```kotlin
 val info = AudioKodec.probe(m4aBytes)
 println(info.codec)                  // AAC
-println(info.format.channelLayout)   // FRONT_LEFT, FRONT_RIGHT
+println(info.format.channelLayout)   // ChannelLayout(FRONT_LEFT, FRONT_RIGHT)
 
 AudioKodec.open(m4aBytes).use { decoder ->
     decoder.seek(decoder.format.sampleRate * 30L)
@@ -55,10 +55,10 @@ gives at the same position.
 
 Configurations 1 to 7 name their speakers in ISO/IEC 14496-3, Table 1.19, and
 the decoder reorders them into AudioKodec's order: configuration 6 carries
-centre, front pair, back pair and LFE, and comes out as front left, front right,
-centre, LFE, back left and back right.
+center, front pair, back pair and LFE, and comes out as front left, front right,
+center, LFE, back left and back right.
 
-Configuration 7 carries centre, the left and right centre pair, the outside
+Configuration 7 carries center, the left and right center pair, the outside
 front pair, the surround pair and the LFE. ffmpeg 6.1 decodes it as plain 7.1,
 with the first pair at the front and the second at the sides, which disagrees
 with the standard; AudioKodec follows the standard, which is also how Apple's
@@ -75,7 +75,7 @@ Each of these throws `UnsupportedFeatureException`, whose `feature` names it:
 | AAC with 960-sample frames | The frame length used by digital radio |
 | AAC coupling channel elements | A channel mixed into others; no common encoder writes one |
 
-`probe` still reports these streams. For HE-AAC signalled in an MP4
+`probe` still reports these streams. For HE-AAC signaled in an MP4
 configuration it reports the output rate a full decoder would give.
 
 ADIF, the single-header framing with no frame lengths, is probed and not

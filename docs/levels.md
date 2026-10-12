@@ -24,8 +24,9 @@ val bounds = Levels.findSilence(samples, channels)
 val trimmed = samples.copyOfRange(bounds.soundStart * channels, bounds.soundEnd * channels)
 ```
 
-Every function takes a range of frames, `from` and `frameCount`, and
-defaults to the whole array.
+`scan`, `findSilence` and `applyGain` take a range of frames, `from` and
+`frameCount`, and default to the whole array. `fadeIn` and `fadeOut` need an
+explicit range.
 
 ## Change
 

@@ -23,7 +23,7 @@ trimming. A known duration clamps seeks past the end. If a link's duration
 is unknown, the complete duration is also unknown. Seeking beyond that link's
 start requires a forward decode, deferred until the next frame is requested.
 `DecodeOptions(allowSlowSeek = false)` refuses that seek before changing the
-position. Seeks within links retain the codec's existing preroll behaviour.
+position. Seeks within links retain the codec's existing preroll behavior.
 
 The sample rate, channel count and channel layout must agree across links.
 A change throws `UnsupportedFeatureException` naming
@@ -36,7 +36,7 @@ no single bit depth.
 
 Opening walks the links before playback. Retained headers respect
 `maxAllocationBytes`; expanded Vorbis setup is kept only for the active link.
-For a multiplexed link, AudioKodec selects its first recognised audio stream.
+For a multiplexed link, AudioKodec selects its first recognized audio stream.
 Every stream in the preceding group must reach EOS before a new group starts.
 RFC 3533 requires distinct serial numbers throughout a chained file.
 AudioKodec additionally accepts serial reuse across complete BOS/EOS boundaries
@@ -50,4 +50,6 @@ link or packet; it does not skip ahead to later recordings.
 
 The tag API reads and edits the first link's metadata. Rewriting its comments
 preserves every later link byte for byte and leaves the combined PCM intact.
-Multiplexed tag writing remains unsupported.
+A file that interleaves several logical streams can be tagged as well, and the pages of
+the other streams are copied byte for byte. A stream that begins while the others are
+still open is refused.

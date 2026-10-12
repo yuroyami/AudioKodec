@@ -57,9 +57,9 @@ key `----:mean:name`, such as `----:com.apple.iTunes:iTunSMPB`.
 ## What is kept as it was
 
 Items AudioKodec does not model, such as iTunes' gapless `iTunSMPB` value, its
-normalisation data or a store identifier, are written back with their stored
+normalization data or a store identifier, are written back with their stored
 data types. Decoding applies the `iTunSMPB` trim when no edit list trims the
-track; see [MP4](index.md#mp4). An item whose structure the reader cannot follow is kept whole and
+track; see [MP4](formats.md#mp4). An item whose structure the reader cannot follow is kept whole and
 written back byte for byte, unless the edit sets the field its atom would hold.
 
 ## Artwork

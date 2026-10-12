@@ -43,7 +43,7 @@ read failures use `AudioKodecException`. Closing twice has no effect.
 | Browsers | Named `UnsupportedFeatureException`; buffer user-selected or downloaded bytes |
 
 `Path.readAudioSource()` and `RawSource.readAudioSource()` retain their
-whole-file buffering behaviour and default 512 MiB ceiling. They remain
+whole-file buffering behavior and default 512 MiB ceiling. They remain
 useful for small files, sequential streams and browser `Buffer` input.
 Neither name changes, and opening a file does not silently fall back to
 buffering.

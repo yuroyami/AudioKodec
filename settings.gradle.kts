@@ -28,8 +28,8 @@ include(":audiokodec")
 
 // :audiokodec-io is the optional kotlinx-io bridge: read a file as an
 // AudioSource, write an encoder's output to a Sink. It keeps kotlinx-io off
-// the classpath of consumers that already have their own byte plumbing. Its
-// target list is kotlinx-io's, which is smaller than the core's.
+// the classpath of consumers that already have their own byte plumbing. It
+// builds for the same targets as the core.
 include(":audiokodec-io")
 
 // :sample is a desktop application and the benchmark task. It is never

@@ -18,7 +18,7 @@ Opening measures unpadded frame size from headers with matching version,
 layer, sample rate and channel count. Two equal intervals confirm the size;
 two complete frames can also establish it when the recording ends there.
 Layer I padding adds a four-byte slot; Layers II and III add one byte.
-Recognised embedded ID3 tags are skipped and do not enter the measured size.
+Recognized embedded ID3 tags are skipped and do not enter the measured size.
 Sync-shaped payload words must pass the same following-header check.
 
 The search for a confirming boundary is limited to 512 KiB. A lone raw frame
@@ -30,7 +30,7 @@ sizes are supported. Frame allocations obey `DecodeOptions.maxAllocationBytes`.
 
 Strict mode rejects later changes of spacing or bitrate-index kind and reports
 a truncated final payload. Tolerant mode retains the complete prefix. Normal
-terminal zero padding and recognised trailers are accepted. Protected frame
+terminal zero padding and recognized trailers are accepted. Protected frame
 CRCs follow the same strict and tolerant policy as ordinary MPEG audio.
 
 LAME gapless delay and padding and the silent Xing frame are handled as usual.

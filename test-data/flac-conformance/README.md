@@ -3,7 +3,7 @@
 The FLAC decoder testbench is published by the IETF CELLAR working group at
 https://github.com/ietf-wg-cellar/flac-test-files. The corpus is pinned to commit
 `aa7b0c6cf32994c106ae517a08134c28a96ff5b2`; its 86 FLAC files and documentation
-are licensed under CC0-1.0 by Martijn van Beurden. The complete licence is in
+are licensed under CC0-1.0 by Martijn van Beurden. The complete license is in
 `LICENSE.txt` and `reference/REFERENCES.md`.
 
 `manifest.tsv` records every file's size and SHA-256. Two small vectors are

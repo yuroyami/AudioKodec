@@ -1,7 +1,7 @@
 # Measure loudness
 
 `LoudnessMeter` measures loudness as EBU R 128 defines it, from
-Recommendation ITU-R BS.1770: the integrated loudness of a whole programme,
+Recommendation ITU-R BS.1770: the integrated loudness of a whole program,
 the momentary and short-term loudness of its last 400 ms and three seconds,
 its loudness range, and the sample and true peak of each channel. It turns
 the result into ReplayGain values in the form the tag writers take, so a
@@ -32,7 +32,7 @@ false)`; `replayGain()` then gives the sample peak.
 `replayGain()` gives the ReplayGain 2 values for one track: the gain that
 brings it to -18 LUFS, and its true peak. `LoudnessMeter.albumReplayGain`
 takes the meters of an album's tracks and adds the album gain, from the
-tracks' gating blocks pooled and gated as one programme, as ReplayGain 2
+tracks' gating blocks pooled and gated as one program, as ReplayGain 2
 defines it, and the album's largest true peak.
 
 ## How it measures

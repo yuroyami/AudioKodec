@@ -60,7 +60,7 @@ The replay gain values in the stream header are not applied to the samples.
 
 | Case | Result |
 |---|---|
-| Stream version 7 and older, which begin `MP+` or have no magic number | `UnsupportedFeatureException` naming "Musepack stream version 7", or not recognised as Musepack at all |
+| Stream version 7 and older, which begin `MP+` or have no magic number | `UnsupportedFeatureException` naming "Musepack stream version 7", or not recognized as Musepack at all |
 | A stream header whose checksum fails, or that states an impossible format | `CorruptStreamException` |
 | An audio packet whose frames do not fit it | `CorruptStreamException`, or in tolerant mode the end of the stream |
 | A stream that ends before the samples its header promises | `TruncatedStreamException`, or in tolerant mode the end of the stream |

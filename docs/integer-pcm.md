@@ -26,7 +26,7 @@ The source depth must be stated explicitly and can be any value from 1 to
 before output or source consumption. The Float32 overloads continue to
 support those targets.
 
-| Depth change | Behaviour |
+| Depth change | Behavior |
 |---|---|
 | Equal depths | Every integer bit is preserved |
 | Increasing depth | Shift left by the depth difference; new low bits are zero |

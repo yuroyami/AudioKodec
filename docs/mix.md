@@ -43,8 +43,8 @@ it out.
 
 A channel the output has keeps its place at unity, so mixing up invents
 nothing: stereo into 5.1 fills the front pair and leaves the rest silent,
-and mono into stereo puts the centre on both sides at -3 dB, by the same rule
-that carries any centre into a front pair.
+and mono into stereo puts the center on both sides at -3 dB, by the same rule
+that carries any center into a front pair.
 
 Some positions are beyond BS.775. They follow what ffmpeg does, measured
 rather than read:
@@ -52,12 +52,12 @@ rather than read:
 | Channel | Where it goes when the output lacks it |
 |---|---|
 | A side pair or a back pair | The other pair, whole when the input has only one of them, and at -3 dB for the second when it has both, as 7.1 into 5.1 |
-| Back centre | The two surrounds at -3 dB each, else the front pair at -6 dB each, else the centre at -6 dB |
-| Front left and right of centre | The front pair, whole, else the centre at -3 dB |
-| Top front left and right | The front pair at -3 dB, else the centre at -6 dB |
+| Back center | The two surrounds at -3 dB each, else the front pair at -6 dB each, else the center at -6 dB |
+| Front left and right of center | The front pair, whole, else the center at -3 dB |
+| Top front left and right | The front pair at -3 dB, else the center at -6 dB |
 
 Every coefficient of these mixes agrees with ffmpeg's float mixing in the
-oracle suite. Nothing is normalised or clipped, as in ffmpeg: a downmix of
+oracle suite. Nothing is normalized or clipped, as in ffmpeg: a downmix of
 loud channels can pass full scale, and `Pcm.clampInPlace` or a gain can
 bring it back.
 

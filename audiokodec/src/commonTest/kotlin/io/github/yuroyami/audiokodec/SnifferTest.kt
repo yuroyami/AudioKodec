@@ -241,15 +241,15 @@ class SnifferTest {
 
     @Test
     fun theReadmeAndTheCodeAgreeOnHowManyFormatsAreNamed() {
-        // The README says the sniffer names 30 formats. Adding one to the
-        // enum without touching the README would make that sentence wrong,
+        // docs/formats.md says the sniffer names 30 formats. Adding one to the
+        // enum without touching the docs would make that sentence wrong,
         // which is what this test is here to stop.
         assertEquals(30, AudioContainer.entries.size)
     }
 
     @Test
     fun theReadmeAndTheCodeAgreeOnWhichFormatsAreDecodable() {
-        // The README's read and write tables name exactly these twenty-two.
+        // The read and write tables of docs/formats.md name exactly these twenty-two.
         assertEquals(
             setOf(
                 AudioContainer.WAV,
