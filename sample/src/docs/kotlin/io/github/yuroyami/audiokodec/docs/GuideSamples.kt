@@ -155,6 +155,20 @@ class GuideSamples {
         // --8<-- [end:encode-flac]
         assertEquals(true, AudioKodec.verifyFlacMd5(flac))
 
+        // --8<-- [start:encode-wavpack]
+        val wv = AudioKodec.encode(samples, format, EncodeTarget.wavPack(bitDepth = 24, effort = 2))
+        // --8<-- [end:encode-wavpack]
+        assertEquals(AudioCodec.WAVPACK, AudioKodec.probe(wv).codec)
+        // Lossless: 24 bits hold these floats to within half a step.
+        val unpacked = AudioKodec.decode(wv).samples
+        for (i in samples.indices) assertEquals(samples[i], unpacked[i], 1f / (1 shl 23))
+
+        // --8<-- [start:encode-vorbis]
+        val ogg = AudioKodec.encode(samples, format, EncodeTarget.vorbis(quality = 4f))
+        // --8<-- [end:encode-vorbis]
+        assertEquals(AudioCodec.VORBIS, AudioKodec.probe(ogg).codec)
+        assertEquals(samples.size / 2, AudioKodec.decode(ogg).frames)
+
         // --8<-- [start:encode-opus]
         val opus = AudioKodec.encode(decoded, EncodeTarget.opus(bitrate = 128_000), tags = tags)
         // --8<-- [end:encode-opus]

@@ -95,7 +95,7 @@ verification and seeking.
 ## WavPack
 
 ```kotlin
-val wv = AudioKodec.encode(samples, format, EncodeTarget.wavPack(bitDepth = 24, effort = 2))
+--8<-- "GuideSamples.kt:encode-wavpack"
 ```
 
 `effort` runs from 0 to 3 and picks the reference encoder's fast, normal, high and very
@@ -108,7 +108,7 @@ See [WavPack](wavpack.md#encode).
 ## Vorbis
 
 ```kotlin
-val ogg = AudioKodec.encode(samples, AudioFormat(48_000, 2), EncodeTarget.vorbis(quality = 4f))
+--8<-- "GuideSamples.kt:encode-vorbis"
 ```
 
 Vorbis is lossy. The decoded audio is close to the input, not equal to it, and
@@ -295,7 +295,9 @@ first frame is rewritten then. When it cannot and the source states its frame co
 header is computed in advance: in full at a constant bitrate, and without the byte count
 and seek table at a variable one. When neither is possible, the header states only the
 delay, so the decode starts on the first sample but keeps up to one frame of padding,
-silence, at the end.
+silence, at the end. An empty source is the one exception to the exact length: AudioKodec's
+decoder reads a stated length of zero as unknown, so it decodes a few dozen samples of
+silence.
 
 ### How it works
 
