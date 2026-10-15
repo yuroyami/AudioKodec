@@ -84,7 +84,7 @@ Run as programs, never read as source.
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks. `FlacBinarySeekTest` measures source bytes at 10%, 50% and 90% of an unindexed recording, and exercises CRC-8-valid fake headers embedded in RFC 9639 verbatim samples; the oracle suite repeats the read bounds on reference FLAC output and verifies the embedded-header PCM with FFmpeg |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, encodes the files that check the iTunes gapless record, and encodes and decodes the AAC files that check AudioKodec's AAC decoder against Apple's |
-| wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form |
+| wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form. AudioKodec's encoder must write the bytes `wavpack -m --no-threads` writes for the same raw samples, and `wvunpack` must verify its files' checksums and MD5 sums and decode them to the exact input |
 | mac | Monkey's Audio, built from the SDK the port follows, at every compression level from fast to insane, 8, 16, 24 and 32-bit integers and 32-bit float, one to eight channels except seven; every file must decode to exactly the input integers and to exactly what `mac -d` writes |
 | tta (libtta 2.3) | True Audio, the format authors' encoder and decoder, built from `libtta-c-2.3.tar.gz` (SourceForge, SHA-256 `68ba6db2d494dcd4aa6832a40952b88a3d50ca1174ab0ef1e091db16992303c7`). LGPL, so it is built and run as a program and its source is never opened. Its files at 16, 20 and 24 bits with one to six channels, and ffmpeg's at 8, 16 and 24 bits with up to eight, must decode to exactly the input integers, to exactly what `tta -d` writes and to exactly what ffmpeg decodes. It also writes the password-protected files that must be refused by name |
 | mpcenc and libmpcdec r495 | Musepack: `mpcenc` from the operating system's `musepack-tools` package writes the files, and `mpc_float_oracle.c`, a few lines over libmpcdec's public API compiled against the r495 sources, writes the floats the reference decodes them to. `mpcdec` itself writes only 16-bit samples. Every sample must be the same float, at qualities 0 to 10, at 32, 44.1 and 48 kHz, mono and stereo, with each mid/side mode and with noise substitution. The encoder is LGPL and only run |
@@ -572,15 +572,16 @@ order declared in Apple's public header independently of the Kotlin decoder.
 
 WavPack's format is documented in prose (`doc/WavPack5FileFormat.pdf`) for
 its blocks and metadata, and by its source for everything inside them. The
-decoder is a translation of the reference library's decoding half.
+decoder is a translation of the reference library's decoding half, and the
+encoder of its lossless encoding half.
 
 | Field | Value |
 |---|---|
 | Repository | https://github.com/dbry/WavPack |
 | Tag | `5.9.0`, commit `5803634a030e2a11dba602ba057b89cc34486c67` |
 | License | BSD 3-Clause, the `COPYING` file at that commit, reproduced in `NOTICE` |
-| Files | `src/unpack.c`, `src/read_words.c`, `src/entropy_utils.c`, `src/decorr_utils.c`, `src/unpack_floats.c`, the block and metadata handling in `src/open_utils.c` and `src/unpack_utils.c`, `src/wavpack_local.h`, `include/wavpack.h`, and `doc/WavPack5FileFormat.pdf` |
-| Not ported | Pre-4.0 files (`unpack3.c`), DSD (`unpack_dsd.c`), the correction file of hybrid lossless mode, the encoder, and the assembly versions of the decorrelation loops, which compute the same as the C |
+| Files | Decoder: `src/unpack.c`, `src/read_words.c`, `src/entropy_utils.c`, `src/decorr_utils.c`, `src/unpack_floats.c`, the block and metadata handling in `src/open_utils.c` and `src/unpack_utils.c`, `src/wavpack_local.h`, `include/wavpack.h`, and `doc/WavPack5FileFormat.pdf`. Encoder: the lossless paths of `src/pack.c`, `src/write_words.c` and `src/pack_utils.c`, the first (default) filter of each mode in `src/decorr_tables.h`, the default filter search of `execute_mono` and `execute_stereo` with its helpers in `src/extra1.c` and `src/extra2.c`, the logarithm and weight helpers in `src/entropy_utils.c`, and, for the CLI's choices it mirrors, `cli/wavpack.c` |
+| Not ported | Pre-4.0 files (`unpack3.c`), DSD (`unpack_dsd.c`, `pack_dsd.c`), the correction file of hybrid lossless mode, hybrid lossy encoding and its noise shaping (`pack_dns.c`), float encoding (`pack_floats.c`), the extra filter searches of `-x1` to `-x6` beyond the default filter, the multithreaded packer, and the assembly versions of the decorrelation loops, which compute the same as the C |
 
 The arithmetic is the reference's: 32-bit and wrapping where it wraps, with
 its unsigned quantities kept in signed integers and compared and divided
@@ -590,6 +591,16 @@ damaged bitstream it starts again from the beginning and lets the block
 checksum catch the result; the translation reads zeros there, which the
 checksum catches the same way, and a block the reference would mute is an
 error instead.
+
+The encoder makes the reference's choices for its four basic modes: the same
+block lengths, the same filter of each mode set up by the same backwards
+passes, the same repacking with five terms when a residual grows too large,
+false stereo, redundant low bits and the extension stream of 32-bit
+integers, and the same metadata in the same order, with a RIFF header made
+the way the library makes one and an MD5 sum stored as `wavpack -m` stores
+it. Its blocks are compared byte for byte with what `wavpack -m --no-threads`
+writes for the same raw input; the multithreaded packer splits single-stream
+audio differently, which is why the comparison turns it off.
 
 ## Musepack
 

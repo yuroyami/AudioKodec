@@ -75,7 +75,7 @@ internal object TagWriter {
         } else {
             emptyList()
         }
-        val hadLeadingId3 = if (reader.baseOffset > 0 && containerHasSeparateMetadata) {
+        val hadLeadingId3 = if (reader.baseOffset > 0 && (containerHasSeparateMetadata || container == AudioContainer.WAVPACK)) {
             val root = SourceReader(reader.source, reader.options)
             TagLocator.findAll(root, null).any {
                 it.offset < reader.baseOffset &&
@@ -102,6 +102,11 @@ internal object TagWriter {
         val willWriteId3 = if (containerHasSeparateMetadata) {
             options.formats?.any { isId3v2(it) }
                 ?: (hadLeadingId3 || hadTrailingId3 || existing.any { isId3v2(it.format) } || needsId3)
+        } else if (container == AudioContainer.WAVPACK) {
+            // WavPack's tag is APEv2; an ID3v2 block is kept up to date only
+            // where a file already has one, which is in front of the view
+            // of the blocks that detection gives.
+            options.formats?.any { isId3v2(it) } ?: (hadLeadingId3 || existing.any { isId3v2(it.format) })
         } else {
             options.formats == null || options.formats.any { isId3v2(it) }
         }
@@ -123,6 +128,8 @@ internal object TagWriter {
             options.formats == null && externalTrailing.any {
                 it.block.format == TagFormat.APEV1 || it.block.format == TagFormat.APEV2
             }
+        } else if (container == AudioContainer.WAVPACK) {
+            options.formats?.contains(TagFormat.APEV2) ?: true
         } else {
             options.formats?.contains(TagFormat.APEV2)
                 ?: existing.any { it.format == TagFormat.APEV1 || it.format == TagFormat.APEV2 }
@@ -130,6 +137,8 @@ internal object TagWriter {
         val picturesPreservedElsewhere = if (containerHasSeparateMetadata) {
             container == AudioContainer.FLAC || container == AudioContainer.OGG || container == AudioContainer.MP4 ||
                 willWriteId3
+        } else if (container == AudioContainer.WAVPACK) {
+            willWriteId3
         } else {
             options.formats == null || options.formats.any { isId3v2(it) }
         }
@@ -218,6 +227,7 @@ internal object TagWriter {
             AudioContainer.ADTS,
             AudioContainer.AC3,
             AudioContainer.DTS,
+            AudioContainer.WAVPACK,
             -> writeAroundAudio(reader, existing, artworkTags, sink, options, ape, id3)
             else -> throw UnsupportedFeatureException(
                 "writing tags into ${container.displayName}",
@@ -975,6 +985,7 @@ internal object TagWriter {
             AudioContainer.ADTS,
             AudioContainer.AC3,
             AudioContainer.DTS,
+            AudioContainer.WAVPACK,
             -> setOf(TagFormat.ID3V2_3, TagFormat.ID3V2_4, TagFormat.APEV2)
             else -> return
         }

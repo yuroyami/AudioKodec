@@ -1152,20 +1152,20 @@ internal class WavPackStream {
         private const val WORD_EOF = Int.MIN_VALUE
         private val DIVISORS = intArrayOf(128, 64, 32)
 
-        private fun applyWeight(weight: Int, sample: Int): Int =
+        fun applyWeight(weight: Int, sample: Int): Int =
             if (sample != sample.toShort().toInt()) {
                 ((((sample and 0xFFFF) * weight) shr 9) + (((sample and 0xFFFF.inv()) shr 9) * weight) + 1) shr 1
             } else {
                 (weight * sample + 512) shr 10
             }
 
-        private fun updateWeight(weight: Int, delta: Int, source: Int, result: Int): Int {
+        fun updateWeight(weight: Int, delta: Int, source: Int, result: Int): Int {
             if (source == 0 || result == 0) return weight
             val s = (source xor result) shr 31
             return (delta xor s) + (weight - s)
         }
 
-        private fun updateWeightClip(weight: Int, delta: Int, source: Int, result: Int): Int {
+        fun updateWeightClip(weight: Int, delta: Int, source: Int, result: Int): Int {
             if (source == 0 || result == 0) return weight
             val s = (source xor result) shr 31
             var w = (weight xor s) + (delta - s)
@@ -1173,7 +1173,7 @@ internal class WavPackStream {
             return (w xor s) - s
         }
 
-        private fun restoreWeight(weight: Int): Int {
+        fun restoreWeight(weight: Int): Int {
             var result = weight * 8
             if (result > 0) result += (result + 64) shr 7
             return result

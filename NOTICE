@@ -351,7 +351,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-The WavPack decoder is translated from WavPack 5.9.0, commit
+The WavPack decoder and encoder are translated from WavPack 5.9.0, commit
 5803634a030e2a11dba602ba057b89cc34486c67, under the BSD 3-Clause licence:
 
                   Copyright (c) 1998 - 2025 David Bryant

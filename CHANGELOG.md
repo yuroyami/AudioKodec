@@ -65,6 +65,11 @@ audio and Ogg.
   `IntPcmAccess`, block checksums verified, and exact seeking. Hybrid files
   decode to their lossy stream. Translated from WavPack 5.9.0 and identical
   to `wvunpack`. DSD inside WavPack is refused by name.
+- WavPack, encoded losslessly at 8, 16, 24 and 32 bits with one to eight
+  channels in the fast, normal, high and very high modes, with the RIFF
+  header, MD5 sum and APEv2 tags the reference writes. Translated from
+  WavPack 5.9.0, and byte-identical to `wavpack -m --no-threads`. Tags of
+  WavPack files can be rewritten.
 - Musepack, decoded: stream version 8 at every quality, mono and stereo,
   with mid/side coding and noise substitution, the exact length its header
   states, and seeking. Translated from libmpcdec, BSD-licensed, and on the

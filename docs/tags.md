@@ -84,6 +84,10 @@ This produces a new file rather than editing one in place. Write it to a
 temporary file and move that over the original, which is what makes the
 operation safe against a crash halfway through.
 
+A WavPack file gets an APEv2 tag after its blocks, the tag WavPack uses. An
+ID3v2 block in front of the blocks is kept up to date when the file has one,
+and created only when `TagWriteOptions.formats` asks for it.
+
 An unrelated ID3 edit preserves each comment or lyric's exact text, language
 and description. Original frames with identical text retain their distinct
 language and description pairs. Changing whitespace is an explicit text change.

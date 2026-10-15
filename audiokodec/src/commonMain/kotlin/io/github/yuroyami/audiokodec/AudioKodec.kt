@@ -392,10 +392,10 @@ public object AudioKodec {
      * has to be known in advance, because the header holds lengths that are
      * otherwise only knowable at the end. ALAC in MP4 always needs a sink that
      * can be patched, because the size of its compressed audio is only known
-     * at the end. [tags] are stored natively in WAV, AIFF, FLAC and MP4; WAV
-     * and AIFF also receive an ID3v2.4 chunk so fields their native text
-     * chunks cannot express are retained. AU has no structured tag format and
-     * rejects a non-empty bundle.
+     * at the end. [tags] are stored natively in WAV, AIFF, FLAC and MP4, and
+     * as an APEv2 tag in WavPack; WAV and AIFF also receive an ID3v2.4 chunk
+     * so fields their native text chunks cannot express are retained. AU has
+     * no structured tag format and rejects a non-empty bundle.
      */
     public fun encode(
         pcm: PcmSource,
@@ -438,10 +438,11 @@ public object AudioKodec {
     /**
      * Encodes exact signed integer [pcm] into [sink], without Float32.
      *
-     * Supports integer WAV, AIFF and AU, and 8/16/24-bit FLAC. See
-     * [IntPcmSource] for depth conversion and dither rules. Sources are consumed
-     * through their own cursor. The sink remains open; unpatchable WAV, AIFF
-     * and AU sinks need [IntPcmSource.frameCount]. FLAC can leave totals unknown.
+     * Supports integer WAV, AIFF and AU, 8/16/24-bit FLAC, ALAC and WavPack.
+     * See [IntPcmSource] for depth conversion and dither rules. Sources are
+     * consumed through their own cursor. The sink remains open; unpatchable
+     * WAV, AIFF and AU sinks need [IntPcmSource.frameCount]. FLAC and WavPack
+     * can leave totals unknown.
      * Tags follow the Float32 overload's rules.
      * Other target codings are refused before output or source consumption.
      */

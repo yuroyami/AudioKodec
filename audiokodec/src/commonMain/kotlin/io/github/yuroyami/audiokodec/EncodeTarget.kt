@@ -19,8 +19,9 @@ public class EncodeTarget private constructor(
     /**
      * Block size in bytes for the block-based codings, or 0 otherwise.
      *
-     * For FLAC this carries the effort level instead, because FLAC's block size
-     * is measured in samples and is not something a caller needs to choose.
+     * For FLAC and WavPack this carries the effort level instead, because
+     * their blocks are measured in samples and are not something a caller
+     * needs to choose.
      */
     public val blockAlign: Int,
     /** Noise to add when reducing the sample depth. */
@@ -167,6 +168,41 @@ public class EncodeTarget private constructor(
             }
             require(effort in 0..8) { "the FLAC effort is 0 to 8, not $effort" }
             return EncodeTarget(AudioContainer.FLAC, AudioCodec.FLAC, bitDepth, effort, dither)
+        }
+
+        /**
+         * Lossless WavPack, at [bitDepth] bits and the given effort.
+         *
+         * [effort] runs from 0 to 3 and picks the reference encoder's fast,
+         * normal, high and very high modes, which `wavpack` selects with
+         * `-f`, no option, `-h` and `-hh`. Each mode uses a longer
+         * decorrelation filter than the one before, and the two high modes
+         * use longer blocks; none changes what comes back out. The encoder
+         * is a translation of the reference library and writes the same
+         * blocks it does in those modes. Hybrid lossy mode is not offered.
+         *
+         * Up to eight channels are written. WavPack keeps the speakers of a
+         * WAV channel mask first, in the mask's order, and any unassigned
+         * channels after them, so a layout in any other order is refused
+         * rather than written to the wrong speakers.
+         *
+         * The first block holds a RIFF header, so `wvunpack` restores a WAV
+         * file, and the last the MD5 sum of the audio. When the source's
+         * frame count is unknown, the length is stated as unknown and
+         * corrected at the end if the sink can be patched. Tags go into an
+         * APEv2 tag after the audio. [dither] applies when the source is
+         * float or deeper than [bitDepth].
+         */
+        public fun wavPack(
+            bitDepth: Int = 16,
+            effort: Int = 1,
+            dither: Dither = Dither.None,
+        ): EncodeTarget {
+            require(bitDepth == 8 || bitDepth == 16 || bitDepth == 24 || bitDepth == 32) {
+                "AudioKodec writes 8, 16, 24 or 32-bit WavPack, not $bitDepth"
+            }
+            require(effort in 0..3) { "the WavPack effort is 0 to 3, not $effort" }
+            return EncodeTarget(AudioContainer.WAVPACK, AudioCodec.WAVPACK, bitDepth, effort, dither)
         }
 
         /**
