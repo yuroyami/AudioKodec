@@ -16,7 +16,10 @@ decoder or tool:
 - Opus decodes bit-exactly against libopus 1.5.2 built without its SIMD kernels. The SIMD build
   sums in another order, so in concealed frames it drifts from the plain build. Opus also passes
   all twelve RFC 8251 conformance vectors.
-- Vorbis decodes to within a ten-thousandth of libvorbis.
+- Vorbis decodes to within a ten-thousandth of libvorbis. Vorbis encoding is lossy, so it is
+  measured instead: libvorbisfile has to open every file it writes and decode exactly the input's
+  length, and its decode of a music-like signal is scored with `opus_compare` against stated
+  bounds. [Encoding](encoding.md#measured-quality) has the figures.
 - MPEG audio agrees with ffmpeg's floating-point decoders to within 1e-4 a sample for Layers I
   and III, and to within 1e-5 for Layer II.
 - The codecs translated from a reference implementation decode to that reference's samples. The
@@ -50,7 +53,7 @@ iOS simulator and MinGW x64.
 | **AU** | ✅ | ✅ | Six-field header. A data size of `0xFFFFFFFF` reads to the end of the input |
 | **FLAC** | ✅ | ✅ | Metadata block chain, stream information, seek table, cue sheet and application blocks carried across a tag edit, stream MD5 verification. A tag read skips the seek table, so an unusable index cannot hide intact comments |
 | **CAF** | ✅ | ❌ | 64-bit chunk sizes, the description chunk, Apple's named channel layouts reordered into the canonical order, and the valid, priming and remainder frame counts of the packet table. Priming and remainder are left out of decoding and seeking. ALAC is read through its magic cookie and its packet table. Above two channels, a file without a layout chunk has unknown speakers, because CAF assumes no order. Bitmap, explicit-description and unmapped layouts are named and refused |
-| **Ogg** | ✅ | tags only | Pages, checksums, packets reassembled across pages, up to 256 simultaneous logical streams, chained streams, granule positions. The Vorbis, Opus, FLAC and Speex mappings are identified, and their headers, comments and audio are read. Tolerant playback stops at a damaged page or packet, with the duration and seeks limited to the complete prefix. A tag read stops at the metadata packets, so it keeps intact tags despite later damage |
+| **Ogg** | ✅ | Vorbis, and tags | Pages, checksums, packets reassembled across pages, up to 256 simultaneous logical streams, chained streams, granule positions. The Vorbis, Opus, FLAC and Speex mappings are identified, and their headers, comments and audio are read. Tolerant playback stops at a damaged page or packet, with the duration and seeks limited to the complete prefix. A tag read stops at the metadata packets, so it keeps intact tags despite later damage |
 | **MPEG audio** | ✅ | ❌ | Frame headers for MPEG-1, 2 and 2.5 in all three layers, with every reserved combination rejected. A candidate sync is confirmed against the frames that follow it. `Xing`, `Info` and `VBRI` headers, LAME gapless delay and padding, tag blocks at both ends left out of the audio. Embedded ID3v2 tags are skipped by their declared size. Exact durations and sample-accurate seeking. A protected frame's checksum is verified in strict mode and decoded as stored in tolerant mode |
 | **MP4, M4A, M4B, 3GP, QuickTime** | ✅ | ALAC | The box tree with 32 and 64-bit sizes, a `moov` before or after the audio, and fragmented files read from their `moof` boxes. Sample tables expanded into packets at the offset and size that ffprobe lists. Edit lists that play the media straight through, with empty edits passed over. One that skips or repeats media is refused in strict mode. Without a trimming edit list, the iTunes `iTunSMPB` record's delay, padding and length are applied. Chapters from a QuickTime chapter track or Nero's `chpl` list. AAC-LC, ALAC, Opus, FLAC, all three MPEG layers, AMR, AC-3 and the uncompressed QuickTime and ISO codings decode, with `chan` layouts reordered. Enhanced AC-3 is named and refused |
 | **Matroska and WebM** | ✅ | ❌ | Written from RFC 9559 and RFC 8794: EBML headers, Segments and Clusters of unknown size, SimpleBlocks and BlockGroups with Xiph, EBML and fixed lacing, and zlib and header-stripping content encodings. The first audio track decodes through the decoder that its codec ID names: Opus, Vorbis, FLAC, MPEG Layers I to III, AAC-LC, AC-3 and PCM. CodecDelay trims the start and the last Block's DiscardPadding trims the end. For each coding, ffmpeg's copy of a file into Matroska decodes to the samples of the native file. Encrypted tracks and other compression algorithms are refused by name |
@@ -74,7 +77,7 @@ iOS simulator and MinGW x64.
 | **IMA ADPCM (QuickTime `ima4`)** | ✅ | ❌ | 34-byte packets of 64 frames, one packet per channel |
 | **Microsoft ADPCM** | ✅ | ✅ | The seven standard coefficient sets, plus a table that the file carries |
 | **FLAC** | ✅ | ✅ | Constant, verbatim, fixed and linear predictors up to order 32, Rice and Rice2 residuals with escaped partitions, all four stereo arrangements, wasted-bits subframes. 4 to 32-bit decode and 8, 16 and 24-bit encode. Decodes inside Ogg as well as natively |
-| **Vorbis** | ✅ | ❌ | Floor types 0 and 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodec's channel order |
+| **Vorbis** | ✅ | ✅ | Floor types 0 and 1, residue types 0, 1 and 2, channel coupling, block switching, up to eight channels reordered into AudioKodec's channel order. The encoder is written from the specification: quality 0 to 10, floor 1, residue types 1 and 2, square polar coupling, block switching at onsets, one to eight channels at 8 to 192 kHz, and the exact input length through the granule positions. libvorbisfile reads every file, and [Encoding](encoding.md#measured-quality) lists the measured quality |
 | **Opus** | ✅ | ❌ | SILK, CELT and hybrid frames, mode and bandwidth changes, concealment and recovery from in-band redundancy, mapping families 0, 1, 2, 3 and 255 with surround reordered into AudioKodec's order. Pre-skip, start offset, end trim and output gain applied. Seeking with 80 ms of run-up |
 | **Speex** | ✅ | ❌ | Translated from libspeex 1.2.1 in the single-precision arithmetic of its float build: narrowband, wideband and ultra-wideband with every submode, discontinuous transmission with comfort noise, the perceptual enhancer and in-band stereo. Every file from `speexenc` 1.2.1 in the test suite decodes on the JVM to exactly the floats of libspeex built without SSE, and on other targets to within 1e-3. Seeking converges after a 25-frame run-up. Bitstream versions other than 4 are refused by name. Packet loss concealment is not used |
 | **ALAC** | ✅ | ✅ | Translated from Apple's Apache-2.0 reference: every predictor order, mixed stereo pairs, shifted-off low bytes at 24 and 32 bits, escape frames, one to eight channels reordered from ALAC's order. Every file from Apple's `alacconvert` at 16, 24 and 32 bits decodes to exactly its input, and 20-bit files are checked against Apple's `ALACEncoder` directly. The encoder writes packets that are byte-identical to the reference's |
@@ -277,7 +280,9 @@ needs AudioKodec's behavior.
 The samples that an encoder pads its final block with are not part of the recording, and
 AudioKodec drops them, so one file follows another with no gap. ffmpeg's raw output does not
 always agree. On some files it keeps that padding, and on a Vorbis stream whose audio fits in a
-single Ogg page it drops 128 real samples from the end instead.
+single Ogg page it drops 128 real samples from the end instead. AudioKodec's own Vorbis encoder
+puts the first audio packet, which decodes to nothing, on a page of its own, and ffmpeg then
+returns exactly the frames that went in.
 
 **Two conventions for `TXXX` frames.** ID3v2 has no frame for many fields, so they go in a user
 text frame whose description names them. Some programs use a fixed set of descriptions. Others,

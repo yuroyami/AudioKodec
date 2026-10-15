@@ -1,6 +1,7 @@
 package io.github.yuroyami.audiokodec
 
 import io.github.yuroyami.audiokodec.internal.dsp.Fft
+import io.github.yuroyami.audiokodec.internal.dsp.ForwardMdct
 import io.github.yuroyami.audiokodec.internal.dsp.InverseMdct
 import kotlin.math.PI
 import kotlin.math.abs
@@ -131,6 +132,60 @@ class MdctTest {
                             "(${gotRe[p]}, ${gotIm[p]}) against (${wantRe[p]}, ${wantIm[p]})",
                     )
                 }
+            }
+        }
+    }
+
+    @Test
+    fun theFastForwardMdctAgreesWithItsDefinition() {
+        for (n in listOf(8, 16, 64, 256, 2048)) {
+            val input = pseudoRandom(n + 11, n + 3)
+            val m = n / 2
+            val actual = FloatArray(m)
+            ForwardMdct(n).transform(input, 3, actual, 1f)
+            var worst = 0.0
+            var scale = 1e-6
+            for (k in 0 until m) {
+                var sum = 0.0
+                for (i in 0 until n) sum += input[3 + i] * cos(PI / m * (i + 0.5 + n / 4.0) * (k + 0.5))
+                worst = maxOf(worst, abs(actual[k] - sum))
+                scale = maxOf(scale, abs(sum))
+            }
+            assertTrue(worst < scale * 1e-4, "forward MDCT of length $n is off by $worst against a peak of $scale")
+        }
+    }
+
+    /**
+     * Windowing, the forward transform scaled by `4 / n`, the inverse unscaled,
+     * windowing again and overlap-adding gives back the signal, which is the
+     * contract the Vorbis encoder relies on to mirror the decoder.
+     */
+    @Test
+    fun theForwardAndInverseMdctReconstructWithOverlapAdd() {
+        for (n in listOf(16, 256, 2048)) {
+            val hop = n / 2
+            val signal = pseudoRandom(n, hop * 8)
+            val window = FloatArray(n) {
+                val inner = sin((it + 0.5) / n * PI)
+                sin(PI / 2 * inner * inner).toFloat()
+            }
+            val output = FloatArray(signal.size)
+            val forward = ForwardMdct(n)
+            val inverse = InverseMdct(n)
+            val block = FloatArray(n)
+            val coefficients = FloatArray(hop)
+            val time = FloatArray(n)
+            for (start in 0..signal.size - n step hop) {
+                for (i in 0 until n) block[i] = signal[start + i] * window[i]
+                forward.transform(block, 0, coefficients, 4f / n)
+                inverse.transform(coefficients, time, 1f)
+                for (i in 0 until n) output[start + i] += time[i] * window[i]
+            }
+            for (i in hop until signal.size - hop) {
+                assertTrue(
+                    abs(output[i] - signal[i]) < 1e-4f,
+                    "length $n: sample $i came back as ${output[i]}, not ${signal[i]}",
+                )
             }
         }
     }

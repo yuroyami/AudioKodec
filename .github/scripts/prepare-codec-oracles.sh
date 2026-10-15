@@ -66,6 +66,20 @@ cmake -S reference/libopus -B reference/libopus/build-plain \
     -DOPUS_X86_MAY_HAVE_AVX2=OFF
 cmake --build reference/libopus/build-plain --target opus_demo opus_compare -j4
 
+# libogg 1.3.5 and libvorbis 1.3.7 are BSD; the Vorbis encoder's oracle,
+# vorbisfile_oracle.c, links their static libraries. The encoder is written
+# from the Vorbis I specification and ports none of this source.
+reference_checkout reference/libogg https://github.com/xiph/ogg.git e1774cd77f471443541596e09078e78fdc342e4f
+cmake -S reference/libogg -B reference/libogg/build -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF -DINSTALL_DOCS=OFF \
+    -DCMAKE_INSTALL_PREFIX="$PWD/reference/libogg/install" -DCMAKE_INSTALL_LIBDIR=lib
+cmake --build reference/libogg/build -j4
+cmake --install reference/libogg/build
+reference_checkout reference/libvorbis https://github.com/xiph/vorbis.git 0657aee69dec8508a0011f47f3b69d7538e9d262
+cmake -S reference/libvorbis -B reference/libvorbis/build -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=OFF -DCMAKE_PREFIX_PATH="$PWD/reference/libogg/install"
+cmake --build reference/libvorbis/build --target vorbis vorbisfile -j4
+
 reference_checkout reference/alac https://github.com/macosforge/alac.git c38887c5c5e64a4b31108733bd79ca9b2496d987
 make -C reference/alac/codec -j4
 c++ -O3 -I reference/alac/codec reference/alac/convert-utility/main.cpp \
