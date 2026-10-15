@@ -1,7 +1,7 @@
 # AudioKodec
 
 Audio containers, codecs and tags written in Kotlin for Kotlin Multiplatform: decode 22
-containers to Float32 PCM, write FLAC, WAV, AIFF, AU and Apple Lossless, and edit tags
+containers to Float32 PCM, write FLAC, WavPack, WAV, AIFF, AU and Apple Lossless, and edit tags
 without touching the audio, with the same code on every target.
 
 <sub>AI tools wrote much of the code, tests and documentation in this project, under the
@@ -82,8 +82,8 @@ val wav = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16
 val flac = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.flac(bitDepth = 24))
 ```
 
-The encoders write FLAC, WAV, AIFF, AU and Apple Lossless in an `.m4a` file, with tags and
-cover art. See [Encoding](docs/encoding.md).
+The encoders write FLAC, WavPack, WAV, AIFF, AU and Apple Lossless in an `.m4a` file, with
+tags and cover art. See [Encoding](docs/encoding.md).
 
 ### Read and edit tags
 
@@ -126,10 +126,10 @@ See [Files and kotlinx-io](docs/files.md).
 
 ## Formats
 
-- **Read and write:** FLAC, WAV and RF64, AIFF and AIFF-C, AU, and Apple Lossless in MP4.
-  BW64 is read as well.
+- **Read and write:** FLAC, WavPack, WAV and RF64, AIFF and AIFF-C, AU, and Apple Lossless
+  in MP4. BW64 is read as well.
 - **Read only:** Ogg with Vorbis, Opus, FLAC and Speex, MP3 and the other MPEG audio layers,
-  AAC-LC in MP4 and ADTS, AC-3, Matroska and WebM, Wave64, CAF, WavPack, Monkey's Audio, True
+  AAC-LC in MP4 and ADTS, AC-3, Matroska and WebM, Wave64, CAF, Monkey's Audio, True
   Audio, Musepack, AMR, GSM 06.10, iLBC, G.722, G.726, and DSD in DSF and DSDIFF.
 - **Tags:** ID3v2, APE, Vorbis comments, MP4 items, RIFF INFO and `bext`, and AIFF text
   chunks are read and written. An ID3v1 block is kept up to date when a file has one. Lyrics3
@@ -174,8 +174,9 @@ Apache-2.0. See [LICENSE](LICENSE).
 Most formats are written from their published specifications. Several decoders are
 translations of permissively licensed reference code: Opus from libopus, Apple Lossless from
 Apple's reference, WavPack, Monkey's Audio, True Audio, Musepack from libmpcdec, Speex from
-libspeex, AMR from opencore-amr, GSM 06.10 from libgsm and iLBC from WebRTC. The resampler
-comes from speexdsp and the loudness meter from libebur128. [NOTICE](NOTICE) gives the
+libspeex, AMR from opencore-amr, GSM 06.10 from libgsm and iLBC from WebRTC. The Apple
+Lossless and WavPack encoders come from the same references. The resampler comes from
+speexdsp and the loudness meter from libebur128. [NOTICE](NOTICE) gives the
 attribution and license terms for each, and
 [reference/REFERENCES.md](reference/REFERENCES.md) records the sources.
 

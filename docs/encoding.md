@@ -1,6 +1,6 @@
 # Encoding
 
-AudioKodec writes FLAC, WAV, AIFF, AU and Apple Lossless in an `.m4a` file. An encoder
+AudioKodec writes FLAC, WavPack, WAV, AIFF, AU and Apple Lossless in an `.m4a` file. An encoder
 takes Float32 samples with an `AudioFormat`, a `DecodedAudio`, or any `PcmSource`, and
 writes to a byte array or to a sink.
 
@@ -28,8 +28,8 @@ Other `PcmSource` implementations are consumed through their own cursor.
 Create a fresh source for each encoding operation. The sample array is not
 copied, so avoid changing it while an encoding runs.
 
-The targets available are FLAC, integer PCM and IEEE float in WAV, AIFF and AU,
-A-law and mu-law in all three, IMA or Microsoft ADPCM in WAV, and Apple
+The targets available are FLAC, lossless WavPack, integer PCM and IEEE float in WAV,
+AIFF and AU, A-law and mu-law in all three, IMA or Microsoft ADPCM in WAV, and Apple
 Lossless in an `.m4a` file.
 
 ```kotlin
@@ -68,15 +68,16 @@ storage count towards `DecodeOptions.maxAllocationBytes`.
 The channel layout of the source is never silently relabeled. WAV PCM and float keep
 any positional layout that follows the speaker-bit order of WAV, including custom mono
 and stereo masks. AIFF and AU store only a channel count, compressed WAV has no mask in
-this writer, and FLAC fixes the layout for each channel count. Encoding refuses a layout
-that the target cannot represent before it writes any bytes.
+this writer, and FLAC fixes the layout for each channel count. WavPack keeps the speakers
+of a WAV mask in the mask's order, followed by any unassigned channels. Encoding refuses a
+layout that the target cannot represent before it writes any bytes.
 
 ## Tags and artwork
 
 Pass a `TagBundle` to `encode` and the tags go into the file with the audio. WAV and
 AIFF use their native text chunks, plus ID3v2.4 for Unicode and richer fields. FLAC
 uses Vorbis comments and native `PICTURE` blocks, whose limits [Tags](tags.md#pictures)
-describes. AU has no structured tag format, so it refuses a bundle that is not empty
+describes. WavPack uses an APEv2 tag after the audio. AU has no structured tag format, so it refuses a bundle that is not empty
 instead of dropping it.
 
 ## FLAC
@@ -89,6 +90,19 @@ val flac = AudioKodec.encode(samples, format, EncodeTarget.flac(bitDepth = 16, e
 levels of the reference encoder do, and it never changes the decoded audio, because
 the format is lossless at every setting. See [Formats](formats.md#flac) for
 verification and seeking.
+
+## WavPack
+
+```kotlin
+val wv = AudioKodec.encode(samples, format, EncodeTarget.wavPack(bitDepth = 24, effort = 2))
+```
+
+`effort` runs from 0 to 3 and picks the reference encoder's fast, normal, high and very
+high modes, `wavpack -f`, the default, `-h` and `-hh`. The encoder writes 8, 16, 24 and
+32-bit lossless files with one to eight channels, and for the same samples writes the
+same bytes as `wavpack -m --no-threads`. When the frame count is not known in advance the
+file states an unknown length, which is corrected at the end if the sink can be patched.
+See [WavPack](wavpack.md#encode).
 
 ## Exact integers
 

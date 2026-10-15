@@ -717,6 +717,7 @@ final class io.github.yuroyami.audiokodec/EncodeTarget { // io.github.yuroyami.a
         final fun wavImaAdpcm(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavImaAdpcm|wavImaAdpcm(kotlin.Int){}[0]
         final fun wavMsAdpcm(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavMsAdpcm|wavMsAdpcm(kotlin.Int){}[0]
         final fun wavMuLaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavMuLaw|wavMuLaw(){}[0]
+        final fun wavPack(kotlin/Int = ..., kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavPack|wavPack(kotlin.Int;kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
     }
 }
 
