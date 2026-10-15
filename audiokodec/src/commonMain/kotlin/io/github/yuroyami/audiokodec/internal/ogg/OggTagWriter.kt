@@ -102,14 +102,14 @@ internal object OggTagWriter {
 
     /** The identification packet has a page to itself, which is what every mapping requires and what a reader looking for it expects. */
     private fun writeIdentification(writer: PageWriter, headers: List<ByteArray>) {
-        writer.writePacket(headers[0], granule = 0, first = true, flush = true)
+        writer.writePacket(headers[0], granule = 0, flush = true)
     }
 
     private fun writeOtherHeaders(writer: PageWriter, headers: List<ByteArray>) {
         for (index in 1 until headers.size) {
             writer.writePacket(headers[index], granule = 0, flush = index == headers.size - 1)
         }
-        writer.flush(granule = 0)
+        writer.flush()
     }
 
     /**
@@ -483,82 +483,40 @@ internal object OggTagWriter {
      *
      * Ogg requires every page of a logical stream to be numbered in order, and
      * a reader that meets a gap is entitled to treat the stream as damaged. So
-     * the counter lives here and every page written goes through it.
+     * every page written, rebuilt or copied, goes through one [OggPageWriter],
+     * which holds the counter.
+     *
+     * Header packets are gathered until they reach [TARGET_PAGE_PAYLOAD] bytes
+     * or a header must end its page, and only then cut into pages, each as
+     * full as a page can be. All supported Ogg mappings require every header
+     * page, including one that only continues a packet, to carry granule zero.
      */
-    private class PageWriter(private val sink: AudioSink, private val serial: Int) {
+    private class PageWriter(private val sink: AudioSink, serial: Int) {
 
-        private var sequence = 0
-        private val pending = ArrayList<ByteArray>()
+        private val pages = OggPageWriter(
+            sink,
+            serial,
+            pageTarget = OggPageWriter.MAX_PAYLOAD,
+            openPageGranule = 0L,
+        )
         private var pendingBytes = 0L
 
-        /** Queues a packet, flushing when it says so or when a page fills. */
-        fun writePacket(packet: ByteArray, granule: Long, first: Boolean = false, flush: Boolean = false) {
-            pending.add(packet)
+        /** Queues a packet, flushing when it says so or when enough is waiting. */
+        fun writePacket(packet: ByteArray, granule: Long, flush: Boolean = false) {
             pendingBytes += packet.size
-            if (flush || pendingBytes >= TARGET_PAGE_PAYLOAD.toLong()) {
-                flush(granule, first)
-            }
+            val now = flush || pendingBytes >= TARGET_PAGE_PAYLOAD.toLong()
+            pages.writePacket(packet, granule, flush = now)
+            if (now) pendingBytes = 0L
         }
 
-        fun flush(granule: Long, first: Boolean = false) {
-            if (pending.isEmpty()) return
-            // Work one bounded Ogg page at a time. A packet can be close to a
-            // Kotlin array's limit; building a second, packet-sized lacing list
-            // would turn a harmless tag edit into avoidable memory pressure.
-            val lacing = IntArray(255)
-            val body = ByteArray(255 * 255)
-            var laceCount = 0
-            var bodyLength = 0
-            var firstOutputPage = true
-            var pageContinued = false
-
-            fun emitBuffered(lastPacketFinished: Boolean) {
-                emit(
-                    flags =
-                        (if (first && firstOutputPage) OggPage.FLAG_FIRST else 0) or
-                            (if (pageContinued) OggPage.FLAG_CONTINUED else 0),
-                    // All supported Ogg mappings require every header page,
-                    // including continuation-only pages, to carry granule zero.
-                    granule = granule,
-                    lacing = lacing.copyOf(laceCount),
-                    body = body.copyOf(bodyLength),
-                    last = false,
-                )
-                firstOutputPage = false
-                pageContinued = !lastPacketFinished
-                laceCount = 0
-                bodyLength = 0
-            }
-
-            for (packet in pending) {
-                var packetOffset = 0
-                while (true) {
-                    val segment = minOf(255, packet.size - packetOffset)
-                    lacing[laceCount++] = segment
-                    if (segment > 0) {
-                        packet.copyInto(body, bodyLength, packetOffset, packetOffset + segment)
-                        bodyLength += segment
-                        packetOffset += segment
-                    }
-                    val packetFinished = segment < 255
-                    if (laceCount == 255) emitBuffered(packetFinished)
-                    if (packetFinished) break
-                }
-            }
-            if (laceCount > 0) emitBuffered(lastPacketFinished = true)
-            pending.clear()
+        fun flush() {
+            pages.flush()
             pendingBytes = 0L
         }
 
         /** Writes an existing page's contents under a new sequence number. */
         fun writeRawPage(page: OggPage) {
-            emit(
-                flags = page.flags,
-                granule = page.granulePosition,
-                lacing = page.segments,
-                body = page.payload,
-                last = page.isLast,
-            )
+            pages.writePage(page.flags, page.granulePosition, page.segments, page.payload)
         }
 
         /** Copies later chained streams and trailing bytes without changing them. */
@@ -586,34 +544,6 @@ internal object OggTagWriter {
                 sink.write(bytes, 0, count)
                 left -= count
             }
-        }
-
-        private fun emit(
-            flags: Int,
-            granule: Long,
-            lacing: IntArray,
-            body: ByteArray,
-            last: Boolean,
-        ) {
-            val header = ByteArray(OggPage.HEADER_BYTES + lacing.size)
-            OggPage.CAPTURE.copyInto(header, 0)
-            header[4] = 0
-            header[5] = (flags or if (last) OggPage.FLAG_LAST else 0).toByte()
-            for (i in 0 until 8) header[6 + i] = (granule ushr (8 * i)).toByte()
-            for (i in 0 until 4) header[14 + i] = (serial ushr (8 * i)).toByte()
-            for (i in 0 until 4) header[18 + i] = (sequence ushr (8 * i)).toByte()
-            // The checksum field stays zero while the checksum is computed.
-            header[26] = lacing.size.toByte()
-            for (i in lacing.indices) header[OggPage.HEADER_BYTES + i] = lacing[i].toByte()
-
-            val whole = ByteArray(header.size + body.size)
-            header.copyInto(whole, 0)
-            body.copyInto(whole, header.size)
-            val crc = OggCrc.of(whole, 0, whole.size)
-            for (i in 0 until 4) whole[22 + i] = (crc ushr (8 * i)).toByte()
-
-            sink.write(whole)
-            sequence++
         }
     }
 }
