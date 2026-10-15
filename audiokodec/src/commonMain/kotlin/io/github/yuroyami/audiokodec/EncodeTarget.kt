@@ -25,9 +25,18 @@ public class EncodeTarget private constructor(
     public val blockAlign: Int,
     /** Noise to add when reducing the sample depth. */
     public val dither: Dither,
+    /**
+     * The quality setting of a lossy coding that takes one, or null.
+     *
+     * For Vorbis this is on oggenc's scale, 0 to 10.
+     */
+    public val quality: Float? = null,
 ) {
-    override fun toString(): String =
+    override fun toString(): String = if (quality != null) {
+        "EncodeTarget(${container.displayName}, ${codec.displayName}, quality $quality)"
+    } else {
         "EncodeTarget(${container.displayName}, ${codec.displayName}, ${bitDepth}-bit)"
+    }
 
     public companion object {
 
@@ -189,6 +198,25 @@ public class EncodeTarget private constructor(
                 "AudioKodec writes 16, 20, 24 or 32-bit ALAC, not $bitDepth"
             }
             return EncodeTarget(AudioContainer.MP4, AudioCodec.ALAC, bitDepth, 0, dither)
+        }
+
+        /**
+         * Ogg Vorbis at [quality], on oggenc's scale from 0 to 10.
+         *
+         * Vorbis is lossy: what comes back is close to what went in, not the
+         * same, and a higher quality buys closeness with size. The encoder
+         * aims at a quality rather than a bitrate, so the size follows the
+         * material. See `docs/encoding.md` for what each setting measured.
+         *
+         * One to eight channels in Vorbis's speaker layouts, at 8 to 192 kHz.
+         * The encoder reads the source once from start to end and never
+         * patches what it has written, so any sink will do, and the decoded
+         * length is exactly the source's. Tags go into the Vorbis comment
+         * header, pictures included; chapters are refused.
+         */
+        public fun vorbis(quality: Float = 4f): EncodeTarget {
+            require(quality in 0f..10f) { "the Vorbis quality is 0 to 10, not $quality" }
+            return EncodeTarget(AudioContainer.OGG, AudioCodec.VORBIS, 0, 0, Dither.None, quality)
         }
     }
 }

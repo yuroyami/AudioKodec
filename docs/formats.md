@@ -13,6 +13,7 @@ complete support tables and how each format is checked against a reference decod
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
 | AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law; G.722 and G.726 (Sun's G.721 and G.723) are read only |
 | MP4 and M4A | ALAC 16/20/24/32-bit with one to eight channels, written with packets identical to those of Apple's reference encoder. The other MP4 codings are read only |
+| Ogg | Vorbis at quality 0 to 10 with one to eight channels. Opus, FLAC and Speex are read only, and tags can be rewritten in all four |
 
 RF64 and BW64 are read, and a WAV is written as RF64 automatically when it passes 4 GiB.
 
@@ -24,7 +25,6 @@ integer types are little-endian: `23ni` is 32-bit and `42ni` is 24-bit.
 
 | Container | Codings |
 |---|---|
-| Ogg | Vorbis, Opus, FLAC and Speex, with up to 256 simultaneous logical streams. Tags can be rewritten |
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit, iLBC |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
@@ -141,7 +141,7 @@ headers cannot be read.
 
 | Mapping | Headers and tags | Audio |
 |---|---|---|
-| Vorbis | read | decodes, with seeking |
+| Vorbis | read and written | decodes, with seeking, and encodes |
 | FLAC | read | decodes, with seeking |
 | Opus | read | decodes, with seeking |
 | Speex | read | decodes, with seeking that converges after a run-up |
@@ -201,6 +201,10 @@ channel coupling, block switching, and up to eight channels, which come out in
 AudioKodec's channel order rather than Vorbis's own. Vorbis puts the center
 channel second, between the two front channels, where WAV and everything derived
 from it puts it third.
+
+Vorbis also encodes, with `EncodeTarget.vorbis(quality)`. The encoder is lossy,
+streams from any `PcmSource` to any sink, and keeps the exact length of the
+input. [Encoding](encoding.md#vorbis) describes it and what it measured.
 
 [Floor type 0](vorbis-floor-zero.md) describes the curve as line spectral pairs
 instead of line segments. Its vector decoding and Bark-mapped response follow

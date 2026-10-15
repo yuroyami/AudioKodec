@@ -25,6 +25,7 @@ import io.github.yuroyami.audiokodec.internal.io.SinkWriter
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4AlacWriter
 import io.github.yuroyami.audiokodec.internal.tag.Id3v2Writer
 import io.github.yuroyami.audiokodec.internal.tag.TagWriter
+import io.github.yuroyami.audiokodec.internal.vorbis.VorbisEncoder
 import io.github.yuroyami.audiokodec.tag.TagBundle
 
 /**
@@ -62,6 +63,10 @@ internal object ContainerWriter {
         }
         if (target.codec == AudioCodec.ALAC) {
             Mp4AlacWriter(pcm.format, target.bitDepth, target.dither.fresh()).encode(pcm, tags, sink)
+            return
+        }
+        if (target.codec == AudioCodec.VORBIS) {
+            VorbisEncoder(pcm.format, target.quality ?: VorbisEncoder.DEFAULT_QUALITY).encode(pcm, tags, sink)
             return
         }
         writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->

@@ -68,7 +68,7 @@ def corpus_inputs():
 
 def reference_builds():
     builds = {}
-    for name in ("libopus", "alac"):
+    for name in ("libopus", "alac", "libogg", "libvorbis"):
         directory = ROOT / "reference" / name
         if directory.is_dir():
             result = subprocess.run(["git", "-C", str(directory), "rev-parse", "HEAD"],
