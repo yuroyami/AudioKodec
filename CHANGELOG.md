@@ -52,6 +52,12 @@ audio and Ogg.
 - Apple Lossless encoding into `.m4a` at 16, 20, 24 and 32 bits with one to
   eight channels, translated from Apple's reference encoder and writing the
   same packets, with tags, cover art and chapters.
+- Opus encoding into Ogg with `EncodeTarget.opus`: the CELT music mode at full
+  bandwidth, mono and stereo, 10 or 20 ms frames, at a constant, constrained
+  variable or variable bit rate from 6 to 510 kbit/s. Translated from libopus
+  1.5.2's CELT encoder and writing the same packets. The pre-skip and end
+  trim make the decoded length exactly the input's, other sample rates are
+  resampled to 48 kHz, and tags go into the OpusTags header.
 - Raw AAC in ADTS and ADIF framing, probed: rate, channels and bitrate, and
   for ADTS the exact length from its frame headers.
 - AAC-LC, decoded from MP4 and ADTS: every tool of the low complexity

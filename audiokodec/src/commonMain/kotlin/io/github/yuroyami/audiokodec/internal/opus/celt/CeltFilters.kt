@@ -3,7 +3,9 @@ package io.github.yuroyami.audiokodec.internal.opus.celt
 /**
  * The time-domain filters CELT runs around its transform: the pitch
  * postfilter after every frame, and the linear prediction and pitch search
- * that concealment uses to extrapolate a lost one.
+ * that concealment uses to extrapolate a lost one. The encoder's prefilter
+ * runs the same comb filter with the gains negated, after the same pitch
+ * search and [removeDoubling].
  *
  * Translated from libopus `celt.c` (`comb_filter`), `celt_lpc.c` and
  * `pitch.c`, float build. Every shift and rounding the fixed-point build does
@@ -322,6 +324,110 @@ internal object CeltFilters {
         }
         return 2 * best[0] - offset
     }
+
+    /**
+     * `remove_doubling`: checks whether the period [t0In] found by
+     * [pitchSearch] in the half-rate signal [x] is a multiple of the true
+     * one, and returns the gain of the period chosen, which it leaves in
+     * [period]`[0]` at the full rate. [prevPeriodIn] and [prevGain] are the
+     * previous frame's, which favour continuity.
+     */
+    fun removeDoubling(
+        x: FloatArray,
+        maxPeriodIn: Int,
+        minPeriodIn: Int,
+        nIn: Int,
+        t0In: Int,
+        prevPeriodIn: Int,
+        prevGain: Float,
+        period: IntArray,
+    ): Float {
+        val minPeriod0 = minPeriodIn
+        val maxPeriod = maxPeriodIn / 2
+        val minPeriod = minPeriodIn / 2
+        var t0 = t0In / 2
+        val prevPeriod = prevPeriodIn / 2
+        val n = nIn / 2
+        val xo = maxPeriod
+        if (t0 >= maxPeriod) t0 = maxPeriod - 1
+        var t = t0
+        val yyLookup = FloatArray(maxPeriod + 1)
+        var xx = 0f
+        var xy = 0f
+        for (i in 0 until n) {
+            xx += x[xo + i] * x[xo + i]
+            xy += x[xo + i] * x[xo + i - t0]
+        }
+        yyLookup[0] = xx
+        var yy = xx
+        for (i in 1..maxPeriod) {
+            yy = yy + x[xo - i] * x[xo - i] - x[xo + n - i] * x[xo + n - i]
+            yyLookup[i] = if (0f > yy) 0f else yy
+        }
+        yy = yyLookup[t0]
+        var bestXy = xy
+        var bestYy = yy
+        val g0 = pitchGain(xy, xx, yy)
+        var g = g0
+        // Look for a strong correlation at a fraction of the period.
+        for (k in 2..15) {
+            val t1 = CeltMath.udiv(2 * t0 + k, 2 * k)
+            if (t1 < minPeriod) break
+            val t1b = if (k == 2) {
+                if (t1 + t0 > maxPeriod) t0 else t0 + t1
+            } else {
+                CeltMath.udiv(2 * SECOND_CHECK[k] * t0 + k, 2 * k)
+            }
+            var xy1 = 0f
+            var xy2 = 0f
+            for (i in 0 until n) {
+                xy1 += x[xo + i] * x[xo + i - t1]
+                xy2 += x[xo + i] * x[xo + i - t1b]
+            }
+            xy = 0.5f * (xy1 + xy2)
+            yy = 0.5f * (yyLookup[t1] + yyLookup[t1b])
+            val g1 = pitchGain(xy, xx, yy)
+            val cont = when {
+                kotlin.math.abs(t1 - prevPeriod) <= 1 -> prevGain
+                kotlin.math.abs(t1 - prevPeriod) <= 2 && 5 * k * k < t0 -> 0.5f * prevGain
+                else -> 0f
+            }
+            var thresh = max16(0.3f, 0.7f * g0 - cont)
+            // Very short periods need a stronger case, since short-term
+            // correlation alone produces them.
+            if (t1 < 3 * minPeriod) {
+                thresh = max16(0.4f, 0.85f * g0 - cont)
+            } else if (t1 < 2 * minPeriod) {
+                thresh = max16(0.5f, 0.9f * g0 - cont)
+            }
+            if (g1 > thresh) {
+                bestXy = xy
+                bestYy = yy
+                t = t1
+                g = g1
+            }
+        }
+        bestXy = max16(0f, bestXy)
+        var pg = if (bestYy <= bestXy) 1f else bestXy / (bestYy + 1)
+        val xcorr = FloatArray(3)
+        for (k in 0 until 3) xcorr[k] = CeltMath.innerProduct(x, xo, x, xo - (t + k - 1), n)
+        val offset = when {
+            (xcorr[2] - xcorr[0]) > 0.7f * (xcorr[1] - xcorr[0]) -> 1
+            (xcorr[0] - xcorr[2]) > 0.7f * (xcorr[1] - xcorr[2]) -> -1
+            else -> 0
+        }
+        if (pg > g) pg = g
+        period[0] = maxOf(2 * t + offset, minPeriod0)
+        return pg
+    }
+
+    /** `compute_pitch_gain`, float build. */
+    private fun pitchGain(xy: Float, xx: Float, yy: Float): Float = xy / CeltMath.sqrt(1 + xx * yy)
+
+    /** `MAX16` in the float build, which keeps the second argument on a tie. */
+    private fun max16(a: Float, b: Float): Float = if (a > b) a else b
+
+    private val SECOND_CHECK = intArrayOf(0, 0, 3, 2, 3, 2, 5, 2, 3, 2, 3, 2, 5, 2, 3, 2)
 
     private fun findBestPitch(xcorr: FloatArray, y: FloatArray, yOffset: Int, len: Int, maxPitch: Int, best: IntArray) {
         var syy = 1f

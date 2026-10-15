@@ -33,8 +33,9 @@ The following components were written from published specifications:
 
 Translated components
 
-The Opus decoder is translated from libopus 1.5.2, commit
-ddbe48383984d56acd9e1ab6a090c54ca6b735a6, under the BSD 3-Clause licence:
+The Opus decoder and the Opus encoder's CELT layer are translated from
+libopus 1.5.2, commit ddbe48383984d56acd9e1ab6a090c54ca6b735a6, under the
+BSD 3-Clause licence:
 
 Copyright 2001-2023 Xiph.Org, Skype Limited, Octasic,
                     Jean-Marc Valin, Timothy B. Terriberry,

@@ -275,20 +275,6 @@ internal class CeltBands(private val range: RangeDecoder) {
         thetaFill = fill
     }
 
-    private fun computeQn(n: Int, b: Int, offset: Int, pulseCap: Int, stereo: Boolean): Int {
-        var n2 = 2 * n - 1
-        if (stereo && n == 2) n2--
-        var qb = sudiv(b + n2 * offset, n2)
-        qb = minOf(b - pulseCap - (4 shl BITRES), qb)
-        qb = minOf(8 shl BITRES, qb)
-        return if (qb < (1 shl BITRES shr 1)) {
-            1
-        } else {
-            val qn = EXP2_TABLE8[qb and 0x7] shr (14 - (qb shr BITRES))
-            (qn + 1) shr 1 shl 1
-        }
-    }
-
     /** `quant_band_n1`: a one-coefficient band is only a sign. */
     private fun decodeBandN1(
         x: FloatArray,
@@ -584,42 +570,16 @@ internal class CeltBands(private val range: RangeDecoder) {
         return cm
     }
 
-    /** `stereo_merge`: turns a decoded mid and side back into left and right. */
-    private fun stereoMerge(x: FloatArray, xOffset: Int, y: FloatArray, yOffset: Int, mid: Float, n: Int) {
-        var xp = 0f
-        var side = 0f
-        for (i in 0 until n) {
-            xp += y[yOffset + i] * x[xOffset + i]
-            side += y[yOffset + i] * y[yOffset + i]
-        }
-        xp *= mid
-        val mid2 = mid
-        val el = mid2 * mid2 + side - 2 * xp
-        val er = mid2 * mid2 + side + 2 * xp
-        if (er < 6e-4f || el < 6e-4f) {
-            x.copyInto(y, yOffset, xOffset, xOffset + n)
-            return
-        }
-        val lgain = CeltMath.rsqrt(el)
-        val rgain = CeltMath.rsqrt(er)
-        for (j in 0 until n) {
-            val l = mid * x[xOffset + j]
-            val r = y[yOffset + j]
-            x[xOffset + j] = lgain * (l - r)
-            y[yOffset + j] = rgain * (l + r)
-        }
-    }
-
     companion object {
         const val BITRES: Int = RangeDecoder.BITRES
         private const val NB_E_BANDS = 21
         private const val EFF_E_BANDS = 21
-        private const val QTHETA_OFFSET = 4
-        private const val QTHETA_OFFSET_TWOPHASE = 16
+        const val QTHETA_OFFSET: Int = 4
+        const val QTHETA_OFFSET_TWOPHASE: Int = 16
         private const val NORM_SCALING = 1f
         private val EXP2_TABLE8 = intArrayOf(16384, 17866, 19483, 21247, 23170, 25267, 27554, 30048)
-        private val BIT_INTERLEAVE = intArrayOf(0, 1, 1, 1, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3)
-        private val BIT_DEINTERLEAVE = intArrayOf(
+        val BIT_INTERLEAVE: IntArray = intArrayOf(0, 1, 1, 1, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3)
+        val BIT_DEINTERLEAVE: IntArray = intArrayOf(
             0x00, 0x03, 0x0C, 0x0F, 0x30, 0x33, 0x3C, 0x3F, 0xC0, 0xC3, 0xCC, 0xCF, 0xF0, 0xF3, 0xFC, 0xFF,
         )
         private val ORDERY = intArrayOf(
@@ -628,6 +588,47 @@ internal class CeltBands(private val range: RangeDecoder) {
             7, 0, 4, 3, 6, 1, 5, 2,
             15, 0, 8, 7, 12, 3, 11, 4, 14, 1, 9, 6, 13, 2, 10, 5,
         )
+
+        /** `compute_qn`: how finely to quantise a split angle. */
+        fun computeQn(n: Int, b: Int, offset: Int, pulseCap: Int, stereo: Boolean): Int {
+            var n2 = 2 * n - 1
+            if (stereo && n == 2) n2--
+            var qb = sudiv(b + n2 * offset, n2)
+            qb = minOf(b - pulseCap - (4 shl BITRES), qb)
+            qb = minOf(8 shl BITRES, qb)
+            return if (qb < (1 shl BITRES shr 1)) {
+                1
+            } else {
+                val qn = EXP2_TABLE8[qb and 0x7] shr (14 - (qb shr BITRES))
+                (qn + 1) shr 1 shl 1
+            }
+        }
+
+        /** `stereo_merge`: turns a decoded mid and side back into left and right. */
+        fun stereoMerge(x: FloatArray, xOffset: Int, y: FloatArray, yOffset: Int, mid: Float, n: Int) {
+            var xp = 0f
+            var side = 0f
+            for (i in 0 until n) {
+                xp += y[yOffset + i] * x[xOffset + i]
+                side += y[yOffset + i] * y[yOffset + i]
+            }
+            xp *= mid
+            val mid2 = mid
+            val el = mid2 * mid2 + side - 2 * xp
+            val er = mid2 * mid2 + side + 2 * xp
+            if (er < 6e-4f || el < 6e-4f) {
+                x.copyInto(y, yOffset, xOffset, xOffset + n)
+                return
+            }
+            val lgain = CeltMath.rsqrt(el)
+            val rgain = CeltMath.rsqrt(er)
+            for (j in 0 until n) {
+                val l = mid * x[xOffset + j]
+                val r = y[yOffset + j]
+                x[xOffset + j] = lgain * (l - r)
+                y[yOffset + j] = rgain * (l + r)
+            }
+        }
 
         /** `celt_sudiv`: signed division truncating towards zero. */
         private fun sudiv(n: Int, d: Int): Int = n / d
@@ -647,7 +648,7 @@ internal class CeltBands(private val range: RangeDecoder) {
             }
         }
 
-        private fun deinterleaveHadamard(x: FloatArray, offset: Int, n0: Int, stride: Int, hadamard: Boolean) {
+        fun deinterleaveHadamard(x: FloatArray, offset: Int, n0: Int, stride: Int, hadamard: Boolean) {
             val n = n0 * stride
             val tmp = FloatArray(n)
             if (hadamard) {
@@ -659,7 +660,7 @@ internal class CeltBands(private val range: RangeDecoder) {
             tmp.copyInto(x, offset)
         }
 
-        private fun interleaveHadamard(x: FloatArray, offset: Int, n0: Int, stride: Int, hadamard: Boolean) {
+        fun interleaveHadamard(x: FloatArray, offset: Int, n0: Int, stride: Int, hadamard: Boolean) {
             val n = n0 * stride
             val tmp = FloatArray(n)
             if (hadamard) {

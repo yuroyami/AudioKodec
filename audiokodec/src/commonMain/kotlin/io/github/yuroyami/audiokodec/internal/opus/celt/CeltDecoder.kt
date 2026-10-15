@@ -642,15 +642,15 @@ internal class CeltDecoder(
         private const val OVERLAP = 120
         private const val MAX_LM = 3
         private const val SHORT_MDCT_SIZE = CeltBands.SHORT_MDCT_SIZE
-        private const val PREEMPH = 0.85000610f
+        const val PREEMPH: Float = 0.85000610f
         private const val VERY_SMALL = 1e-30f
         private const val SIG_SCALE = 32768f
         private val E_BANDS = CeltModeTables.E_BANDS
         private val WINDOW = CeltWindowTable.WINDOW
-        private val TRIM_ICDF = intArrayOf(126, 124, 119, 109, 87, 41, 19, 9, 4, 2, 0)
-        private val SPREAD_ICDF = intArrayOf(25, 23, 2, 0)
-        private val TAPSET_ICDF = intArrayOf(2, 1, 0)
-        private val TF_SELECT = arrayOf(
+        val TRIM_ICDF: IntArray = intArrayOf(126, 124, 119, 109, 87, 41, 19, 9, 4, 2, 0)
+        val SPREAD_ICDF: IntArray = intArrayOf(25, 23, 2, 0)
+        val TAPSET_ICDF: IntArray = intArrayOf(2, 1, 0)
+        val TF_SELECT: Array<IntArray> = arrayOf(
             intArrayOf(0, -1, 0, -1, 0, -1, 0, -1),
             intArrayOf(0, -1, 0, -2, 1, 0, 1, -1),
             intArrayOf(0, -2, 0, -3, 2, 0, 1, -1),

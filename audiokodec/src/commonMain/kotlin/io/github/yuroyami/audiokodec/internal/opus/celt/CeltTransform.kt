@@ -261,13 +261,116 @@ internal class CeltFft(
 }
 
 /**
- * CELT's inverse MDCT with its windowed overlap, `clt_mdct_backward` from
- * libopus `mdct.c`.
+ * CELT's MDCT with its windowed overlap: `clt_mdct_backward` from libopus
+ * `mdct.c` for the decoder, and `clt_mdct_forward` for the encoder.
  */
 internal object CeltMdct {
 
     /** Transform size at the largest block, 20 ms at 48 kHz. */
     private const val SIZE = 1920
+
+    /**
+     * The forward FFT's `scale` for each [shift], one over its size, as the
+     * reference's static mode tables state it in single precision.
+     */
+    private val FORWARD_SCALE = floatArrayOf(0.002083333f, 0.004166667f, 0.008333333f, 0.016666667f)
+
+    /**
+     * Transforms `SIZE shr shift` samples of [input] at [inOffset], windowed
+     * at both ends by [overlap] samples of [window], into half as many
+     * coefficients written to [out] at [outOffset] with stride [stride]. The
+     * input is left as it was.
+     */
+    fun forward(
+        input: FloatArray,
+        inOffset: Int,
+        out: FloatArray,
+        outOffset: Int,
+        window: FloatArray,
+        overlap: Int,
+        shift: Int,
+        stride: Int,
+    ) {
+        val trigTable = CeltMdctTable.TWIDDLES
+        var n = SIZE
+        var trig = 0
+        for (i in 0 until shift) {
+            n = n shr 1
+            trig += n
+        }
+        val n2 = n shr 1
+        val n4 = n shr 2
+        val fft = CeltFft.MODE[shift]
+        val scale = FORWARD_SCALE[shift]
+        val f = FloatArray(n2)
+        val f2 = FloatArray(2 * n4)
+
+        // Window, shuffle and fold: the input is four quarters [a, b, c, d],
+        // and the real parts become -d-cR and a-bR, the imaginary -b+aR and
+        // -c-dR.
+        var xp1 = inOffset + (overlap shr 1)
+        var xp2 = inOffset + n2 - 1 + (overlap shr 1)
+        var yp = 0
+        var wp1 = overlap shr 1
+        var wp2 = (overlap shr 1) - 1
+        var i = 0
+        while (i < (overlap + 3) shr 2) {
+            f[yp++] = window[wp2] * input[xp1 + n2] + window[wp1] * input[xp2]
+            f[yp++] = window[wp1] * input[xp1] - window[wp2] * input[xp2 - n2]
+            xp1 += 2
+            xp2 -= 2
+            wp1 += 2
+            wp2 -= 2
+            i++
+        }
+        wp1 = 0
+        wp2 = overlap - 1
+        while (i < n4 - ((overlap + 3) shr 2)) {
+            f[yp++] = input[xp2]
+            f[yp++] = input[xp1]
+            xp1 += 2
+            xp2 -= 2
+            i++
+        }
+        while (i < n4) {
+            f[yp++] = -(window[wp1] * input[xp1 - n2]) + window[wp2] * input[xp2]
+            f[yp++] = window[wp2] * input[xp1] + window[wp1] * input[xp2 + n2]
+            xp1 += 2
+            xp2 -= 2
+            wp1 += 2
+            wp2 -= 2
+            i++
+        }
+
+        // Pre-rotation, scaled and written straight into bit-reversed order.
+        for (k in 0 until n4) {
+            val t0 = trigTable[trig + k]
+            val t1 = trigTable[trig + n4 + k]
+            val re = f[2 * k]
+            val im = f[2 * k + 1]
+            val yr = re * t0 - im * t1
+            val yi = im * t0 + re * t1
+            val rev = fft.bitrev(k)
+            f2[2 * rev] = scale * yr
+            f2[2 * rev + 1] = scale * yi
+        }
+
+        fft.transform(f2, 0)
+
+        // Post-rotation, writing from both ends of the output at once.
+        var yp1 = outOffset
+        var yp2 = outOffset + stride * (n2 - 1)
+        for (k in 0 until n4) {
+            val r = f2[2 * k]
+            val im = f2[2 * k + 1]
+            val yr = im * trigTable[trig + n4 + k] - r * trigTable[trig + k]
+            val yi = r * trigTable[trig + n4 + k] + im * trigTable[trig + k]
+            out[yp1] = yr
+            out[yp2] = yi
+            yp1 += 2 * stride
+            yp2 -= 2 * stride
+        }
+    }
 
     /**
      * Inverse-transforms the spectrum read from [input] at [inOffset] with

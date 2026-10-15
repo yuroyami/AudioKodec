@@ -1,8 +1,8 @@
 # Encoding
 
-AudioKodec writes FLAC, WAV, AIFF, AU and Apple Lossless in an `.m4a` file. An encoder
-takes Float32 samples with an `AudioFormat`, a `DecodedAudio`, or any `PcmSource`, and
-writes to a byte array or to a sink.
+AudioKodec writes FLAC, WAV, AIFF, AU, Apple Lossless in an `.m4a` file, and Opus in an
+Ogg file. An encoder takes Float32 samples with an `AudioFormat`, a `DecodedAudio`, or any
+`PcmSource`, and writes to a byte array or to a sink.
 
 ## Write a file
 
@@ -29,8 +29,8 @@ Create a fresh source for each encoding operation. The sample array is not
 copied, so avoid changing it while an encoding runs.
 
 The targets available are FLAC, integer PCM and IEEE float in WAV, AIFF and AU,
-A-law and mu-law in all three, IMA or Microsoft ADPCM in WAV, and Apple
-Lossless in an `.m4a` file.
+A-law and mu-law in all three, IMA or Microsoft ADPCM in WAV, Apple
+Lossless in an `.m4a` file, and [Opus](#opus) in an Ogg file.
 
 ```kotlin
 val m4a = AudioKodec.encode(decoded, EncodeTarget.alac(24), tags = tags)
@@ -76,8 +76,9 @@ that the target cannot represent before it writes any bytes.
 Pass a `TagBundle` to `encode` and the tags go into the file with the audio. WAV and
 AIFF use their native text chunks, plus ID3v2.4 for Unicode and richer fields. FLAC
 uses Vorbis comments and native `PICTURE` blocks, whose limits [Tags](tags.md#pictures)
-describes. AU has no structured tag format, so it refuses a bundle that is not empty
-instead of dropping it.
+describes. Ogg Opus uses Vorbis comments in its OpusTags header, with pictures as
+`METADATA_BLOCK_PICTURE`. AU has no structured tag format, so it refuses a bundle that is
+not empty instead of dropping it.
 
 ## FLAC
 
@@ -89,6 +90,64 @@ val flac = AudioKodec.encode(samples, format, EncodeTarget.flac(bitDepth = 16, e
 levels of the reference encoder do, and it never changes the decoded audio, because
 the format is lossless at every setting. See [Formats](formats.md#flac) for
 verification and seeking.
+
+## Opus
+
+```kotlin
+val opus = AudioKodec.encode(decoded, EncodeTarget.opus(bitrate = 128_000), tags = tags)
+```
+
+The encoder writes the music mode of Opus: CELT on its own, at full bandwidth (20 kHz),
+mono or stereo, in 20 ms frames or, with `frameMillis = 10`, 10 ms ones. It is a
+translation of libopus 1.5.2's CELT encoder at its highest complexity, with transient
+detection and short blocks, the pitch prefilter, time-frequency analysis, dynamic
+allocation, and mid/side and intensity stereo chosen as libopus chooses them. Driven the
+way libopus's CELT-only mode drives it, libopus writes the same packets byte for byte.
+
+| Option | Effect |
+|---|---|
+| `bitrate` | The target in bits per second, 6,000 to 510,000. The default is 128,000 |
+| `vbr = true` (default) | Each packet's size follows how hard the frame is to code, around the target |
+| `constrainedVbr = true` (default) | Never more than about one frame's worth of bits ahead of the target, libopus's default. `false` lets bits move freely between loud and quiet passages, as `opusenc` and ffmpeg do by default |
+| `vbr = false` | Every packet is the same size, `bitrate * frameMillis / 8000` bytes |
+| `frameMillis` | 20 (default) or 10 |
+
+Opus always runs at 48 kHz. Input at another rate is converted first with the library's
+[resampler](resample.md), and the identification header records the original rate. A
+decoder returns the 48 kHz signal, which has `ceil(frames * 48000 / rate)` frames.
+
+The file is gapless. The identification header's pre-skip is the encoder's delay, 120
+samples, and the last page's granule position marks where the input ended, so any decoder
+that applies both, as RFC 7845 requires, returns exactly as many frames as went in,
+aligned with them: a click goes in and comes out on the same sample. The pages are written
+as they fill, so the sink is never patched and the source's length need not be known.
+
+Not written: the speech (SILK) and hybrid modes, more than two channels, which need the
+multistream mapping and are refused with `UnsupportedFeatureException`, and the tonality
+analysis with which libopus narrows the bandwidth and the stereo image at low rates.
+Integer sources are refused; pass Float32.
+
+The measurements below use a seeded ten-second stereo test signal: a three-note chord
+with harmonics, a sweep from 50 Hz to 19 kHz, a noise bed, and a decaying burst of noise
+every half second. The files are decoded by libopus, aligned only by their pre-skip, and
+scored with `opus_compare`, the measure the Opus specification defines, as an internal
+weighted error, lower being better. The last column is libopus's own encoder in its
+CELT-only mode with constrained VBR, which also runs its tonality analysis; AudioKodec is
+never more than 0.05 worse than it, and better at 64 kbit/s.
+
+| Rate | Constrained VBR (default) | VBR | libopus, constrained VBR |
+|---|---|---|---|
+| 64 kbit/s | 0.552 | 0.572 | 0.604 |
+| 96 kbit/s | 0.575 | 0.568 | 0.575 |
+| 128 kbit/s | 0.394 | 0.367 | 0.394 |
+| 192 kbit/s | 0.115 | 0.115 | 0.104 |
+| 256 kbit/s | 0.098 | 0.100 | 0.098 |
+| 64 kbit/s mono | 0.724 | 0.559 | 0.728 |
+
+The average rate is within 2% of the target with constrained VBR and within 6% with VBR.
+A 1 kHz sine at -6 dBFS comes back at 41 dB signal to noise at 128 kbit/s, and silence
+stays below 1e-30. On this signal the score does not improve between 64 and 96 kbit/s
+with constrained VBR, and the mono score at 64 kbit/s is high, both as with libopus.
 
 ## Exact integers
 

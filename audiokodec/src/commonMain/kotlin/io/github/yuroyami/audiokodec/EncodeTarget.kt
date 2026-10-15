@@ -21,13 +21,24 @@ public class EncodeTarget private constructor(
      *
      * For FLAC this carries the effort level instead, because FLAC's block size
      * is measured in samples and is not something a caller needs to choose.
+     * For Opus it carries the frame length in samples at 48 kHz.
      */
     public val blockAlign: Int,
     /** Noise to add when reducing the sample depth. */
     public val dither: Dither,
+    /**
+     * The target bit rate in bits per second for the lossy codings, or 0 for
+     * the others, whose size follows from the samples.
+     */
+    public val bitrate: Int = 0,
+    /** How a lossy coding holds to [bitrate], or null for the other codings. */
+    public val bitrateMode: BitrateMode? = null,
 ) {
-    override fun toString(): String =
+    override fun toString(): String = if (bitrateMode != null) {
+        "EncodeTarget(${container.displayName}, ${codec.displayName}, $bitrate bit/s $bitrateMode)"
+    } else {
         "EncodeTarget(${container.displayName}, ${codec.displayName}, ${bitDepth}-bit)"
+    }
 
     public companion object {
 
@@ -170,6 +181,61 @@ public class EncodeTarget private constructor(
         }
 
         /**
+         * Opus in an Ogg file, at [bitrate] bits per second.
+         *
+         * The encoder is a translation of libopus 1.5.2's CELT encoder, the
+         * transform half of Opus, which libopus uses for music, at its
+         * highest complexity. Driven as libopus's CELT-only mode drives it,
+         * minus the tonality analysis libopus adds above complexity 6, it
+         * writes the same packets byte for byte. It codes mono and stereo,
+         * always at full bandwidth (20 kHz), in frames of [frameMillis], 20
+         * or 10 ms, with transient detection and short blocks, the pitch
+         * prefilter, dynamic allocation, and mid/side and intensity stereo
+         * decided as libopus decides them. Opus works at 48 kHz, so input at
+         * any other rate is first converted with [Resampler], and the file
+         * records the original rate for players that convert back.
+         *
+         * With [vbr], the default, each packet's size follows the signal and
+         * the average follows [bitrate]. With [constrainedVbr] as well, also
+         * the default and libopus's own, the encoder never runs more than one
+         * frame's worth of bits ahead of the rate, which suits streaming; off,
+         * as `opusenc` and ffmpeg default to, it moves bits more freely
+         * between loud and quiet passages, which suits files. Without [vbr]
+         * every packet is the same size. [bitrate] is 6 to 510 kbit/s, and
+         * with [vbr] CELT spends at most 260 kbit/s per channel.
+         *
+         * The identification header's pre-skip is the encoder's delay, 120
+         * samples, and the last page's granule position marks where the
+         * input ended, so a decoder that applies both, as RFC 7845 requires,
+         * returns exactly as many samples as went in, aligned with them, or
+         * the input's length at 48 kHz when it was resampled. Pages are
+         * written as they fill, so any sink will do. Tags go into the
+         * OpusTags header, and pictures into it as `METADATA_BLOCK_PICTURE`.
+         *
+         * Not implemented: the speech (SILK) and hybrid modes, more than two
+         * channels, which needs the multistream mapping and is refused with
+         * [UnsupportedFeatureException], and the analysis with which libopus
+         * narrows the bandwidth and the stereo image at low rates. Integer
+         * sources are refused; pass float PCM. Like any lossy coding it does
+         * not return the input exactly.
+         */
+        public fun opus(
+            bitrate: Int = 128_000,
+            vbr: Boolean = true,
+            constrainedVbr: Boolean = true,
+            frameMillis: Int = 20,
+        ): EncodeTarget {
+            require(bitrate in 6_000..510_000) { "the Opus bit rate is 6000 to 510000 bit/s, not $bitrate" }
+            require(frameMillis == 10 || frameMillis == 20) { "Opus frames are 10 or 20 ms here, not $frameMillis" }
+            val mode = when {
+                !vbr -> BitrateMode.CONSTANT
+                constrainedVbr -> BitrateMode.CONSTRAINED_VARIABLE
+                else -> BitrateMode.VARIABLE
+            }
+            return EncodeTarget(AudioContainer.OGG, AudioCodec.OPUS, 0, 48 * frameMillis, Dither.None, bitrate, mode)
+        }
+
+        /**
          * Apple Lossless in an `.m4a` file, at [bitDepth] bits.
          *
          * The encoder is a translation of Apple's reference encoder in its
@@ -191,4 +257,20 @@ public class EncodeTarget private constructor(
             return EncodeTarget(AudioContainer.MP4, AudioCodec.ALAC, bitDepth, 0, dither)
         }
     }
+}
+
+/** How a lossy encoder holds to its target bit rate. */
+public enum class BitrateMode {
+    /** Every packet the same size, whatever the signal. */
+    CONSTANT,
+
+    /**
+     * Packet sizes follow the signal, but the encoder never runs more than
+     * about one frame's worth of bits ahead of the rate, so a stream at the
+     * target rate never needs a larger buffer.
+     */
+    CONSTRAINED_VARIABLE,
+
+    /** Packet sizes follow the signal, and only the long-run average follows the rate. */
+    VARIABLE,
 }

@@ -23,6 +23,7 @@ import io.github.yuroyami.audiokodec.internal.flac.FlacDecoder
 import io.github.yuroyami.audiokodec.internal.flac.FlacEncoder
 import io.github.yuroyami.audiokodec.internal.io.SinkWriter
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4AlacWriter
+import io.github.yuroyami.audiokodec.internal.opus.OggOpusEncoder
 import io.github.yuroyami.audiokodec.internal.tag.Id3v2Writer
 import io.github.yuroyami.audiokodec.internal.tag.TagWriter
 import io.github.yuroyami.audiokodec.tag.TagBundle
@@ -62,6 +63,10 @@ internal object ContainerWriter {
         }
         if (target.codec == AudioCodec.ALAC) {
             Mp4AlacWriter(pcm.format, target.bitDepth, target.dither.fresh()).encode(pcm, tags, sink)
+            return
+        }
+        if (target.codec == AudioCodec.OPUS) {
+            OggOpusEncoder(pcm.format, target.bitrate, target.bitrateMode!!, target.blockAlign).encode(pcm, tags, sink)
             return
         }
         writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->

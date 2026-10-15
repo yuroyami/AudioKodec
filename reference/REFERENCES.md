@@ -439,7 +439,7 @@ is what stops it silently becoming wrong if the widths ever change.
 
 ### The libopus port
 
-The decoder is a translation of libopus.
+The decoder is a translation of libopus, and so is the encoder's CELT layer.
 
 | Field | Value |
 |---|---|
@@ -447,8 +447,8 @@ The decoder is a translation of libopus.
 | Tag | v1.5.2 |
 | Commit | `ddbe48383984d56acd9e1ab6a090c54ca6b735a6` |
 | License | BSD-3-Clause, the `COPYING` file at that commit |
-| Files | `celt/` and `silk/` decoder sources, `src/opus_decoder.c`, `src/opus_multistream_decoder.c`, `src/opus_projection_decoder.c`, `src/mapping_matrix.c` |
-| Not ported | Every encoder source, the `dnn/` tree (deep PLC, DRED and OSCE), and the architecture-specific `x86/`, `arm/` and `mips/` variants |
+| Files | `celt/` and `silk/` decoder sources, `src/opus_decoder.c`, `src/opus_multistream_decoder.c`, `src/opus_projection_decoder.c`, `src/mapping_matrix.c`. For the encoder: `celt/celt_encoder.c`; `celt/entenc.c`; the encoding paths of `celt/bands.c` (`quant_all_bands` and what it calls with `encode` set, `spreading_decision`, `hysteresis_decision`, `compute_band_energies`, `normalise_bands`), `celt/quant_bands.c` (`quant_coarse_energy`, `quant_fine_energy`, `quant_energy_finalise`, `amp2Log2`), `celt/vq.c` (`alg_quant`, `op_pvq_search`, `stereo_itheta`), `celt/cwrs.c` (`icwrs`, `encode_pulses`), `celt/laplace.c` (`ec_laplace_encode`) and `celt/rate.c` (the encoder's skip, intensity and dual stereo choices); `clt_mdct_forward` from `celt/mdct.c`; `remove_doubling` from `celt/pitch.c`, beside the pitch search the decoder already has; `fast_atan2f` from `celt/mathops.h`; and the CELT-only paths of `src/opus_encoder.c` (`dc_reject`, the rate and packet-size set-up, `gen_toc`) |
+| Not ported | The SILK encoder, the hybrid mode, the tonality analysis (`src/analysis.c`, `src/mlp*.c`), surround masking and the multistream and projection encoders, the `dnn/` tree (deep PLC, DRED and OSCE), and the architecture-specific `x86/`, `arm/` and `mips/` variants |
 
 The license text, which a binary release of AudioKodec has to carry because
 the port is a derivative of it:
@@ -496,7 +496,14 @@ format, this one included, and are the caller's to read, not the code's.
 Arithmetic follows the default float build:
 CELT is ported in `Float` from its float path, and SILK, whose decoder is
 fixed point in every build, in `Int` and `Long` with its own 32-bit wrapping
-where the C relies on it.
+where the C relies on it. The CELT encoder keeps the float build's types
+expression by expression, single precision where the C is single precision
+and double where a double constant promotes it, including where the float
+macros differ from the fixed-point ones: `compute_vbr`'s transient boost,
+for one, is not doubled in float. Its encoding decisions share the
+decoder's tables, allocation (`CeltAllocation` serves both ends) and band
+helpers, and its packets equal those of `celt_encode_with_ec` at complexity
+10 byte for byte.
 
 Concentus, the managed-language translation of libopus, was not used. Both
 layers are translated from libopus itself, so no license beyond the one above
@@ -506,6 +513,26 @@ The test oracles for this work are the reference programs built from the same
 commit and run: `opus_demo`, `opus_compare`, and a small command line over the
 multistream and projection API written for these tests
 (`audiokodec/src/jvmTest/resources/opus_multistream_oracle.c`).
+
+The encoder's oracle is `audiokodec/src/jvmTest/resources/opus_encode_oracle.c`,
+compiled against the same build and against libogg 1.3.5:
+
+| Field | Value |
+|---|---|
+| Repository | https://github.com/xiph/ogg |
+| Tag | v1.3.5 |
+| Commit | `e1774cd77f471443541596e09078e78fdc342e4f` |
+| License | BSD-3-Clause, the `COPYING` file at that commit |
+| Use | Linked into the oracle and called through its public interface only; nothing is ported, and AudioKodec's Ogg pages are written from RFC 3533 |
+
+The oracle reads AudioKodec's Ogg Opus files with libogg, decodes them with
+`opus_decode_float`, applies the pre-skip and end trim as RFC 7845 says, and
+reports every header, page and packet. It also drives libopus's internal
+`celt_encode_with_ec` the way the CELT-only mode does, without the tonality
+analysis, which is what `OpusEncodeOracleTest` compares AudioKodec's packets
+with byte for byte. `opus_demo` in its restricted-lowdelay mode is the
+quality baseline, and ffmpeg's native and libopus decoders, run as
+programs, check the decoded lengths.
 
 `opus_compare.c` is also translated, into the test suite as `OpusCompare.kt`,
 because its measure is part of the specification rather than a tool around it:

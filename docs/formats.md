@@ -13,6 +13,7 @@ complete support tables and how each format is checked against a reference decod
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
 | AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law; G.722 and G.726 (Sun's G.721 and G.723) are read only |
 | MP4 and M4A | ALAC 16/20/24/32-bit with one to eight channels, written with packets identical to those of Apple's reference encoder. The other MP4 codings are read only |
+| Ogg | Vorbis, Opus, FLAC and Speex, with up to 256 simultaneous logical streams, are read. Opus is written, mono or stereo, with packets identical to those of libopus's CELT encoder. Tags can be rewritten |
 
 RF64 and BW64 are read, and a WAV is written as RF64 automatically when it passes 4 GiB.
 
@@ -24,7 +25,6 @@ integer types are little-endian: `23ni` is 32-bit and `42ni` is 24-bit.
 
 | Container | Codings |
 |---|---|
-| Ogg | Vorbis, Opus, FLAC and Speex, with up to 256 simultaneous logical streams. Tags can be rewritten |
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit, iLBC |
 | MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
@@ -143,7 +143,7 @@ headers cannot be read.
 |---|---|---|
 | Vorbis | read | decodes, with seeking |
 | FLAC | read | decodes, with seeking |
-| Opus | read | decodes, with seeking |
+| Opus | read and written | decodes, with seeking; encodes mono and stereo |
 | Speex | read | decodes, with seeking that converges after a run-up |
 
 ```kotlin
@@ -215,6 +215,11 @@ to ambisonics. Its codec core supports lost-packet concealment and recovery from
 packet data. The pre-skip and the end trim are applied, so the samples come out where they
 went in, and one file follows another without a gap. Every layer is checked against
 libopus, sample for sample.
+
+The encoder writes Opus's music mode, CELT on its own at full bandwidth, mono or stereo,
+into Ogg. Its packets are byte-identical to those of libopus's CELT encoder at its highest
+complexity, and its files decode to exactly as many samples as went in. See
+[Encoding](encoding.md#opus).
 
 ### Rewriting Ogg tags
 

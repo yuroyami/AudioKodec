@@ -1,6 +1,9 @@
 package io.github.yuroyami.audiokodec.internal.opus.celt
 
 import io.github.yuroyami.audiokodec.internal.opus.RangeDecoder
+import io.github.yuroyami.audiokodec.internal.opus.RangeEncoder
+import kotlin.math.abs
+import kotlin.math.floor
 
 /**
  * CELT's pyramid vector quantiser: the shape of each band, as pulses.
@@ -12,7 +15,8 @@ import io.github.yuroyami.audiokodec.internal.opus.RangeDecoder
  * spread, so that a band with few pulses sounds like noise in the right place
  * rather than a handful of tones.
  *
- * Translated from libopus `cwrs.c` and `vq.c`.
+ * Translated from libopus `cwrs.c` and `vq.c`, the encoder's search and
+ * index computation as well as the decoder's enumeration.
  */
 internal object CeltVq {
 
@@ -100,6 +104,166 @@ internal object CeltVq {
         yy += (value * value).toFloat()
         return yy
     }
+
+    /** `icwrs`: the index of the vector [y] of dimension [n] among those with the same pulse count. */
+    private fun icwrs(n: Int, y: IntArray): Long {
+        var j = n - 1
+        var i = if (y[j] < 0) 1L else 0L
+        var k = abs(y[j])
+        do {
+            j--
+            i += u(n - j, k)
+            k += abs(y[j])
+            if (y[j] < 0) i += u(n - j, k + 1)
+        } while (j > 0)
+        return i
+    }
+
+    /** `encode_pulses`: writes the index of [y], which has [k] pulses in [n] dimensions. */
+    fun encodePulses(y: IntArray, n: Int, k: Int, range: RangeEncoder) {
+        range.encodeUniform(icwrs(n, y), v(n, k))
+    }
+
+    /**
+     * `op_pvq_search`: the vector of [k] pulses closest in direction to the
+     * [n] values of [x] at [xOffset], into [iy], returning its energy. [x] is
+     * left holding its absolute values, as in the reference.
+     */
+    fun pvqSearch(x: FloatArray, xOffset: Int, iy: IntArray, k: Int, n: Int): Float {
+        val y = FloatArray(n)
+        val signx = IntArray(n)
+        var sum = 0f
+        for (j in 0 until n) {
+            signx[j] = if (x[xOffset + j] < 0) 1 else 0
+            x[xOffset + j] = abs(x[xOffset + j])
+            iy[j] = 0
+        }
+        var xy = 0f
+        var yy = 0f
+        var pulsesLeft = k
+        if (k > (n shr 1)) {
+            // A first guess by projecting onto the pyramid.
+            for (j in 0 until n) sum += x[xOffset + j]
+            if (!(sum > EPSILON && sum < 64)) {
+                // Too small, or not finite: a single pulse at the start.
+                x[xOffset] = 1f
+                for (j in 1 until n) x[xOffset + j] = 0f
+                sum = 1f
+            }
+            // K plus less than one can never place more than K pulses.
+            val rcp = (k + 0.8f) * (1f / sum)
+            for (j in 0 until n) {
+                iy[j] = floor(rcp * x[xOffset + j]).toInt()
+                y[j] = iy[j].toFloat()
+                yy += y[j] * y[j]
+                xy += x[xOffset + j] * y[j]
+                y[j] *= 2f
+                pulsesLeft -= iy[j]
+            }
+        }
+        if (pulsesLeft > n + 3) {
+            val tmp = pulsesLeft.toFloat()
+            yy += tmp * tmp
+            yy += tmp * y[0]
+            iy[0] += pulsesLeft
+            pulsesLeft = 0
+        }
+        for (i in 0 until pulsesLeft) {
+            var bestId = 0
+            yy += 1f
+            var rxy = xy + x[xOffset]
+            var ryy = yy + y[0]
+            rxy *= rxy
+            var bestDen = ryy
+            var bestNum = rxy
+            for (j in 1 until n) {
+                rxy = xy + x[xOffset + j]
+                ryy = yy + y[j]
+                rxy *= rxy
+                if (bestDen * rxy > ryy * bestNum) {
+                    bestDen = ryy
+                    bestNum = rxy
+                    bestId = j
+                }
+            }
+            xy += x[xOffset + bestId]
+            yy += y[bestId]
+            y[bestId] += 2f
+            iy[bestId]++
+        }
+        for (j in 0 until n) iy[j] = (iy[j] xor -signx[j]) + signx[j]
+        return yy
+    }
+
+    /**
+     * `alg_quant`: codes the shape of the [n] values of [x] at [xOffset] with
+     * [k] pulses and returns the collapse mask. With [resynth], [x] is left
+     * holding what the decoder will reconstruct.
+     */
+    fun quantise(
+        x: FloatArray,
+        xOffset: Int,
+        n: Int,
+        k: Int,
+        spread: Int,
+        blocks: Int,
+        range: RangeEncoder,
+        gain: Float,
+        resynth: Boolean,
+    ): Int {
+        val iy = IntArray(n + 3)
+        expRotation(x, xOffset, n, 1, blocks, k, spread)
+        val yy = pvqSearch(x, xOffset, iy, k, n)
+        encodePulses(iy, n, k, range)
+        if (resynth) {
+            normaliseResidual(iy, x, xOffset, n, yy, gain)
+            expRotation(x, xOffset, n, -1, blocks, k, spread)
+        }
+        return collapseMask(iy, n, blocks)
+    }
+
+    /**
+     * `stereo_itheta`: the angle, in units of a quarter turn over 16384,
+     * between the energies of [x] and [y], or of their sum and difference
+     * when [stereo].
+     */
+    fun stereoItheta(x: FloatArray, xOffset: Int, y: FloatArray, yOffset: Int, stereo: Boolean, n: Int): Int {
+        var emid = EPSILON
+        var eside = EPSILON
+        if (stereo) {
+            for (i in 0 until n) {
+                val m = x[xOffset + i] + y[yOffset + i]
+                val s = x[xOffset + i] - y[yOffset + i]
+                emid += m * m
+                eside += s * s
+            }
+        } else {
+            emid += CeltMath.innerProduct(x, xOffset, x, xOffset, n)
+            eside += CeltMath.innerProduct(y, yOffset, y, yOffset, n)
+        }
+        val mid = CeltMath.sqrt(emid)
+        val side = CeltMath.sqrt(eside)
+        return floor(0.5f + 16384 * 0.63662f * fastAtan2(side, mid)).toInt()
+    }
+
+    /** `fast_atan2f`: a rational approximation of the arctangent, as the float build has it. */
+    private fun fastAtan2(y: Float, x: Float): Float {
+        val x2 = x * x
+        val y2 = y * y
+        if (x2 + y2 < 1e-18f) return 0f
+        return if (x2 < y2) {
+            val den = (y2 + ATAN_B * x2) * (y2 + ATAN_C * x2)
+            -x * y * (y2 + ATAN_A * x2) / den + (if (y < 0) -ATAN_E else ATAN_E)
+        } else {
+            val den = (x2 + ATAN_B * y2) * (x2 + ATAN_C * y2)
+            x * y * (x2 + ATAN_A * y2) / den + (if (y < 0) -ATAN_E else ATAN_E) - (if (x * y < 0) -ATAN_E else ATAN_E)
+        }
+    }
+
+    private const val ATAN_A = 0.43157974f
+    private const val ATAN_B = 0.67848403f
+    private const val ATAN_C = 0.08595542f
+    private const val ATAN_E = 3.141592653f / 2
 
     /** `alg_unquant`: decodes a band's shape into [x] and returns its collapse mask. */
     fun unquantise(x: FloatArray, xOffset: Int, n: Int, k: Int, spread: Int, blocks: Int, range: RangeDecoder, gain: Float): Int {

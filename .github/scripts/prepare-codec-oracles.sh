@@ -66,6 +66,12 @@ cmake -S reference/libopus -B reference/libopus/build-plain \
     -DOPUS_X86_MAY_HAVE_AVX2=OFF
 cmake --build reference/libopus/build-plain --target opus_demo opus_compare -j4
 
+# libogg 1.3.5 is BSD; the Opus encoder's oracle links it to read the Ogg pages.
+reference_checkout reference/libogg https://github.com/xiph/ogg.git e1774cd77f471443541596e09078e78fdc342e4f
+cmake -S reference/libogg -B reference/libogg/build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+    -DBUILD_TESTING=OFF -DINSTALL_DOCS=OFF -DCMAKE_INSTALL_PREFIX="$PWD/reference/libogg/install"
+cmake --build reference/libogg/build --target install -j4
+
 reference_checkout reference/alac https://github.com/macosforge/alac.git c38887c5c5e64a4b31108733bd79ca9b2496d987
 make -C reference/alac/codec -j4
 c++ -O3 -I reference/alac/codec reference/alac/convert-utility/main.cpp \

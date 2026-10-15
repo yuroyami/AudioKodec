@@ -1,6 +1,7 @@
 package io.github.yuroyami.audiokodec.internal.opus.celt
 
 import io.github.yuroyami.audiokodec.internal.opus.RangeDecoder
+import io.github.yuroyami.audiokodec.internal.opus.RangeEncoder
 
 /**
  * How CELT divides a packet's bits between its bands.
@@ -67,7 +68,11 @@ internal object CeltAllocation {
         }
     }
 
-    /** What [compute] returns beside the pulse and fine-energy arrays it fills. */
+    /**
+     * What [compute] returns beside the pulse and fine-energy arrays it fills.
+     * When encoding, [intensity] and [dualStereo] go in holding the
+     * encoder's wishes, and come out holding what was coded.
+     */
     class Result {
         var codedBands = 0
         var intensity = 0
@@ -75,7 +80,13 @@ internal object CeltAllocation {
         var balance = 0
     }
 
-    /** `clt_compute_allocation`, decoder side. */
+    /**
+     * `clt_compute_allocation`. Exactly one of [range] and [encoder] is
+     * given: the decoder reads the skip, intensity and dual stereo decisions,
+     * and the encoder makes and writes them, skipping bands from the top down
+     * to what [signalBandwidth] and the previous frame's coded band count
+     * [prev] suggest.
+     */
     fun compute(
         start: Int,
         end: Int,
@@ -88,8 +99,11 @@ internal object CeltAllocation {
         finePriority: IntArray,
         channels: Int,
         lm: Int,
-        range: RangeDecoder,
+        range: RangeDecoder?,
         result: Result,
+        encoder: RangeEncoder? = null,
+        prev: Int = 0,
+        signalBandwidth: Int = 0,
     ) {
         var total = maxOf(totalIn, 0)
         val len = NB_E_BANDS
@@ -156,10 +170,11 @@ internal object CeltAllocation {
         interpolate(
             start, end, skipStart, bits1, bits2, thresh, cap, total, skipRsv,
             intensityRsv, dualStereoRsv, pulses, ebits, finePriority, channels, lm, range, result,
+            encoder, prev, signalBandwidth,
         )
     }
 
-    /** `interp_bits2pulses`, decoder side. */
+    /** `interp_bits2pulses`. */
     private fun interpolate(
         start: Int,
         end: Int,
@@ -177,8 +192,11 @@ internal object CeltAllocation {
         finePriority: IntArray,
         channels: Int,
         lm: Int,
-        range: RangeDecoder,
+        range: RangeDecoder?,
         result: Result,
+        encoder: RangeEncoder?,
+        prev: Int,
+        signalBandwidth: Int,
     ) {
         var total = totalIn
         var intensityRsv = intensityRsvIn
@@ -232,7 +250,21 @@ internal object CeltAllocation {
             val bandWidth = eBands[codedBands] - eBands[j]
             var bandBits = bits[j] + percoeff * bandWidth + rem
             if (bandBits >= maxOf(thresh[j], allocFloor + (1 shl BITRES))) {
-                if (range.decodeBitLogp(1)) break
+                if (encoder != null) {
+                    // The one choice here the bitstream does not dictate:
+                    // which bands to skip. Some hysteresis keeps bands from
+                    // flickering in and out, without folding too low.
+                    val depthThreshold = if (codedBands > 17) (if (j < prev) 7 else 9) else 0
+                    if (codedBands <= start + 2 ||
+                        (bandBits > (depthThreshold * bandWidth shl lm shl BITRES) shr 4 && j <= signalBandwidth)
+                    ) {
+                        encoder.encodeBitLogp(true, 1)
+                        break
+                    }
+                    encoder.encodeBitLogp(false, 1)
+                } else if (range!!.decodeBitLogp(1)) {
+                    break
+                }
                 psum += 1 shl BITRES
                 bandBits -= 1 shl BITRES
             }
@@ -247,12 +279,22 @@ internal object CeltAllocation {
             }
             codedBands--
         }
-        result.intensity = if (intensityRsv > 0) start + range.decodeUniform(codedBands + 1 - start) else 0
+        result.intensity = when {
+            intensityRsv <= 0 -> 0
+            encoder != null -> minOf(result.intensity, codedBands).also {
+                encoder.encodeUniform(it - start, codedBands + 1 - start)
+            }
+            else -> start + range!!.decodeUniform(codedBands + 1 - start)
+        }
         if (result.intensity <= start) {
             total += dualStereoRsv
             dualStereoRsv = 0
         }
-        result.dualStereo = if (dualStereoRsv > 0) range.decodeBitLogp(1) else false
+        result.dualStereo = when {
+            dualStereoRsv <= 0 -> false
+            encoder != null -> result.dualStereo.also { encoder.encodeBitLogp(it, 1) }
+            else -> range!!.decodeBitLogp(1)
+        }
         var left = total - psum
         val percoeff = CeltMath.udiv(left, eBands[codedBands] - eBands[start])
         left -= (eBands[codedBands] - eBands[start]) * percoeff

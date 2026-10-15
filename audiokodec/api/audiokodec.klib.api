@@ -241,6 +241,18 @@ final enum class io.github.yuroyami.audiokodec/AudioContainer : kotlin/Enum<io.g
     final fun values(): kotlin/Array<io.github.yuroyami.audiokodec/AudioContainer> // io.github.yuroyami.audiokodec/AudioContainer.values|values#static(){}[0]
 }
 
+final enum class io.github.yuroyami.audiokodec/BitrateMode : kotlin/Enum<io.github.yuroyami.audiokodec/BitrateMode> { // io.github.yuroyami.audiokodec/BitrateMode|null[0]
+    enum entry CONSTANT // io.github.yuroyami.audiokodec/BitrateMode.CONSTANT|null[0]
+    enum entry CONSTRAINED_VARIABLE // io.github.yuroyami.audiokodec/BitrateMode.CONSTRAINED_VARIABLE|null[0]
+    enum entry VARIABLE // io.github.yuroyami.audiokodec/BitrateMode.VARIABLE|null[0]
+
+    final val entries // io.github.yuroyami.audiokodec/BitrateMode.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<io.github.yuroyami.audiokodec/BitrateMode> // io.github.yuroyami.audiokodec/BitrateMode.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): io.github.yuroyami.audiokodec/BitrateMode // io.github.yuroyami.audiokodec/BitrateMode.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<io.github.yuroyami.audiokodec/BitrateMode> // io.github.yuroyami.audiokodec/BitrateMode.values|values#static(){}[0]
+}
+
 final enum class io.github.yuroyami.audiokodec/FadeCurve : kotlin/Enum<io.github.yuroyami.audiokodec/FadeCurve> { // io.github.yuroyami.audiokodec/FadeCurve|null[0]
     enum entry LINEAR // io.github.yuroyami.audiokodec/FadeCurve.LINEAR|null[0]
     enum entry LOGARITHMIC // io.github.yuroyami.audiokodec/FadeCurve.LOGARITHMIC|null[0]
@@ -689,6 +701,10 @@ final class io.github.yuroyami.audiokodec/DecodedAudio : io.github.yuroyami.audi
 final class io.github.yuroyami.audiokodec/EncodeTarget { // io.github.yuroyami.audiokodec/EncodeTarget|null[0]
     final val bitDepth // io.github.yuroyami.audiokodec/EncodeTarget.bitDepth|{}bitDepth[0]
         final fun <get-bitDepth>(): kotlin/Int // io.github.yuroyami.audiokodec/EncodeTarget.bitDepth.<get-bitDepth>|<get-bitDepth>(){}[0]
+    final val bitrate // io.github.yuroyami.audiokodec/EncodeTarget.bitrate|{}bitrate[0]
+        final fun <get-bitrate>(): kotlin/Int // io.github.yuroyami.audiokodec/EncodeTarget.bitrate.<get-bitrate>|<get-bitrate>(){}[0]
+    final val bitrateMode // io.github.yuroyami.audiokodec/EncodeTarget.bitrateMode|{}bitrateMode[0]
+        final fun <get-bitrateMode>(): io.github.yuroyami.audiokodec/BitrateMode? // io.github.yuroyami.audiokodec/EncodeTarget.bitrateMode.<get-bitrateMode>|<get-bitrateMode>(){}[0]
     final val blockAlign // io.github.yuroyami.audiokodec/EncodeTarget.blockAlign|{}blockAlign[0]
         final fun <get-blockAlign>(): kotlin/Int // io.github.yuroyami.audiokodec/EncodeTarget.blockAlign.<get-blockAlign>|<get-blockAlign>(){}[0]
     final val codec // io.github.yuroyami.audiokodec/EncodeTarget.codec|{}codec[0]
@@ -711,6 +727,7 @@ final class io.github.yuroyami.audiokodec/EncodeTarget { // io.github.yuroyami.a
         final fun auFloat(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.auFloat|auFloat(kotlin.Int){}[0]
         final fun auMuLaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.auMuLaw|auMuLaw(){}[0]
         final fun flac(kotlin/Int = ..., kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.flac|flac(kotlin.Int;kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
+        final fun opus(kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.opus|opus(kotlin.Int;kotlin.Boolean;kotlin.Boolean;kotlin.Int){}[0]
         final fun wav(kotlin/Int = ..., io.github.yuroyami.audiokodec/Dither = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wav|wav(kotlin.Int;io.github.yuroyami.audiokodec.Dither){}[0]
         final fun wavALaw(): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavALaw|wavALaw(){}[0]
         final fun wavFloat(kotlin/Int = ...): io.github.yuroyami.audiokodec/EncodeTarget // io.github.yuroyami.audiokodec/EncodeTarget.Companion.wavFloat|wavFloat(kotlin.Int){}[0]

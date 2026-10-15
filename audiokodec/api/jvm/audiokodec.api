@@ -225,6 +225,15 @@ public final class io/github/yuroyami/audiokodec/AudioSourceKt {
 	public static final fun asAudioSource ([B)Lio/github/yuroyami/audiokodec/AudioSource;
 }
 
+public final class io/github/yuroyami/audiokodec/BitrateMode : java/lang/Enum {
+	public static final field CONSTANT Lio/github/yuroyami/audiokodec/BitrateMode;
+	public static final field CONSTRAINED_VARIABLE Lio/github/yuroyami/audiokodec/BitrateMode;
+	public static final field VARIABLE Lio/github/yuroyami/audiokodec/BitrateMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/github/yuroyami/audiokodec/BitrateMode;
+	public static fun values ()[Lio/github/yuroyami/audiokodec/BitrateMode;
+}
+
 public final class io/github/yuroyami/audiokodec/ByteArrayAudioSink : io/github/yuroyami/audiokodec/AudioSink {
 	public fun <init> ()V
 	public fun <init> (I)V
@@ -323,6 +332,8 @@ public final class io/github/yuroyami/audiokodec/Dither$Tpdf : io/github/yuroyam
 public final class io/github/yuroyami/audiokodec/EncodeTarget {
 	public static final field Companion Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;
 	public final fun getBitDepth ()I
+	public final fun getBitrate ()I
+	public final fun getBitrateMode ()Lio/github/yuroyami/audiokodec/BitrateMode;
 	public final fun getBlockAlign ()I
 	public final fun getCodec ()Lio/github/yuroyami/audiokodec/AudioCodec;
 	public final fun getContainer ()Lio/github/yuroyami/audiokodec/AudioContainer;
@@ -347,6 +358,8 @@ public final class io/github/yuroyami/audiokodec/EncodeTarget$Companion {
 	public final fun auMuLaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun flac (IILio/github/yuroyami/audiokodec/Dither;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun flac$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public final fun opus (IZZI)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public static synthetic fun opus$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IZZIILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun wav (ILio/github/yuroyami/audiokodec/Dither;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun wav$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;ILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun wavALaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;
