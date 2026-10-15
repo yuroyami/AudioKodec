@@ -124,6 +124,19 @@ See [Files and kotlinx-io](docs/files.md).
 [measure loudness](docs/loudness.md), [draw a waveform](docs/waveform.md), and
 [apply levels and fades](docs/levels.md).
 
+### Try it
+
+The repository has a sample desktop viewer. Drop a file on its window, or use File > Open, to
+see the container and coding, the format and duration, the tags and cover art, and the
+waveform, and to play the file through Java Sound:
+
+```sh
+./gradlew :sample:run
+./gradlew :sample:run --args="path/to/song.flac"
+```
+
+Without a display, it prints the same summary for the file named in `--args`.
+
 ## Formats
 
 - **Read and write:** FLAC, WAV and RF64, AIFF and AIFF-C, AU, and Apple Lossless in MP4.

@@ -4,9 +4,13 @@ plugins {
 }
 
 /*
- * :sample is not published and carries no API. It depends on the core alone:
- * a file is read into memory by the JDK and handed to AudioKodec as bytes,
- * which is all a demonstration or a benchmark needs.
+ * :sample is not published and carries no API. It uses the library the way any
+ * consumer does, through the public API of :audiokodec and :audiokodec-io.
+ *
+ * `./gradlew :sample:run` opens the viewer, a Swing window that names a file's
+ * format, lists its tags, draws its waveform and plays it through Java Sound.
+ * `./gradlew :sample:run --args=song.flac` opens that file at once. Without a
+ * display the viewer prints the same summary to the console instead.
  *
  * `./gradlew :sample:benchmark` measures decode speed against the floors
  * docs/support.md records; see Benchmark.kt for what it decodes.
@@ -17,11 +21,23 @@ kotlin {
 
 dependencies {
     implementation(project(":audiokodec"))
+    // Seekable file input, so that the viewer never holds a whole file in memory.
+    implementation(project(":audiokodec-io"))
     testImplementation(kotlin("test"))
 }
 
 application {
-    mainClass.set("io.github.yuroyami.audiokodec.sample.BenchmarkKt")
+    mainClass.set("io.github.yuroyami.audiokodec.sample.ViewerKt")
+}
+
+tasks.named<JavaExec>("run") {
+    // A relative path in --args means what it meant where Gradle was started.
+    workingDir = gradle.startParameter.currentDir
+}
+
+tasks.test {
+    // The tests paint the viewer off screen, which needs no display.
+    systemProperty("java.awt.headless", "true")
 }
 
 tasks.register<JavaExec>("benchmark") {

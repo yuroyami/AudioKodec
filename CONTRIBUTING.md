@@ -108,9 +108,14 @@ For tests without provenance recording:
 ```
 
 `./gradlew :sample:benchmark` measures decode speed against the floors recorded
-in [docs/support.md](docs/support.md#decode-speed) and `./gradlew :sample:test`
-checks the benchmark's own helpers. A change to a decoder's inner loops should
-be measured before and after.
+in [docs/support.md](docs/support.md#decode-speed). A change to a decoder's
+inner loops should be measured before and after. `./gradlew :sample:run` opens
+the sample viewer. `./gradlew :sample:test` checks the benchmark's helpers and
+the viewer: its summary of a file of every decodable container, its waveform
+and playback conversion, and its panel painted off screen. Set
+`AUDIOKODEC_SAMPLE_SCREENS` to a directory to keep those pictures; they go to
+`sample/build/sample-screens` otherwise. Files ffmpeg writes are skipped when it
+is not on `PATH`.
 
 The oracle suites compare against outside tools: `ffmpeg` and `ffprobe`
 for most formats, the reference `flac` tools for FLAC, and Apple's `afconvert`
