@@ -393,8 +393,10 @@ public object AudioKodec {
      * otherwise only knowable at the end. ALAC in MP4 always needs a sink that
      * can be patched, because the size of its compressed audio is only known
      * at the end. Ogg Vorbis and Ogg Opus never patch, so they need
-     * neither. [tags] are stored natively in WAV, AIFF, FLAC, MP4 and Ogg,
-     * and as an APEv2 tag in WavPack; WAV and AIFF also receive an ID3v2.4
+     * neither. MP3 works with any sink, and patches its first frame's counts
+     * and seek table when it can. [tags] are stored natively in WAV, AIFF,
+     * FLAC, MP4 and Ogg, as an APEv2 tag in WavPack and as an ID3v2.4 tag at
+     * the front of MP3; WAV and AIFF also receive an ID3v2.4
      * chunk so fields their native text chunks cannot express are retained.
      * AU has no structured tag format and rejects a non-empty bundle.
      */

@@ -421,6 +421,47 @@ of right-channel spectrum. Another 183 FFmpeg comparisons cover independent
 windows, mixed blocks, mid-side combinations, both MPEG-2 gain ladders, explicit
 right-channel zeros and highest bands next to real right-channel data.
 
+## MPEG Layer III encoder
+
+The encoder is written from the specification alone. No MP3 encoder or decoder
+source was opened, searched for or recalled while writing it: not LAME, Shine,
+TwoLAME, BladeEnc, 8hz-mp3, the ISO dist10 sample encoder, mpg123, libmad,
+ffmpeg, minimp3 or any other.
+
+| Field | Value |
+|---|---|
+| Specification | ISO/IEC 11172-3:1993, clause 2.4 for the Layer III bitstream it writes; Annex C, the encoding process, for the analysis subband filter, the MDCT with window switching and alias reduction, quantization by the inner (rate) and outer (distortion) iteration loops, the choice of Huffman tables and regions, scalefactor selection information and the bit reservoir; Annex D, psychoacoustic model 2, for the masking thresholds, from which the encoder derives the perceptual entropy that shares out the reservoir |
+| Gapless header | The published layout of the Xing header (`Xing` and `Info`, flags, frame count, byte count, 100-entry table of contents, quality) and the published "Mp3 Info Tag rev 1" description of the LAME extension that follows it, which is also what `MpegVbrHeader.kt` reads |
+| Never opened | Everything in the first sentence of this section |
+
+Tables are reused from the decoder, never retyped: the Huffman codes of
+`Mp3HuffmanTables.kt` (the encoder builds its codeword lookup from the same
+arrays the decoder builds its trees from), the scalefactor band boundaries,
+`PRETAB`, `SLEN1` and `SLEN2` and the alias reduction coefficients of
+`Mp3Tables.kt`. The analysis window is not typed either: Annex C's window C and
+the synthesis window D of Table 3-B.3 are the same prototype filter, with
+`C[i] = D[i] / 32`, so the encoder derives C from the decoder's D, and a test
+runs the analysis filter into the decoder's synthesis filter and recovers the
+input within float rounding. The forward MDCT and alias reduction are checked
+the same way against the decoder's inverse path for all four block types.
+
+Model 2's partition tables, its absolute threshold column and its spreading
+values are computed from the formulas they come from rather than transcribed:
+partitions of a third of a critical band on the Bark scale, the spreading
+function Annex D states, and the threshold in quiet from Terhardt's published
+approximation, the last two through the shared `internal/psy/Hearing.kt`. The
+threshold in quiet is held at 20 dB SPL above 12 kHz, where Terhardt's curve
+would otherwise let the encoder drop the top octave. [Encoding](../docs/encoding.md#mp3)
+records where the encoder departs from the annexes: it switches to short
+blocks on a detected onset rather than on the perceptual entropy, and scales
+the allowed noise to the budget before the outer loop.
+
+ffmpeg reads the gapless numbers of the LAME extension only when the encoder
+name in it starts with `LAME`, `Lavc` or `Lavf`, which was established by
+running ffmpeg on files that differed only in that name, not by reading its
+source. The encoder writes `LAMEAKdec`: the prefix names the layout the block
+follows, and the rest names AudioKodec.
+
 ## Opus
 
 Specifications: RFC 6716 (the codec) and RFC 7845 (Ogg encapsulation). Both are

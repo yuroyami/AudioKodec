@@ -1,6 +1,7 @@
 package io.github.yuroyami.audiokodec.internal.container
 
 import io.github.yuroyami.audiokodec.AudioCodec
+import io.github.yuroyami.audiokodec.BitrateMode
 import io.github.yuroyami.audiokodec.AudioContainer
 import io.github.yuroyami.audiokodec.AudioFormat
 import io.github.yuroyami.audiokodec.AudioSink
@@ -23,6 +24,7 @@ import io.github.yuroyami.audiokodec.internal.flac.FlacDecoder
 import io.github.yuroyami.audiokodec.internal.flac.FlacEncoder
 import io.github.yuroyami.audiokodec.internal.io.SinkWriter
 import io.github.yuroyami.audiokodec.internal.mp4.Mp4AlacWriter
+import io.github.yuroyami.audiokodec.internal.mpeg.encoder.Mp3Encoder
 import io.github.yuroyami.audiokodec.internal.opus.OggOpusEncoder
 import io.github.yuroyami.audiokodec.internal.tag.Id3v2Writer
 import io.github.yuroyami.audiokodec.internal.tag.TagWriter
@@ -65,6 +67,16 @@ internal object ContainerWriter {
         }
         if (target.codec == AudioCodec.ALAC) {
             Mp4AlacWriter(pcm.format, target.bitDepth, target.dither.fresh()).encode(pcm, tags, sink)
+            return
+        }
+        if (target.codec == AudioCodec.MP3) {
+            val constant = target.bitrateMode == BitrateMode.CONSTANT
+            Mp3Encoder(
+                pcm.format,
+                bitrateKbps = if (constant) target.bitrate / 1_000 else 0,
+                quality = if (constant) 0 else (target.quality ?: 3f).toInt(),
+                jointStereo = target.jointStereo,
+            ).encode(pcm, tags, sink)
             return
         }
         if (target.codec == AudioCodec.OPUS) {

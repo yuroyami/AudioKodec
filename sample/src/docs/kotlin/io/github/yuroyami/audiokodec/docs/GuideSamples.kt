@@ -165,6 +165,19 @@ class GuideSamples {
         val rate = decoded.format.sampleRate.toLong()
         assertEquals((decoded.frames * 48_000L + rate - 1) / rate, opusInfo.durationFrames)
         assertEquals(opusInfo.durationFrames, AudioKodec.decode(opus).frames.toLong())
+
+        // --8<-- [start:encode-mp3]
+        val mp3 = AudioKodec.encode(decoded, EncodeTarget.mp3(bitrate = 192_000), tags = tags)
+        val smaller = AudioKodec.encode(decoded, EncodeTarget.mp3Vbr(quality = 5))
+        // --8<-- [end:encode-mp3]
+        val mp3Info = AudioKodec.probe(mp3)
+        assertEquals(AudioCodec.MP3, mp3Info.codec)
+        assertEquals("Two Seconds", AudioKodec.readTags(mp3)[TagField.TITLE])
+        // Gapless: exactly as long as the input, at either setting.
+        assertEquals(decoded.frames.toLong(), mp3Info.durationFrames)
+        assertEquals(decoded.frames, AudioKodec.decode(mp3).frames)
+        assertEquals(decoded.frames, AudioKodec.decode(smaller).frames)
+        assertTrue(smaller.size < mp3.size)
     }
 
     @Test

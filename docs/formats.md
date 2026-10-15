@@ -15,6 +15,7 @@ complete support tables and how each format is checked against a reference decod
 | MP4 and M4A | ALAC 16/20/24/32-bit with one to eight channels, written with packets identical to those of Apple's reference encoder. The other MP4 codings are read only |
 | [WavPack](wavpack.md) | Integers of 1 to 32 bits and 32-bit float on read, exact integers through `IntPcmAccess`, mono to multichannel, hybrid files without their correction file; lossless 8, 16, 24 and 32-bit integers with one to eight channels on write, byte-identical to the reference encoder's. APEv2 tags are read and written |
 | Ogg | Vorbis at quality 0 to 10 with one to eight channels, and Opus, mono or stereo, with packets identical to those of libopus's CELT encoder. FLAC and Speex are read only, and tags can be rewritten in all four |
+| MPEG audio | Layers I, II and III (MP1, MP2 and MP3) on read, with gapless trimming and sample-accurate seeking; MPEG-1 Layer III on write, mono or stereo at 32, 44.1 and 48 kHz, at a constant or variable bitrate, gapless |
 
 RF64 and BW64 are read, and a WAV is written as RF64 automatically when it passes 4 GiB.
 
@@ -28,7 +29,6 @@ integer types are little-endian: `23ni` is 32-bit and `42ni` is 24-bit.
 |---|---|
 | Wave64 | PCM 8/16/24/32-bit, IEEE float 32/64-bit, A-law, mu-law |
 | CAF | PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, QuickTime IMA ADPCM, ALAC 16/20/24/32-bit, iLBC |
-| MPEG audio | Layers I, II and III (MP1, MP2 and MP3), with gapless trimming and sample-accurate seeking |
 | [Matroska and WebM](matroska.md) | Opus, Vorbis, FLAC, MPEG Layers I, II and III, AAC-LC, AC-3, PCM 8 to 32-bit in both byte orders, IEEE float 32/64-bit, from the first audio track. Tags and chapters are read |
 | MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, AMR-NB and AMR-WB, GSM 06.10, iLBC, AC-3. Tags can be rewritten |
 | ADTS | [AAC-LC](aac.md), with sample-accurate seeking |
@@ -458,6 +458,11 @@ present. Otherwise AudioKodec counts complete frame headers, including bitrate
 changes and padding. The silent metadata frame is excluded from audio. LAME's
 stored encoder delay and padding shorten the playable duration; playback also
 accounts for the decoder filter's 529-sample delay when dropping the front.
+
+MP3 is also written, with `EncodeTarget.mp3(bitrate)` at a constant bitrate or
+`EncodeTarget.mp3Vbr(quality)` at a variable one. The files start with an `Info` or
+`Xing` frame whose LAME extension makes them gapless in AudioKodec, ffmpeg and
+libmpg123. [Encoding](encoding.md#mp3) describes the encoder and what it measured.
 
 Seeking uses a valid `Xing` or `Info` table of contents, including with
 `DecodeOptions(allowSlowSeek = false)`. The table's quantized byte hints are

@@ -40,8 +40,10 @@ public class EncodeTarget private constructor(
     public val bitrate: Int = 0,
     /** How a lossy coding holds to [bitrate], or null for the codings without one. */
     public val bitrateMode: BitrateMode? = null,
+    /** Whether a two-channel MP3 may code the sum and difference of its channels. */
+    internal val jointStereo: Boolean = true,
 ) {
-    override fun toString(): String = if (bitrateMode != null) {
+    override fun toString(): String = if (bitrateMode != null && bitrate > 0) {
         "EncodeTarget(${container.displayName}, ${codec.displayName}, $bitrate bit/s $bitrateMode)"
     } else if (quality != null) {
         "EncodeTarget(${container.displayName}, ${codec.displayName}, quality $quality)"
@@ -322,6 +324,64 @@ public class EncodeTarget private constructor(
             require(quality in 0f..10f) { "the Vorbis quality is 0 to 10, not $quality" }
             return EncodeTarget(AudioContainer.OGG, AudioCodec.VORBIS, 0, 0, Dither.None, quality)
         }
+
+        /**
+         * MP3, MPEG-1 Layer III, at a constant [bitrate] in bits per second.
+         *
+         * [bitrate] is one of the format's own: 32, 40, 48, 56, 64, 80, 96,
+         * 112, 128, 160, 192, 224, 256 or 320 kbit/s. Every frame has the
+         * same size, and the bit reservoir lets a hard passage borrow the
+         * bits an easy one left over. The source must be mono or stereo at
+         * 32, 44.1 or 48 kHz, the rates MPEG-1 defines; other rates and more
+         * channels are refused with [UnsupportedFeatureException]. With
+         * [jointStereo], each frame of a stereo source codes the sum and
+         * difference of the channels instead of the channels whenever that
+         * needs fewer bits; without it the channels are always coded apart.
+         * Intensity stereo is not used.
+         *
+         * The coding is lossy. The file starts with a Xing `Info` frame whose
+         * LAME extension states the encoder delay and end padding, so a
+         * decoder that honours it, as AudioKodec, ffmpeg and libmpg123 do,
+         * returns exactly as many samples as went in, lined up with them.
+         * The frame count, byte count and seek table in that frame are
+         * patched at the end when the sink can be patched, and computed in
+         * advance when the source states its frame count; with neither, only
+         * the delay at the start is trimmed. Tags go into an ID3v2.4 tag at
+         * the front. Integer sources are refused; pass float PCM. See
+         * `docs/encoding.md` for what each bitrate measured.
+         */
+        public fun mp3(bitrate: Int = 192_000, jointStereo: Boolean = true): EncodeTarget {
+            require(bitrate % 1_000 == 0 && bitrate / 1_000 in MP3_BITRATES) {
+                "an MP3 bit rate is one of ${MP3_BITRATES.joinToString()} kbit/s, not $bitrate bit/s"
+            }
+            return EncodeTarget(
+                AudioContainer.MPEG_AUDIO, AudioCodec.MP3, 0, 0, Dither.None,
+                bitrate = bitrate, bitrateMode = BitrateMode.CONSTANT, jointStereo = jointStereo,
+            )
+        }
+
+        /**
+         * MP3, MPEG-1 Layer III, at a variable bitrate chosen frame by frame
+         * for a [quality] from 0, the best and largest, to 9, the smallest.
+         *
+         * Each granule is quantised to the noise the psychoacoustic model
+         * allows there, loosened or tightened by [quality], and each frame
+         * takes the smallest bitrate that holds it. On music at 48 kHz in
+         * stereo the default, 3, averaged about 180 kbit/s, and the scale
+         * runs from about 250 kbit/s at 0 to about 50 at 9; see
+         * `docs/encoding.md`. The file starts with a Xing frame carrying the
+         * frame count, a seek table and the gapless numbers. Everything else
+         * is as for [mp3].
+         */
+        public fun mp3Vbr(quality: Int = 3, jointStereo: Boolean = true): EncodeTarget {
+            require(quality in 0..9) { "the MP3 VBR quality is 0 to 9, not $quality" }
+            return EncodeTarget(
+                AudioContainer.MPEG_AUDIO, AudioCodec.MP3, 0, 0, Dither.None,
+                quality = quality.toFloat(), bitrateMode = BitrateMode.VARIABLE, jointStereo = jointStereo,
+            )
+        }
+
+        private val MP3_BITRATES = intArrayOf(32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320)
     }
 }
 

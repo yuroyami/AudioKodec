@@ -67,6 +67,16 @@ audio and Ogg.
   sink, and libvorbisfile, ffmpeg and AudioKodec decode exactly the input's
   length. At the default quality a music-like test signal takes 145 kbit/s and
   scores an `opus_compare` error of 0.38 against libvorbisfile's decode.
+- MP3 encoding with `EncodeTarget.mp3(bitrate)` and `EncodeTarget.mp3Vbr(quality)`,
+  written from ISO/IEC 11172-3: MPEG-1 Layer III, mono or stereo at 32, 44.1 and
+  48 kHz, constant bitrates from 32 to 320 kbit/s and a variable bitrate by
+  quality 0 to 9, with psychoacoustic model 2, block switching at onsets, the
+  Annex C quantization loops, the bit reservoir and mid-side stereo chosen
+  frame by frame. An `Info` or `Xing` frame with the LAME extension makes the
+  files gapless in AudioKodec, ffmpeg and libmpg123, and tags go into an
+  ID3v2.4 tag. On a music-like test signal, 192 kbit/s scores an
+  `opus_compare` error of 0.27 against ffmpeg's decode, where LAME scores
+  0.29, and the default variable quality 0.27 at 179 kbit/s.
 - A shared Ogg page writer, a forward MDCT and a codec-neutral psychoacoustic
   toolkit (Bark and ERB scales, the absolute threshold of hearing, spreading,
   tonality, masking thresholds and a transient detector) for the encoders that

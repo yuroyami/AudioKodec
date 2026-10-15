@@ -1,8 +1,8 @@
 # AudioKodec
 
 Audio containers, codecs and tags written in Kotlin for Kotlin Multiplatform: decode 22
-containers to Float32 PCM, write FLAC, WavPack, WAV, AIFF, AU, Apple Lossless, Ogg Vorbis
-and Ogg Opus, and edit tags without touching the audio, with the same code on every target.
+containers to Float32 PCM, write FLAC, WavPack, WAV, AIFF, AU, Apple Lossless, Ogg Vorbis,
+Ogg Opus and MP3, and edit tags without touching the audio, with the same code on every target.
 
 <sub>AI tools wrote much of the code, tests and documentation in this project, under the
 direction and review of its author.</sub>
@@ -83,8 +83,8 @@ val flac = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.flac(
 val ogg = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.vorbis(quality = 4f))
 ```
 
-The encoders write FLAC, WavPack, WAV, AIFF, AU, Apple Lossless in an `.m4a` file, and Vorbis
-and Opus in Ogg, with tags and cover art. See [Encoding](docs/encoding.md).
+The encoders write FLAC, WavPack, WAV, AIFF, AU, Apple Lossless in an `.m4a` file, Vorbis
+and Opus in Ogg, and MP3, with tags and cover art. See [Encoding](docs/encoding.md).
 
 ### Read and edit tags
 
@@ -142,8 +142,10 @@ Without a display, it prints the same summary for the file named in `--args`.
 ## Formats
 
 - **Read and write:** FLAC, WavPack, WAV and RF64, AIFF and AIFF-C, AU, Apple Lossless in
-  MP4, and Vorbis and Opus (mono and stereo) in Ogg. BW64 is read as well.
-- **Read only:** Ogg with FLAC and Speex, MP3 and the other MPEG audio layers,
+  MP4, Vorbis and Opus (mono and stereo) in Ogg, and MP3 (MPEG-1 Layer III, mono and
+  stereo). BW64 is read as well.
+- **Read only:** Ogg with FLAC and Speex, MPEG audio Layers I and II and the MPEG-2 rates of
+  Layer III,
   AAC-LC in MP4 and ADTS, AC-3, Matroska and WebM, Wave64, CAF, Monkey's Audio, True
   Audio, Musepack, AMR, GSM 06.10, iLBC, G.722, G.726, and DSD in DSF and DSDIFF.
 - **Tags:** ID3v2, APE, Vorbis comments, MP4 items, RIFF INFO and `bext`, and AIFF text
@@ -172,8 +174,9 @@ reads and writes buffers and streams only, because a browser has no filesystem f
 
 - AudioKodec decodes and does not play. [Playing the result](docs/decoding.md#playing-the-result)
   shows the sink for each platform.
-- Vorbis and Opus are the only lossy encoders, Opus in its music mode (CELT) with one or two
-  channels. MP3 and AAC decode only.
+- Vorbis, Opus and MP3 are the only lossy encoders: Opus in its music mode (CELT) with one or
+  two channels, and MP3 as MPEG-1 Layer III with one or two channels at 32, 44.1 and 48 kHz.
+  AAC decodes only.
 - A header cannot make AudioKodec allocate more than `DecodeOptions.maxAllocationBytes`, which
   defaults to 1 GiB.
 

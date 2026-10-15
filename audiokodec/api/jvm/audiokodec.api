@@ -359,6 +359,10 @@ public final class io/github/yuroyami/audiokodec/EncodeTarget$Companion {
 	public final fun auMuLaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun flac (IILio/github/yuroyami/audiokodec/Dither;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun flac$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public final fun mp3 (IZ)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public static synthetic fun mp3$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IZILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public final fun mp3Vbr (IZ)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public static synthetic fun mp3Vbr$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IZILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun opus (IZZI)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun opus$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IZZIILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun vorbis (F)Lio/github/yuroyami/audiokodec/EncodeTarget;

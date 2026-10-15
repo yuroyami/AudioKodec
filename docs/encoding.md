@@ -1,7 +1,7 @@
 # Encoding
 
-AudioKodec writes FLAC, WavPack, WAV, AIFF, AU, Apple Lossless in an `.m4a` file, and Vorbis
-and Opus in Ogg. An encoder takes Float32 samples with an `AudioFormat`, a `DecodedAudio`, or
+AudioKodec writes FLAC, WavPack, WAV, AIFF, AU, Apple Lossless in an `.m4a` file, Vorbis
+and Opus in Ogg, and MP3. An encoder takes Float32 samples with an `AudioFormat`, a `DecodedAudio`, or
 any `PcmSource`, and writes to a byte array or to a sink.
 
 ## Write a file
@@ -28,7 +28,7 @@ copied, so avoid changing it while an encoding runs.
 
 The targets available are FLAC, lossless WavPack, integer PCM and IEEE float in WAV,
 AIFF and AU, A-law and mu-law in all three, IMA or Microsoft ADPCM in WAV, Apple
-Lossless in an `.m4a` file, and [Vorbis](#vorbis) and [Opus](#opus) in Ogg.
+Lossless in an `.m4a` file, [Vorbis](#vorbis) and [Opus](#opus) in Ogg, and [MP3](#mp3).
 
 ```kotlin
 --8<-- "GuideSamples.kt:encode-alac"
@@ -77,7 +77,8 @@ AIFF use their native text chunks, plus ID3v2.4 for Unicode and richer fields. F
 uses Vorbis comments and native `PICTURE` blocks, whose limits [Tags](tags.md#pictures)
 describes. WavPack uses an APEv2 tag after the audio. Vorbis and Opus use Vorbis
 comments too, Opus in its OpusTags header, with pictures in `METADATA_BLOCK_PICTURE`
-comments. AU has no structured tag format, so it refuses a bundle that is not empty
+comments. MP3 gets an ID3v2.4 tag at the front, with 1024 bytes of padding so that a later
+edit can usually rewrite it in place. AU has no structured tag format, so it refuses a bundle that is not empty
 instead of dropping it.
 
 ## FLAC
@@ -249,6 +250,133 @@ rate. The average rate is within 6% of the target with VBR and within 2% with
 constrained VBR. With constrained VBR the error does not fall from 64 to 96 kbit/s, and
 the mono error at 64 kbit/s is 0.72, both as with libopus. A 1 kHz sine at -6 dBFS comes
 back at 41 dB signal to noise at 128 kbit/s, and silence stays below 1e-30.
+
+## MP3
+
+```kotlin
+--8<-- "GuideSamples.kt:encode-mp3"
+```
+
+The encoder writes MPEG-1 Layer III, mono or stereo, at 32, 44.1 or 48 kHz. It is written
+from ISO/IEC 11172-3 alone, without reference to any MP3 encoder's source. Other sample
+rates, including the MPEG-2 and MPEG-2.5 ones, and more than two channels are refused with
+`UnsupportedFeatureException` before anything is written; resample or mix down first.
+Integer sources are refused; pass Float32. Like any lossy coding it does not return the
+input exactly.
+
+| Target | Effect |
+|---|---|
+| `mp3(bitrate)` | A constant bitrate, one of 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256 and 320 kbit/s, given in bits per second. The default is 192,000. Every frame has the same size, give or take the padding byte that 44.1 kHz needs |
+| `mp3Vbr(quality)` | A variable bitrate for a quality from 0, the best and largest, to 9, the smallest. The default is 3. Each frame takes the smallest bitrate that holds what its granules need |
+| `jointStereo = true` (default) | Each frame of a stereo source codes the sum and difference of the channels when that needs fewer bits, and the channels themselves otherwise |
+| `jointStereo = false` | The two channels are always coded apart |
+
+Intensity stereo is not used, and neither are mixed blocks.
+
+### Gapless playback
+
+The first frame is a silent one holding a Xing header, `Info` for a constant bitrate and
+`Xing` for a variable one, with the frame count, the byte count and a 100-entry seek table,
+followed by the extension LAME introduced, which states the encoder delay and the padding
+at the end. The encoder delays the signal by 528 samples, the analysis filterbank's 481
+and the MDCT's 576 less the 529 every decoder adds on its own, and pads the end out to a
+whole frame. A decoder that applies the two numbers returns exactly as many samples as went
+in, lined up with them: AudioKodec, ffmpeg and libmpg123 all do. Like those of LAME, the
+files' container duration that ffprobe reports counts whole frames, delay and padding
+included; the decoded length is the exact one.
+
+The extension's nine-byte encoder name is `LAMEAKdec`. ffmpeg only reads the gapless
+numbers when that name starts with `LAME` (or with its own `Lavc` or `Lavf`), so the first
+four bytes say which layout the block follows and the other five say that AudioKodec wrote
+it.
+
+The counts and the seek table are only known at the end. When the sink can be patched, the
+first frame is rewritten then. When it cannot and the source states its frame count, the
+header is computed in advance: in full at a constant bitrate, and without the byte count
+and seek table at a variable one. When neither is possible, the header states only the
+delay, so the decode starts on the first sample but keeps up to one frame of padding,
+silence, at the end.
+
+### How it works
+
+Each granule of 576 samples goes through the stages Annex C of the standard describes:
+
+1. The analysis filterbank splits the signal into 32 subbands. Its window is the decoder's
+   synthesis window divided by 32, and a test runs it into the decoder's own synthesis
+   filter and gets the input back.
+2. Psychoacoustic model 2 of Annex D looks at the granule through a 1024-point FFT, and
+   through three 256-point FFTs for a short block. It measures each part of the spectrum's
+   tonality from how well its magnitude and phase are predicted from the two transforms
+   before, spreads the energy across critical bands, and sets the noise each scalefactor
+   band may carry: 29 dB below a tone and 6 dB below noise, with pre-echo control against
+   the granules before and the threshold in quiet. Its partition tables are computed from
+   the Bark scale instead of copied from the standard.
+3. An onset detector compares the high-frequency energy of 64-sample pieces of the signal
+   with the pieces before. A rise of 10 dB switches the granule to three short blocks,
+   with start and stop blocks around them. Annex D switches on a high perceptual entropy
+   instead, which also fires on dense but steady passages and misses quiet onsets.
+4. The MDCT, with the window of each block type, the frequency inversion of odd subbands
+   and the alias reduction butterflies, turns each subband's samples into spectral lines.
+   A test runs it into the decoder's inverse for every block type and transition.
+5. Each frame chooses between left and right and sum and difference by an estimate of the
+   bits each needs.
+6. At a constant bitrate, each granule's share of the frame and of the bit reservoir
+   follows its perceptual entropy: one that needs more than usual, or a short block, draws
+   on the reservoir, and the others leave a little in it. Annex C's two loops then
+   quantize the granule within that budget: the inner loop finds the finest global step
+   that fits, and the outer loop makes the step finer in every scalefactor band whose
+   noise is above what the model allows. The allowed noise is first scaled to the level
+   the budget can reach, so the outer loop has a goal it can meet.
+7. At a variable bitrate, each scalefactor band is quantized to the coarsest step that
+   keeps its noise within what the model allows, moved by the quality setting, and the
+   frame takes the smallest bitrate that holds the result.
+8. Huffman coding picks the cheapest of the tables sized for each region's largest value,
+   tries every division into regions, and picks the cheaper of the two tables for the values of 1 and below.
+   Scalefactors take the narrowest fields that hold them, pre-emphasis is used when it
+   saves bits, and a second granule's scalefactors that equal the first's are not sent
+   again.
+
+The `main_data_begin` field never reaches before the start of the stream or more than 511
+bytes back, and a frame and the reservoir it draws on never exceed the 7680 bits a decoder
+is required to buffer, so at 320 kbit/s there is no reservoir.
+
+### Measured quality
+
+The test signal is the same kind as for Vorbis and Opus: ten seconds of seeded,
+music-like 48 kHz stereo, with a chord of three notes with harmonics, a sweep to 19 kHz, a
+noise bed and a decaying burst of noise every half second. Each file is decoded by ffmpeg's
+float decoder and scored with `opus_compare`'s internal weighted error, lower being better.
+The LAME rows are ffmpeg's `libmp3lame` encoder on the same signal, decoded the same way.
+
+| Encoder | Bitrate | Error | LAME at the same setting |
+|---|---|---|---|
+| CBR 96 kbit/s | 96 kbit/s | 0.564 | 0.537 |
+| CBR 128 kbit/s | 128 kbit/s | 0.445 | 0.464 |
+| CBR 192 kbit/s (default) | 193 kbit/s | 0.271 | 0.286 |
+| CBR 320 kbit/s | 321 kbit/s | 0.169 | 0.128 |
+| VBR quality 0 | 247 kbit/s | 0.178 | |
+| VBR quality 1 | 222 kbit/s | 0.225 | |
+| VBR quality 2 | 199 kbit/s | 0.263 | |
+| VBR quality 3 (default) | 179 kbit/s | 0.271 | |
+| VBR quality 4 | 159 kbit/s | 0.308 | LAME `-V 4`, 158 kbit/s: 0.384 |
+| VBR quality 5 | 139 kbit/s | 0.342 | |
+| VBR quality 6 | 121 kbit/s | 0.384 | |
+| VBR quality 7 | 105 kbit/s | 0.474 | |
+| VBR quality 8 | 77 kbit/s | 0.572 | |
+| VBR quality 9 | 49 kbit/s | 0.651 | |
+
+`Mp3EncodeOracleTest` holds the encoder to bounds fixed before it was written: an error of
+at most 0.45 at 192 kbit/s and 0.60 at 128, and at the default variable quality at most
+0.45 at no more than 224 kbit/s on average. The error must not rise from 96 to 128, 192
+and 320 kbit/s. Whole numbers of sine periods, including fewer samples than a frame and
+lengths that are not a multiple of 1152, decode to exactly their length in AudioKodec and
+ffmpeg, with no lag, and libmpg123 reports and decodes the exact length of music. A 1 kHz sine at -6 dBFS comes back at 70 dB signal to
+noise at 192 kbit/s, where the test asks for 30, and silence stays below 1e-4. ffmpeg
+decodes every file without a message at its error level, and AudioKodec and libmpg123
+agree with it to within 1e-4 a sample, the bound `MpegOracleTest` uses for LAME's files.
+
+On the JVM the encoder runs at about 15 to 25 times real time for stereo at a constant
+bitrate and about 40 times at a variable one, on one core of a shared machine.
 
 ## Exact integers
 
