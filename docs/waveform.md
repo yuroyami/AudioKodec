@@ -1,30 +1,16 @@
 # Draw a waveform
 
+**Depends on** `io.github.yuroyami:audiokodec:0.1.0`. See [Install](index.md#install).
+
 Drawing a waveform means reducing millions of samples to a few thousand
 buckets, each with the lowest and highest sample and the root mean square
 of its frames. `WaveformReducer` does that a block at a time, so a two hour
 file streams through in bounded memory.
 
 ```kotlin
-val info = AudioKodec.probe(source)
-val perBucket = 1_024
-val buckets = WaveformReducer.bucketCount(info.durationFrames ?: 0, perBucket).toInt()
-val channels = info.format.channels
-val min = FloatArray(buckets * channels)
-val max = FloatArray(buckets * channels)
-val rms = FloatArray(buckets * channels)
+--8<-- "WaveformSample.kt:imports"
 
-val reducer = WaveformReducer(channels, perBucket)
-var pulled = 0
-AudioKodec.open(source, DecodeOptions(reuseBuffers = true)).use { decoder ->
-    while (true) {
-        val frame = decoder.nextFrame() ?: break
-        reducer.push(frame.samples, 0, frame.frameCount)
-        pulled += reducer.pull(min, max, rms, pulled)
-    }
-}
-reducer.finish()
-pulled += reducer.pull(min, max, rms, pulled)
+--8<-- "WaveformSample.kt:waveform"
 ```
 
 `bucketCount` says how many buckets a stream of a given length reduces to

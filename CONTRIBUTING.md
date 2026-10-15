@@ -58,6 +58,16 @@ Two documentation rules catch people out: no em dashes anywhere, and no claim
 that the committed code does not support. The documentation uses American
 spelling.
 
+A code sample added to `docs/` is not typed into the page. It lives in a test under
+`sample/src/docs/kotlin/io/github/yuroyami/audiokodec/docs/`, a source set
+that sees only the published modules, between `// --8<-- [start:name]` and
+`// --8<-- [end:name]` markers, and the page includes it with
+`--8<-- "File.kt:name"`. The test must run the sample on input it makes itself
+and assert what the page says it does. `./gradlew :sample:docsTest` runs the
+samples, and `mkdocs build --strict` fails on a missing file or marker. The
+Web Audio sample is the one exception to the location: it is Kotlin/JS, so it
+lives in `audiokodec/src/jsTest` and runs with `:audiokodec:jsNodeTest`.
+
 Code follows the official Kotlin style.
 
 ## Running the tests

@@ -16,11 +16,11 @@ downloaded or user-selected bytes into a `Buffer` and call `readAudioSource()`.
 ## Read and write a file
 
 ```kotlin
-val info = Path("song.wav").openAudioSource().use { AudioKodec.probe(it) }
+--8<-- "KotlinxIoSample.kt:imports"
 
-Path("out.wav").writeAudioAtomically { sink ->
-    AudioKodec.encode(samples.asPcmSource(format), EncodeTarget.wav(24), sink)
-}
+--8<-- "KotlinxIoSample.kt:describe"
+
+--8<-- "KotlinxIoSample.kt:write"
 ```
 
 ## Seekable input

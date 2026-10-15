@@ -4,24 +4,16 @@
 not load the recording into memory and has no whole-file byte ceiling:
 
 ```kotlin
-import io.github.yuroyami.audiokodec.AudioKodec
-import io.github.yuroyami.audiokodec.io.openAudioSource
-import kotlinx.io.files.Path
+--8<-- "FileInputSample.kt:imports"
 
-AudioKodec.open(Path("recording.wav").openAudioSource()).use { decoder ->
-    decoder.seek(10L * decoder.format.sampleRate)
-    val block = decoder.nextFrame()
-}
+--8<-- "FileInputSample.kt:seek"
 ```
 
 Closing the decoder closes its source and file handle. For probing or tags,
 which do not take ownership, close the source yourself:
 
 ```kotlin
-Path("recording.flac").openAudioSource().use { source ->
-    val info = AudioKodec.probe(source)
-    val tags = AudioKodec.readTags(source)
-}
+--8<-- "FileInputSample.kt:probe"
 ```
 
 The handle captures its byte length when opened. Keep the file unchanged

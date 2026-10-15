@@ -40,6 +40,35 @@ tasks.test {
     systemProperty("java.awt.headless", "true")
 }
 
+/*
+ * The code samples the documentation includes. They live in a source set of
+ * their own that sees the two published modules and nothing else, not even the
+ * viewer, so a sample can only use what a reader's project can. Each one is a
+ * test that runs and checks its result, and docs/ includes the marked regions
+ * of these files rather than a copy of them. `./gradlew :sample:docsTest`
+ * runs them.
+ */
+val docs: SourceSet by sourceSets.creating
+
+dependencies {
+    "docsImplementation"(project(":audiokodec"))
+    "docsImplementation"(project(":audiokodec-io"))
+    "docsImplementation"(kotlin("test-junit"))
+}
+
+val docsTest by tasks.registering(Test::class) {
+    group = "verification"
+    description = "Runs the code samples that the documentation includes."
+    testClassesDirs = docs.output.classesDirs
+    classpath = docs.runtimeClasspath
+    // The Java Sound sample asks for a line, which needs no display either.
+    systemProperty("java.awt.headless", "true")
+}
+
+tasks.check {
+    dependsOn(docsTest)
+}
+
 tasks.register<JavaExec>("benchmark") {
     group = "verification"
     description = "Decodes fixed inputs and reports a multiple of real time for each codec, against the floors."

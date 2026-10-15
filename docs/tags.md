@@ -4,10 +4,9 @@ Tag reading works on any file, including the ones AudioKodec cannot decode.
 A tag block does not need a decoder.
 
 ```kotlin
-val tags = AudioKodec.readTags(bytes)
-println(tags[TagField.TITLE])
-println(tags.all(TagField.ARTIST))    // a file may name more than one
-println(tags.number(TagField.TRACK_NUMBER))
+--8<-- "ReadTagsSample.kt:imports"
+
+--8<-- "ReadTagsSample.kt:read"
 ```
 
 ## Which tag formats
@@ -55,11 +54,7 @@ the chunk. Ordinary edits preserve it byte-for-byte.
 Everything stays available exactly as it was stored:
 
 ```kotlin
-println(tags.raw.formats.map { it.displayName }) // [ID3v2.4, ID3v1]
-for (block in tags.raw.blocks) {
-    println("${block.format.displayName} at ${block.offset}, ${block.size} bytes")
-    for (entry in block.entries) println("  ${entry.key} = ${entry.text}")
-}
+--8<-- "ReadTagsSample.kt:raw"
 ```
 
 When one field has many values, the merge removes identical values and
@@ -78,14 +73,7 @@ Editing rewrites the tag blocks and copies the audio across unchanged. It never
 decodes or re-encodes, so it is safe on a lossy file.
 
 ```kotlin
-val edited = AudioKodec.readTags(bytes).edit {
-    set(TagField.TITLE, "New title")
-    set(TagField.TRACK_NUMBER, 4)
-    set(TagField.TRACK_TOTAL, 11)
-    remove(TagField.COMMENT)
-    addPicture(TagPicture(mimeType = "image/jpeg", bytes = coverBytes))
-}
-val updated = AudioKodec.writeTags(bytes, edited)
+--8<-- "EditTagsSample.kt:edit"
 ```
 
 To discard every entry in the bundle, including private entries and unknown
@@ -114,15 +102,7 @@ frame does not change that frame's meaning.
 `TagWriteOptions` controls the details:
 
 ```kotlin
-AudioKodec.writeTags(
-    bytes,
-    edited,
-    TagWriteOptions(
-        id3Version = 3,        // for hardware that predates ID3v2.4
-        padding = 4096,        // room for the next edit to reuse
-        keepId3v1 = true,      // update an existing block; never create one
-    ),
-)
+--8<-- "EditTagsSample.kt:options"
 ```
 
 ## Primary and explicit release dates
@@ -410,12 +390,7 @@ A subframe marked for discard when the tag changes is removed as its flag requir
 Use `TagChapter.copy` to edit the modeled values while retaining other subframes:
 
 ```kotlin
-val tags = AudioKodec.readTags(bytes)
-val first = tags.chapters.first().copy(title = "A new title", startMillis = 1500)
-val edited = tags.edit {
-    setChapters(listOf(first) + tags.chapters.drop(1))
-}
-val written = AudioKodec.writeTags(bytes, edited, TagWriteOptions(id3Version = 4))
+--8<-- "GuideSamples.kt:chapters"
 ```
 
 A changed title or picture list replaces its readable `TIT2` or `APIC` frames.
@@ -444,10 +419,7 @@ Chapter parsing limits nesting to sixteen levels and honors `DecodeOptions.maxAl
 ## Pictures
 
 ```kotlin
-tags.cover?.let { showCover(it.bytes, it.mimeType) }
-for (picture in tags.pictures) {
-    println("${picture.type}: ${picture.mimeType}, ${picture.bytes.size} bytes")
-}
+--8<-- "CoverArtSample.kt:read"
 ```
 
 The bytes are the image file exactly as it was stored. AudioKodec does not
@@ -501,13 +473,7 @@ reports both as decibels and says which was found, so applying one as the other
 is not a mistake you can make by accident.
 
 ```kotlin
-val gain = tags.replayGain
-val trackGain = gain?.trackGainDb
-if (gain != null && trackGain != null) {
-    // An R128 gain aims at -23 LUFS. Add 5 dB to play it at the -18 LUFS of ReplayGain 2.
-    val gainDb = if (gain.isR128) trackGain + 5.0 else trackGain
-    Levels.applyGain(audio.samples, audio.format.channels, gainDb)
-}
+--8<-- "GuideSamples.kt:replay-gain"
 ```
 
 ID3, APE and Vorbis writers rebuild only these six names from `replayGain`:

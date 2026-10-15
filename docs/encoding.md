@@ -7,15 +7,13 @@ writes to a byte array or to a sink.
 ## Write a file
 
 ```kotlin
-val wav = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16))
+--8<-- "GuideSamples.kt:encode-wav"
 ```
 
 To convert one decoded value into several formats, reuse it directly:
 
 ```kotlin
-val decoded = AudioKodec.decode(bytes)
-val wav = AudioKodec.encode(decoded, EncodeTarget.wav(16))
-val flac = AudioKodec.encode(decoded, EncodeTarget.flac(16))
+--8<-- "GuideSamples.kt:encode-decoded"
 ```
 
 Each encoding reads the complete `DecodedAudio.samples` array from the
@@ -33,7 +31,7 @@ A-law and mu-law in all three, IMA or Microsoft ADPCM in WAV, and Apple
 Lossless in an `.m4a` file.
 
 ```kotlin
-val m4a = AudioKodec.encode(decoded, EncodeTarget.alac(24), tags = tags)
+--8<-- "GuideSamples.kt:encode-alac"
 ```
 
 ALAC is written at 16, 20, 24 or 32 bits with Apple's 4096-frame packets, and
@@ -51,7 +49,7 @@ belongs. It replaces the distortion of plain rounding with a small amount of
 noise, which is what you want at 16 bits and below:
 
 ```kotlin
-AudioKodec.encode(samples, format, EncodeTarget.wav(16, dither = Dither.Tpdf()))
+--8<-- "GuideSamples.kt:encode-dither"
 ```
 
 Files above 4 GiB are written as RF64 automatically. AudioKodec reserves the
@@ -82,7 +80,7 @@ instead of dropping it.
 ## FLAC
 
 ```kotlin
-val flac = AudioKodec.encode(samples, format, EncodeTarget.flac(bitDepth = 16, effort = 5))
+--8<-- "GuideSamples.kt:encode-flac"
 ```
 
 `effort` runs from 0 to 8. It trades encoding time against size, as the numbered

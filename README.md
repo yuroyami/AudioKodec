@@ -122,7 +122,8 @@ See [Files and kotlinx-io](docs/files.md).
 
 [Change the sample rate](docs/resample.md), [mix channels](docs/mix.md),
 [measure loudness](docs/loudness.md), [draw a waveform](docs/waveform.md), and
-[apply levels and fades](docs/levels.md).
+[apply levels and fades](docs/levels.md). The [task pages](docs/tasks/index.md) each answer
+one "how do I" question in a few minutes, with code that runs in the build.
 
 ### Try it
 
