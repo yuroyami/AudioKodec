@@ -26,6 +26,8 @@ import io.github.yuroyami.audiokodec.internal.mp4.Mp4AlacWriter
 import io.github.yuroyami.audiokodec.internal.opus.OggOpusEncoder
 import io.github.yuroyami.audiokodec.internal.tag.Id3v2Writer
 import io.github.yuroyami.audiokodec.internal.tag.TagWriter
+import io.github.yuroyami.audiokodec.internal.vorbis.VorbisEncoder
+import io.github.yuroyami.audiokodec.internal.wavpack.WavPackWriter
 import io.github.yuroyami.audiokodec.tag.TagBundle
 
 /**
@@ -69,6 +71,14 @@ internal object ContainerWriter {
             OggOpusEncoder(pcm.format, target.bitrate, target.bitrateMode!!, target.blockAlign).encode(pcm, tags, sink)
             return
         }
+        if (target.codec == AudioCodec.WAVPACK) {
+            WavPackWriter(pcm.format, target.bitDepth, target.blockAlign, target.dither.fresh()).encode(pcm, tags, sink)
+            return
+        }
+        if (target.codec == AudioCodec.VORBIS) {
+            VorbisEncoder(pcm.format, target.quality ?: VorbisEncoder.DEFAULT_QUALITY).encode(pcm, tags, sink)
+            return
+        }
         writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->
             encodeAll(pcm, encoder, writer)
         }
@@ -80,10 +90,12 @@ internal object ContainerWriter {
         sink: AudioSink,
         tags: TagBundle? = null,
     ) {
-        if (target.codec != AudioCodec.PCM_INTEGER && target.codec != AudioCodec.FLAC && target.codec != AudioCodec.ALAC) {
+        if (target.codec != AudioCodec.PCM_INTEGER && target.codec != AudioCodec.FLAC &&
+            target.codec != AudioCodec.ALAC && target.codec != AudioCodec.WAVPACK
+        ) {
             throw UnsupportedFeatureException(
                 "integer input for ${target.codec.displayName}",
-                "choose integer WAV, AIFF or AU, 8/16/24-bit FLAC, or ALAC",
+                "choose integer WAV, AIFF or AU, 8/16/24-bit FLAC, ALAC or WavPack",
             )
         }
         validateInput(pcm.format, target, tags)
@@ -100,6 +112,10 @@ internal object ContainerWriter {
         }
         if (target.codec == AudioCodec.ALAC) {
             Mp4AlacWriter(pcm.format, target.bitDepth, target.dither.fresh()).encode(pcm, tags, sink)
+            return
+        }
+        if (target.codec == AudioCodec.WAVPACK) {
+            WavPackWriter(pcm.format, target.bitDepth, target.blockAlign, target.dither.fresh()).encode(pcm, tags, sink)
             return
         }
         writeUncompressed(pcm.format, pcm.frameCount, target, sink, tags) { encoder, writer ->
@@ -194,6 +210,8 @@ internal object ContainerWriter {
                     "FLAC fixes ${format.channels} channels to $fixed and cannot preserve $actual"
                 }
             }
+
+            AudioContainer.WAVPACK -> WavPackWriter.maskFor(actual)
 
             else -> Unit
         }

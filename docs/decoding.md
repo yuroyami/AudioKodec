@@ -8,9 +8,9 @@ and a long one streams a block at a time. Every function takes the encoded bytes
 ## Decode a file
 
 ```kotlin
-val audio = AudioKodec.decode(bytes)
-println("${audio.format.sampleRate} Hz, ${audio.format.channels} channels")
-println("${audio.durationSeconds} seconds")
+--8<-- "DecodeSample.kt:imports"
+
+--8<-- "DecodeSample.kt:decode"
 ```
 
 `audio.samples` is interleaved Float32, nominally between -1.0 and 1.0. A
@@ -20,10 +20,7 @@ it, because clamping belongs at the point where samples become integers again.
 ## Read a header without decoding
 
 ```kotlin
-val info = AudioKodec.probe(bytes)
-println(info.container.displayName)
-println(info.codec.displayName)
-println(info.durationSeconds)
+--8<-- "DecodeSample.kt:probe"
 ```
 
 `probe` reads metadata and index tables. Its I/O depends on the format: Ogg walks
@@ -80,8 +77,7 @@ else, which beats a guess from the file extension. Check `isDecodable` before
 choosing AudioKodec to read one:
 
 ```kotlin
-val container = AudioKodec.sniff(firstBytes)
-if (container?.isDecodable == true) { /* AudioKodec can read it */ }
+--8<-- "GuideSamples.kt:sniff"
 ```
 
 A null result means the bytes do not identify a format. This includes an
@@ -107,13 +103,7 @@ anything long. Seeking is sample accurate: the decoder lands on the frame you
 asked for, not on the block containing it.
 
 ```kotlin
-AudioKodec.open(source).use { decoder ->
-    decoder.seek(decoder.durationFrames!! / 2)
-    while (true) {
-        val block = decoder.nextFrame() ?: break
-        play(block.samples, block.frameCount)
-    }
-}
+--8<-- "StreamSample.kt:stream"
 ```
 
 All decoders reject negative seek targets with `IllegalArgumentException`.
@@ -148,11 +138,7 @@ mantissa. Decoders for lossless codings therefore also implement
 `IntPcmAccess`:
 
 ```kotlin
-AudioKodec.open(bytes).use { decoder ->
-    if (decoder is IntPcmAccess) {
-        val block = decoder.nextIntFrame()   // exactly what the file holds
-    }
-}
+--8<-- "GuideSamples.kt:int-access"
 ```
 
 Use one or the other on a given decoder, not both. They advance the same
@@ -162,7 +148,7 @@ cursor.
 signed, right-justified values without Float32:
 
 ```kotlin
-val exact = AudioKodec.encode(integerSamples, format, bitDepth = 32, target = EncodeTarget.aiff(32))
+--8<-- "GuideSamples.kt:int-encode"
 ```
 
 Integer WAV, AIFF and AU preserve every bit at equal depths, including 32.
@@ -180,8 +166,7 @@ a channel mask, keep it through decoding, and AudioKodec writes the mask back
 out for files with more than two channels.
 
 ```kotlin
-val format = AudioFormat(48_000, ChannelLayout.SURROUND_5_1)
-println(format.channelLayout.channels)  // [FRONT_LEFT, FRONT_RIGHT, ...]
+--8<-- "GuideSamples.kt:layout"
 ```
 
 `Pcm.remapChannels` reorders samples between two layouts that name the same
@@ -216,7 +201,7 @@ modes under an allocation ceiling, and streaming must keep advancing.
 A truncated file throws by default. To salvage what is there instead:
 
 ```kotlin
-AudioKodec.decode(bytes, DecodeOptions(tolerant = true))
+--8<-- "GuideSamples.kt:tolerant"
 ```
 
 For FLAC, tolerant decoding stops at the first damaged frame after valid
@@ -247,7 +232,7 @@ bound individual buffers and collections, rather than total process memory.
 ## Playing the result
 
 AudioKodec decodes and does not play. The result is Float32 PCM, which every
-platform sink accepts:
+platform sink accepts. [Play decoded audio](tasks/play-audio.md) has the code for each:
 
 | Platform | Sink | Notes |
 |---|---|---|

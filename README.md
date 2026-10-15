@@ -1,8 +1,8 @@
 # AudioKodec
 
 Audio containers, codecs and tags written in Kotlin for Kotlin Multiplatform: decode 22
-containers to Float32 PCM, write FLAC, WAV, AIFF, AU, Apple Lossless and Opus, and edit
-tags without touching the audio, with the same code on every target.
+containers to Float32 PCM, write FLAC, WavPack, WAV, AIFF, AU, Apple Lossless, Ogg Vorbis
+and Ogg Opus, and edit tags without touching the audio, with the same code on every target.
 
 <sub>AI tools wrote much of the code, tests and documentation in this project, under the
 direction and review of its author.</sub>
@@ -80,10 +80,11 @@ AudioKodec.open(bytes).use { decoder ->
 ```kotlin
 val wav = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.wav(16))
 val flac = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.flac(bitDepth = 24))
+val ogg = AudioKodec.encode(samples, AudioFormat(44_100, 2), EncodeTarget.vorbis(quality = 4f))
 ```
 
-The encoders write FLAC, WAV, AIFF, AU, Apple Lossless in an `.m4a` file and Opus in an Ogg
-file, with tags and cover art. See [Encoding](docs/encoding.md).
+The encoders write FLAC, WavPack, WAV, AIFF, AU, Apple Lossless in an `.m4a` file, and Vorbis
+and Opus in Ogg, with tags and cover art. See [Encoding](docs/encoding.md).
 
 ### Read and edit tags
 
@@ -122,14 +123,28 @@ See [Files and kotlinx-io](docs/files.md).
 
 [Change the sample rate](docs/resample.md), [mix channels](docs/mix.md),
 [measure loudness](docs/loudness.md), [draw a waveform](docs/waveform.md), and
-[apply levels and fades](docs/levels.md).
+[apply levels and fades](docs/levels.md). The [task pages](docs/tasks/index.md) each answer
+one "how do I" question in a few minutes, with code that runs in the build.
+
+### Try it
+
+The repository has a sample desktop viewer. Drop a file on its window, or use File > Open, to
+see the container and coding, the format and duration, the tags and cover art, and the
+waveform, and to play the file through Java Sound:
+
+```sh
+./gradlew :sample:run
+./gradlew :sample:run --args="path/to/song.flac"
+```
+
+Without a display, it prints the same summary for the file named in `--args`.
 
 ## Formats
 
-- **Read and write:** FLAC, WAV and RF64, AIFF and AIFF-C, AU, Apple Lossless in MP4, and
-  Opus in Ogg, mono and stereo. BW64 is read as well.
-- **Read only:** Ogg with Vorbis, FLAC and Speex, MP3 and the other MPEG audio layers,
-  AAC-LC in MP4 and ADTS, AC-3, Matroska and WebM, Wave64, CAF, WavPack, Monkey's Audio, True
+- **Read and write:** FLAC, WavPack, WAV and RF64, AIFF and AIFF-C, AU, Apple Lossless in
+  MP4, and Vorbis and Opus (mono and stereo) in Ogg. BW64 is read as well.
+- **Read only:** Ogg with FLAC and Speex, MP3 and the other MPEG audio layers,
+  AAC-LC in MP4 and ADTS, AC-3, Matroska and WebM, Wave64, CAF, Monkey's Audio, True
   Audio, Musepack, AMR, GSM 06.10, iLBC, G.722, G.726, and DSD in DSF and DSDIFF.
 - **Tags:** ID3v2, APE, Vorbis comments, MP4 items, RIFF INFO and `bext`, and AIFF text
   chunks are read and written. An ID3v1 block is kept up to date when a file has one. Lyrics3
@@ -157,8 +172,8 @@ reads and writes buffers and streams only, because a browser has no filesystem f
 
 - AudioKodec decodes and does not play. [Playing the result](docs/decoding.md#playing-the-result)
   shows the sink for each platform.
-- Opus is the only lossy encoder, in its music mode (CELT) with one or two channels. MP3, AAC
-  and Vorbis decode only.
+- Vorbis and Opus are the only lossy encoders, Opus in its music mode (CELT) with one or two
+  channels. MP3 and AAC decode only.
 - A header cannot make AudioKodec allocate more than `DecodeOptions.maxAllocationBytes`, which
   defaults to 1 GiB.
 
@@ -175,8 +190,9 @@ Apache-2.0. See [LICENSE](LICENSE).
 Most formats are written from their published specifications. Several decoders are
 translations of permissively licensed reference code: Opus from libopus, Apple Lossless from
 Apple's reference, WavPack, Monkey's Audio, True Audio, Musepack from libmpcdec, Speex from
-libspeex, AMR from opencore-amr, GSM 06.10 from libgsm and iLBC from WebRTC. The resampler
-comes from speexdsp and the loudness meter from libebur128. [NOTICE](NOTICE) gives the
+libspeex, AMR from opencore-amr, GSM 06.10 from libgsm and iLBC from WebRTC. The Apple
+Lossless and WavPack encoders come from the same references. The resampler comes from
+speexdsp and the loudness meter from libebur128. [NOTICE](NOTICE) gives the
 attribution and license terms for each, and
 [reference/REFERENCES.md](reference/REFERENCES.md) records the sources.
 

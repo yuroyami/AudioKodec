@@ -115,7 +115,7 @@ class OpusEncodeTest {
     @Test
     fun aToneComesBackAtItsFrequency() {
         for (channels in 1..2) {
-            for (target in listOf(EncodeTarget.opus(64_000), EncodeTarget.opus(128_000, vbr = false))) {
+            for (target in listOf(EncodeTarget.opus(64_000), EncodeTarget.opus(96_000, constrainedVbr = true), EncodeTarget.opus(128_000, vbr = false))) {
                 val what = "$channels ch, $target"
                 val frames = 9_600
                 val samples = tone(frames, channels, 1_000.0, 48_000)

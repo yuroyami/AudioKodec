@@ -40,11 +40,14 @@ import org.junit.Assume.assumeTrue
  * Quality is scored by `OpusCompare`, the translation of `opus_compare`,
  * against the input, aligned by the stated pre-skip and nothing else, on a
  * seeded ten-second stereo signal of a harmonic chord, a sweep to 19 kHz, a
- * noise bed and decaying noise bursts every half second. libopus 1.5.2
- * itself scores an internal weighted error of 0.25 at 128 kbit/s and 0.54 at
- * 64 kbit/s on such a signal. The bounds are 0.40, 0.70 and 0.30 at 128, 64
- * and 256 kbit/s, 0.60 for mono at 64 kbit/s, and the error must not rise
- * with the rate.
+ * noise bed and decaying noise bursts every half second. libopus 1.5.2,
+ * through ffmpeg with its default unconstrained VBR, scores an internal
+ * weighted error of 0.25 at 128 kbit/s and 0.54 at 64 kbit/s on such a
+ * signal. The bounds hold at the encoder's default, which is the same
+ * unconstrained VBR: 0.40, 0.70 and 0.30 at 128, 64 and 256 kbit/s, 0.60 for
+ * mono at 64 kbit/s, and an error that does not rise with the rate.
+ * Constrained VBR is held to libopus's own constrained VBR on the same
+ * signal instead.
  *
  * Every comparison skips itself when the tool it needs is missing.
  */
@@ -112,24 +115,13 @@ class OpusEncodeOracleTest {
         }
     }
 
-    @Test
-    fun stereoQualityWithTheDefaultConstrainedVbr() = stereoQuality(constrained = true)
-
-    @Test
-    fun stereoQualityWithUnconstrainedVbr() = stereoQuality(constrained = false)
-
-    @Test
-    fun monoAtSixtyFourKilobitsWithTheDefaultConstrainedVbr() = monoQuality(constrained = true)
-
-    @Test
-    fun monoAtSixtyFourKilobitsWithUnconstrainedVbr() = monoQuality(constrained = false)
-
     /**
-     * Scores five rates in stereo against the bounds, which must also not
-     * get worse as the rate rises. Every rate is measured and printed before
-     * any bound is checked.
+     * Scores five rates in stereo at the default settings against the
+     * bounds, which must also not get worse as the rate rises. Every rate is
+     * measured and printed before any bound is checked.
      */
-    private fun stereoQuality(constrained: Boolean) {
+    @Test
+    fun stereoQualityAtTheDefaultMeetsItsBounds() {
         val oracle = requireOracle()
         val frames = 48_000 * 10
         val input = music(frames, 2)
@@ -138,8 +130,8 @@ class OpusEncodeOracleTest {
         val failures = ArrayList<String>()
         var previous = Double.MAX_VALUE
         for (bitrate in intArrayOf(64_000, 96_000, 128_000, 192_000, 256_000)) {
-            val what = "stereo, $bitrate bit/s " + if (constrained) "constrained VBR" else "VBR"
-            val file = encode(input, 2, EncodeTarget.opus(bitrate, constrainedVbr = constrained))
+            val what = "stereo, $bitrate bit/s VBR"
+            val file = encode(input, 2, EncodeTarget.opus(bitrate))
             val decoded = decodeWithReference(oracle, file, what)
             checkStream(decoded, channels = 2, frameMillis = 20, what)
             assertEquals(frames, decoded.samples.size / 2, "$what: decoded length")
@@ -160,12 +152,13 @@ class OpusEncodeOracleTest {
         assertTrue(failures.isEmpty(), failures.joinToString("\n"))
     }
 
-    private fun monoQuality(constrained: Boolean) {
+    @Test
+    fun monoAtSixtyFourKilobitsAtTheDefaultMeetsItsBound() {
         val oracle = requireOracle()
         val frames = 48_000 * 10
         val input = music(frames, 1)
-        val what = "mono, 64000 bit/s " + if (constrained) "constrained VBR" else "VBR"
-        val file = encode(input, 1, EncodeTarget.opus(64_000, constrainedVbr = constrained))
+        val what = "mono, 64000 bit/s VBR"
+        val file = encode(input, 1, EncodeTarget.opus(64_000))
         val decoded = decodeWithReference(oracle, file, what)
         checkStream(decoded, channels = 1, frameMillis = 20, what)
         assertEquals(frames, decoded.samples.size, "$what: decoded length")
@@ -188,7 +181,7 @@ class OpusEncodeOracleTest {
      * streams are not identical and the scores differ a little either way.
      */
     @Test
-    fun qualityIsLibopusOwnOnTheSameSignal() {
+    fun constrainedVbrScoresAsLibopusDoesOnTheSameSignal() {
         val oracle = requireOracle()
         val demo = libopus()?.let { File(it, "build-plain/opus_demo") }?.takeIf { it.canExecute() }
         assumeTrue("opus_demo has not been built under reference/libopus", demo != null)
@@ -207,7 +200,7 @@ class OpusEncodeOracleTest {
             val decoded = ByteBuffer.wrap(output.readBytes()).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
             val theirs = ShortArray(frames * channels) { decoded.get(OpusEncoder.LOOKAHEAD * channels + it) }
             val libopus = OpusCompare.compare(reference, theirs, 48_000)
-            val mine = decodeWithReference(oracle, encode(input, channels, EncodeTarget.opus(bitrate)), what)
+            val mine = decodeWithReference(oracle, encode(input, channels, EncodeTarget.opus(bitrate, constrainedVbr = true)), what)
             val audioKodec = OpusCompare.compare(reference, toInt16(mine.samples), 48_000)
             println("$what: libopus error %.4f, AudioKodec error %.4f".format(libopus.error, audioKodec.error))
             assertTrue(audioKodec.error <= libopus.error + 0.05, "$what: AudioKodec ${audioKodec.error}, libopus ${libopus.error}")

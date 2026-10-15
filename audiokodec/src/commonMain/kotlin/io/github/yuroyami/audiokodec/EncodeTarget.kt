@@ -19,23 +19,32 @@ public class EncodeTarget private constructor(
     /**
      * Block size in bytes for the block-based codings, or 0 otherwise.
      *
-     * For FLAC this carries the effort level instead, because FLAC's block size
-     * is measured in samples and is not something a caller needs to choose.
-     * For Opus it carries the frame length in samples at 48 kHz.
+     * For FLAC and WavPack this carries the effort level instead, because
+     * their blocks are measured in samples and are not something a caller
+     * needs to choose. For Opus it carries the frame length in samples at
+     * 48 kHz.
      */
     public val blockAlign: Int,
     /** Noise to add when reducing the sample depth. */
     public val dither: Dither,
     /**
-     * The target bit rate in bits per second for the lossy codings, or 0 for
-     * the others, whose size follows from the samples.
+     * The quality setting of a lossy coding that takes one, or null.
+     *
+     * For Vorbis this is on oggenc's scale, 0 to 10.
+     */
+    public val quality: Float? = null,
+    /**
+     * The target bit rate in bits per second for the codings that aim at
+     * one, or 0 for the others.
      */
     public val bitrate: Int = 0,
-    /** How a lossy coding holds to [bitrate], or null for the other codings. */
+    /** How a lossy coding holds to [bitrate], or null for the codings without one. */
     public val bitrateMode: BitrateMode? = null,
 ) {
     override fun toString(): String = if (bitrateMode != null) {
         "EncodeTarget(${container.displayName}, ${codec.displayName}, $bitrate bit/s $bitrateMode)"
+    } else if (quality != null) {
+        "EncodeTarget(${container.displayName}, ${codec.displayName}, quality $quality)"
     } else {
         "EncodeTarget(${container.displayName}, ${codec.displayName}, ${bitDepth}-bit)"
     }
@@ -196,11 +205,11 @@ public class EncodeTarget private constructor(
          * records the original rate for players that convert back.
          *
          * With [vbr], the default, each packet's size follows the signal and
-         * the average follows [bitrate]. With [constrainedVbr] as well, also
-         * the default and libopus's own, the encoder never runs more than one
-         * frame's worth of bits ahead of the rate, which suits streaming; off,
-         * as `opusenc` and ffmpeg default to, it moves bits more freely
-         * between loud and quiet passages, which suits files. Without [vbr]
+         * the long-run average follows [bitrate], moving bits freely between
+         * loud and quiet passages, as `opusenc` and ffmpeg do by default.
+         * With [constrainedVbr] as well, libopus's own library default, the
+         * encoder never runs more than one frame's worth of bits ahead of the
+         * rate, which suits streaming over a link of that rate. Without [vbr]
          * every packet is the same size. [bitrate] is 6 to 510 kbit/s, and
          * with [vbr] CELT spends at most 260 kbit/s per channel.
          *
@@ -222,7 +231,7 @@ public class EncodeTarget private constructor(
         public fun opus(
             bitrate: Int = 128_000,
             vbr: Boolean = true,
-            constrainedVbr: Boolean = true,
+            constrainedVbr: Boolean = false,
             frameMillis: Int = 20,
         ): EncodeTarget {
             require(bitrate in 6_000..510_000) { "the Opus bit rate is 6000 to 510000 bit/s, not $bitrate" }
@@ -232,7 +241,45 @@ public class EncodeTarget private constructor(
                 constrainedVbr -> BitrateMode.CONSTRAINED_VARIABLE
                 else -> BitrateMode.VARIABLE
             }
-            return EncodeTarget(AudioContainer.OGG, AudioCodec.OPUS, 0, 48 * frameMillis, Dither.None, bitrate, mode)
+            return EncodeTarget(
+                AudioContainer.OGG, AudioCodec.OPUS, 0, 48 * frameMillis, Dither.None,
+                bitrate = bitrate, bitrateMode = mode,
+            )
+        }
+
+        /**
+         * Lossless WavPack, at [bitDepth] bits and the given effort.
+         *
+         * [effort] runs from 0 to 3 and picks the reference encoder's fast,
+         * normal, high and very high modes, which `wavpack` selects with
+         * `-f`, no option, `-h` and `-hh`. Each mode uses a longer
+         * decorrelation filter than the one before, and the two high modes
+         * use longer blocks; none changes what comes back out. The encoder
+         * is a translation of the reference library and writes the same
+         * blocks it does in those modes. Hybrid lossy mode is not offered.
+         *
+         * Up to eight channels are written. WavPack keeps the speakers of a
+         * WAV channel mask first, in the mask's order, and any unassigned
+         * channels after them, so a layout in any other order is refused
+         * rather than written to the wrong speakers.
+         *
+         * The first block holds a RIFF header, so `wvunpack` restores a WAV
+         * file, and the last the MD5 sum of the audio. When the source's
+         * frame count is unknown, the length is stated as unknown and
+         * corrected at the end if the sink can be patched. Tags go into an
+         * APEv2 tag after the audio. [dither] applies when the source is
+         * float or deeper than [bitDepth].
+         */
+        public fun wavPack(
+            bitDepth: Int = 16,
+            effort: Int = 1,
+            dither: Dither = Dither.None,
+        ): EncodeTarget {
+            require(bitDepth == 8 || bitDepth == 16 || bitDepth == 24 || bitDepth == 32) {
+                "AudioKodec writes 8, 16, 24 or 32-bit WavPack, not $bitDepth"
+            }
+            require(effort in 0..3) { "the WavPack effort is 0 to 3, not $effort" }
+            return EncodeTarget(AudioContainer.WAVPACK, AudioCodec.WAVPACK, bitDepth, effort, dither)
         }
 
         /**
@@ -255,6 +302,25 @@ public class EncodeTarget private constructor(
                 "AudioKodec writes 16, 20, 24 or 32-bit ALAC, not $bitDepth"
             }
             return EncodeTarget(AudioContainer.MP4, AudioCodec.ALAC, bitDepth, 0, dither)
+        }
+
+        /**
+         * Ogg Vorbis at [quality], on oggenc's scale from 0 to 10.
+         *
+         * Vorbis is lossy: what comes back is close to what went in, not the
+         * same, and a higher quality buys closeness with size. The encoder
+         * aims at a quality rather than a bitrate, so the size follows the
+         * material. See `docs/encoding.md` for what each setting measured.
+         *
+         * One to eight channels in Vorbis's speaker layouts, at 8 to 192 kHz.
+         * The encoder reads the source once from start to end and never
+         * patches what it has written, so any sink will do, and the decoded
+         * length is exactly the source's. Tags go into the Vorbis comment
+         * header, pictures included; chapters are refused.
+         */
+        public fun vorbis(quality: Float = 4f): EncodeTarget {
+            require(quality in 0f..10f) { "the Vorbis quality is 0 to 10, not $quality" }
+            return EncodeTarget(AudioContainer.OGG, AudioCodec.VORBIS, 0, 0, Dither.None, quality)
         }
     }
 }

@@ -21,10 +21,10 @@ it is not scaled up to 32 bits. This convention also applies to 8-bit WAV,
 whose unsigned storage representation is handled by the writer.
 
 The source depth must be stated explicitly and can be any value from 1 to
-32. Target depths are 8, 16, 24 or 32 for integer WAV, AIFF and AU, and 8,
-16 or 24 for FLAC. Integer input to float, G.711 or ADPCM targets is refused
-before output or source consumption. The Float32 overloads continue to
-support those targets.
+32. Target depths are 8, 16, 24 or 32 for integer WAV, AIFF, AU and WavPack,
+8, 16 or 24 for FLAC, and 16, 20, 24 or 32 for ALAC. Integer input to float,
+G.711 or ADPCM targets is refused before output or source consumption. The
+Float32 overloads continue to support those targets.
 
 | Depth change | Behavior |
 |---|---|
@@ -72,12 +72,13 @@ A source is consumed. Create a fresh source for another encoding. Short
 nonzero reads are allowed; zero means end of input. Declared frame counts
 must match the frames actually supplied. Unpatchable WAV, AIFF and AU sinks
 need the count before writing. FLAC can stream with unknown totals and
-leave its MD5 unset when the sink cannot be patched.
+leave its MD5 unset when the sink cannot be patched. WavPack can stream with
+an unknown length, which it corrects when the sink can be patched.
 
 Values outside the declared signed range and invalid read counts produce
 `AudioKodecException`. Such source errors can occur after a header has been
 written, so discard partial output after a failed encode. Invalid source
 depths, unsupported target codings, incompatible channel layouts and AU
 tags are checked before output. Metadata uses the same carriers as float
-encoding: WAV and AIFF native text plus ID3, and FLAC native comments and
-pictures.
+encoding: WAV and AIFF native text plus ID3, FLAC native comments and
+pictures, and an APEv2 tag for WavPack.

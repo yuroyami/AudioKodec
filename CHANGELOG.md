@@ -54,10 +54,23 @@ audio and Ogg.
   same packets, with tags, cover art and chapters.
 - Opus encoding into Ogg with `EncodeTarget.opus`: the CELT music mode at full
   bandwidth, mono and stereo, 10 or 20 ms frames, at a constant, constrained
-  variable or variable bit rate from 6 to 510 kbit/s. Translated from libopus
-  1.5.2's CELT encoder and writing the same packets. The pre-skip and end
-  trim make the decoded length exactly the input's, other sample rates are
-  resampled to 48 kHz, and tags go into the OpusTags header.
+  variable or variable (the default) bit rate from 6 to 510 kbit/s.
+  Translated from libopus 1.5.2's CELT encoder and writing the same packets.
+  The pre-skip and end trim make the decoded length exactly the input's,
+  other sample rates are resampled to 48 kHz, and tags go into the OpusTags
+  header.
+- Ogg Vorbis encoding, the first lossy encoder, written from the Vorbis I
+  specification: `EncodeTarget.vorbis(quality)` on oggenc's 0 to 10 scale,
+  one to eight channels in Vorbis's speaker order at 8 to 192 kHz, block
+  switching at onsets, a masking model, floor 1, residue types 1 and 2 and
+  lossless stereo coupling, with tags in the comment header. It streams to any
+  sink, and libvorbisfile, ffmpeg and AudioKodec decode exactly the input's
+  length. At the default quality a music-like test signal takes 145 kbit/s and
+  scores an `opus_compare` error of 0.38 against libvorbisfile's decode.
+- A shared Ogg page writer, a forward MDCT and a codec-neutral psychoacoustic
+  toolkit (Bark and ERB scales, the absolute threshold of hearing, spreading,
+  tonality, masking thresholds and a transient detector) for the encoders that
+  follow.
 - Raw AAC in ADTS and ADIF framing, probed: rate, channels and bitrate, and
   for ADTS the exact length from its frame headers.
 - AAC-LC, decoded from MP4 and ADTS: every tool of the low complexity
@@ -71,6 +84,11 @@ audio and Ogg.
   `IntPcmAccess`, block checksums verified, and exact seeking. Hybrid files
   decode to their lossy stream. Translated from WavPack 5.9.0 and identical
   to `wvunpack`. DSD inside WavPack is refused by name.
+- WavPack, encoded losslessly at 8, 16, 24 and 32 bits with one to eight
+  channels in the fast, normal, high and very high modes, with the RIFF
+  header, MD5 sum and APEv2 tags the reference writes. Translated from
+  WavPack 5.9.0, and byte-identical to `wavpack -m --no-threads`. Tags of
+  WavPack files can be rewritten.
 - Musepack, decoded: stream version 8 at every quality, mono and stereo,
   with mid/side coding and noise substitution, the exact length its header
   states, and seeking. Translated from libmpcdec, BSD-licensed, and on the

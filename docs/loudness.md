@@ -1,5 +1,7 @@
 # Measure loudness
 
+**Depends on** `io.github.yuroyami:audiokodec:0.1.0`. See [Install](index.md#install).
+
 `LoudnessMeter` measures loudness as EBU R 128 defines it, from
 Recommendation ITU-R BS.1770: the integrated loudness of a whole program,
 the momentary and short-term loudness of its last 400 ms and three seconds,
@@ -8,18 +10,19 @@ the result into ReplayGain values in the form the tag writers take, so a
 scan and a tag write are one operation.
 
 ```kotlin
-val meter = LoudnessMeter(decoded.format.sampleRate, decoded.format.channelLayout)
-meter.add(decoded.samples)
-meter.finish()
-println(meter.integratedLoudness)   // LUFS
-println(meter.loudnessRange)        // LU
+--8<-- "LoudnessSample.kt:imports"
 
-val tags = AudioKodec.readTags(bytes).edit { setReplayGain(meter.replayGain()) }
-val retagged = AudioKodec.writeTags(bytes, tags)
+--8<-- "LoudnessSample.kt:loudness"
 ```
 
 A meter takes blocks of any size, and reads at any point give the figures
-so far. `finish` lets the oversampler for the true peak reach the end of the
+so far, so a long file can be measured as it streams:
+
+```kotlin
+--8<-- "LoudnessSample.kt:loudness-stream"
+```
+
+`finish` lets the oversampler for the true peak reach the end of the
 stream, a few milliseconds behind the input; nothing can be added after it.
 
 Oversampling for the true peak is most of a meter's work, about ten times

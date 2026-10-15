@@ -67,8 +67,8 @@ jobs:
       - name: Core tests (native)
         run: ./gradlew :audiokodec:linuxX64Test :audiokodec-io:linuxX64Test --stacktrace
 
-      - name: Sample module tests
-        run: ./gradlew :sample:test --stacktrace
+      - name: Sample module tests and documentation samples
+        run: ./gradlew :sample:test :sample:docsTest --stacktrace
 
       - name: Public API check
         run: ./gradlew checkKotlinAbi --stacktrace
@@ -218,6 +218,17 @@ jobs:
 
       - name: Build the Dokka site
         run: ./gradlew dokkaGenerate --stacktrace
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The guides include their code samples from compiled test sources; a
+      # missing file or section marker fails the strict build.
+      - name: Build the guides
+        run: |
+          python -m pip install mkdocs-material==9.7.7
+          mkdocs build --strict
 
       - uses: actions/upload-artifact@v4
         with:

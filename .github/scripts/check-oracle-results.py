@@ -10,7 +10,7 @@ required = {
     "IntegerEncodingOracleTest", "Mp4OracleTest", "Mp4GaplessOracleTest", "Mp4TagOracleTest", "MpegMp4OracleTest", "MpegCrcOracleTest", "MpegFreeFormatOracleTest", "MpegOracleTest", "OggOpusDecodeTest",
     "OggOracleTest", "OggChainOracleTest", "OpusConformanceTest", "OpusDecodeOracleTest",
     "OpusJoinOracleTest", "OpusMultistreamOracleTest", "OpusOracleTest", "OpusEncodeOracleTest",
-    "SilkDecodeOracleTest", "VorbisOracleTest", "WavPackOracleTest", "ApeOracleTest", "TtaOracleTest", "MusepackOracleTest", "SpeexOracleTest", "AmrOracleTest", "GsmOracleTest", "G72xOracleTest", "G722ConformanceTest", "G726ConformanceTest", "IlbcOracleTest", "DsdOracleTest", "MatroskaOracleTest", "Ac3DecodeOracleTest", "Ac3RandomOracleTest", "ResamplerOracleTest", "ChannelMixOracleTest", "LoudnessOracleTest", "OggMultiplexTagOracleTest", "VorbisFloor0OracleTest", "MutagenTagOracleTest",
+    "SilkDecodeOracleTest", "VorbisOracleTest", "VorbisEncodeOracleTest", "WavPackOracleTest", "WavPackEncodeOracleTest", "ApeOracleTest", "TtaOracleTest", "MusepackOracleTest", "SpeexOracleTest", "AmrOracleTest", "GsmOracleTest", "G72xOracleTest", "G722ConformanceTest", "G726ConformanceTest", "IlbcOracleTest", "DsdOracleTest", "MatroskaOracleTest", "Ac3DecodeOracleTest", "Ac3RandomOracleTest", "ResamplerOracleTest", "ChannelMixOracleTest", "LoudnessOracleTest", "OggMultiplexTagOracleTest", "VorbisFloor0OracleTest", "MutagenTagOracleTest",
     "NativeTextTagOracleTest", "NativeTextEncodingOracleTest", "R128TagOracleTest",
 }
 apple_only = {

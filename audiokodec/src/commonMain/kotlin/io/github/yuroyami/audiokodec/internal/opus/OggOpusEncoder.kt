@@ -7,7 +7,7 @@ import io.github.yuroyami.audiokodec.ChannelLayout
 import io.github.yuroyami.audiokodec.PcmSource
 import io.github.yuroyami.audiokodec.Resampler
 import io.github.yuroyami.audiokodec.UnsupportedFeatureException
-import io.github.yuroyami.audiokodec.internal.ogg.OggPacketWriter
+import io.github.yuroyami.audiokodec.internal.ogg.OggPageWriter
 import io.github.yuroyami.audiokodec.internal.tag.VorbisComment
 import io.github.yuroyami.audiokodec.readChecked
 import io.github.yuroyami.audiokodec.tag.TagBundle
@@ -60,15 +60,13 @@ internal class OggOpusEncoder(
             tags ?: TagBundle.EMPTY,
             preservedVendor = VorbisComment.DEFAULT_VENDOR.encodeToByteArray(),
         )
-        val pages = OggPacketWriter(sink, SERIAL)
-        val head = identificationHeader(channels, format.sampleRate)
-        pages.writePacket(head, 0, head.size, 0)
-        pages.flushPage()
+        // Each header ends its page, so the audio starts on a fresh one.
+        val pages = OggPageWriter(sink)
+        pages.writePacket(identificationHeader(channels, format.sampleRate), 0, flush = true)
         val tagPacket = ByteArray(8 + comment.size)
         "OpusTags".forEachIndexed { i, c -> tagPacket[i] = c.code.toByte() }
         comment.copyInto(tagPacket, 8)
-        pages.writePacket(tagPacket, 0, tagPacket.size, 0)
-        pages.flushPage()
+        pages.writePacket(tagPacket, 0, flush = true)
 
         val encoder = OpusEncoder(
             channels, bitrate, vbr = mode != BitrateMode.CONSTANT, frameSize = frameSize,
@@ -80,16 +78,9 @@ internal class OggOpusEncoder(
         var packets = 0L
         var samples48 = 0L
 
-        fun emit(granule: Long) {
+        fun emit(granule: Long, last: Boolean) {
             val length = encoder.encode(frame, 0, packet)
-            // Audio packets never straddle pages, and a page holds about a
-            // second, so a player can start anywhere without much to discard.
-            if (pages.packetsOnPage >= PACKETS_PER_PAGE * 960 / frameSize ||
-                pages.segmentsFor(length) > pages.freeSegments
-            ) {
-                pages.flushPage()
-            }
-            pages.writePacket(packet, 0, length, granule)
+            pages.writePacket(packet, granule, endOfStream = last, to = length)
             packets++
         }
 
@@ -103,7 +94,7 @@ internal class OggOpusEncoder(
                 samples48 += take
                 if (filled == frameSize) {
                     // A frame completed while input continues is never the last.
-                    emit((packets + 1) * frameSize)
+                    emit((packets + 1) * frameSize, last = false)
                     filled = 0
                 }
             }
@@ -135,9 +126,8 @@ internal class OggOpusEncoder(
             frame.fill(0f, filled * channels, frameSize * channels)
             filled = 0
             val granule = minOf((packets + 1) * frameSize, end)
-            emit(granule)
+            emit(granule, last = granule == end)
         }
-        pages.finish()
     }
 
     /** `OpusHead`: version 1, the channels, the pre-skip, the input rate, no gain, mapping family 0. */
@@ -158,13 +148,5 @@ internal class OggOpusEncoder(
     private companion object {
         const val RATE = 48_000
         const val BLOCK = 4_096
-        const val PACKETS_PER_PAGE = 50
-
-        /**
-         * The stream's serial number. RFC 3533 asks for one unique within the
-         * file, which a file of one stream has whatever the value, and a
-         * fixed one makes the output the same every time.
-         */
-        const val SERIAL = 0x4F707573
     }
 }

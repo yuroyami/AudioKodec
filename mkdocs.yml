@@ -55,7 +55,15 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  # Code samples are included from source files that compile and run as tests
+  # (./gradlew :sample:docsTest, and :audiokodec:jsNodeTest for the Web Audio
+  # one), between `// --8<-- [start:name]` and `// --8<-- [end:name]` markers.
+  - pymdownx.snippets:
+      base_path:
+        - sample/src/docs/kotlin/io/github/yuroyami/audiokodec/docs
+        - audiokodec/src/jsTest/kotlin/io/github/yuroyami/audiokodec/docs
+      check_paths: true
+      dedent_subsections: true
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.highlight:
@@ -70,6 +78,20 @@ plugins:
 
 nav:
   - Home: index.md
+  - Tasks:
+      - tasks/index.md
+      - Decode a file to PCM: tasks/decode.md
+      - Stream and seek: tasks/stream-and-seek.md
+      - Get gapless playback right: tasks/gapless.md
+      - Read tags: tasks/read-tags.md
+      - Edit tags: tasks/edit-tags.md
+      - Read and write cover art: tasks/cover-art.md
+      - Encode FLAC: tasks/encode-flac.md
+      - Use kotlinx-io: tasks/kotlinx-io.md
+      - Play decoded audio: tasks/play-audio.md
+      - Measure loudness: loudness.md
+      - Draw a waveform: waveform.md
+      - Change the sample rate: resample.md
   - Guides:
       - Decoding: decoding.md
       - Encoding: encoding.md
@@ -80,10 +102,7 @@ nav:
       - Files and kotlinx-io: files.md
       - Seekable file input: file-input.md
   - Processing:
-      - Change the sample rate: resample.md
       - Mix channels: mix.md
-      - Measure loudness: loudness.md
-      - Draw a waveform: waveform.md
       - Levels, fades and test signals: levels.md
   - Formats:
       - Overview: formats.md

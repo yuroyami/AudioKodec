@@ -21,12 +21,30 @@ The JVM artifacts need Java 21 or newer.
 ## Quick start
 
 ```kotlin
-val audio = AudioKodec.decode(bytes)
-println("${audio.format.sampleRate} Hz, ${audio.format.channels} channels")
-
-val tags = AudioKodec.readTags(bytes)
-println(tags[TagField.TITLE])
+--8<-- "GuideSamples.kt:quick-start"
 ```
+
+## Try it
+
+The repository has a sample desktop viewer built on the library. Drop a file on its window,
+or use File > Open, to see the container and coding, the format and duration, the tags and
+cover art, and the waveform, and to play the file through Java Sound:
+
+```sh
+./gradlew :sample:run
+./gradlew :sample:run --args="path/to/song.flac"
+```
+
+Without a display, it prints the same summary for the file named in `--args`.
+
+## Tasks
+
+Short pages that each end in code to paste: [decode a file](tasks/decode.md),
+[stream and seek](tasks/stream-and-seek.md), [play gapless](tasks/gapless.md),
+[read tags](tasks/read-tags.md), [edit tags](tasks/edit-tags.md),
+[cover art](tasks/cover-art.md), [encode FLAC](tasks/encode-flac.md),
+[use kotlinx-io](tasks/kotlinx-io.md) and [play decoded audio](tasks/play-audio.md). Every
+code sample on those pages is included from a test that runs in the build.
 
 ## Guides
 

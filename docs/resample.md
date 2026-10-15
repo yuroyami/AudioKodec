@@ -1,13 +1,16 @@
 # Change the sample rate
 
+**Depends on** `io.github.yuroyami:audiokodec:0.1.0`. See [Install](index.md#install).
+
 A decoded file comes out at the rate it was encoded at, and an output
 device usually wants one fixed rate. `Resampler` converts interleaved float
 PCM from one rate to another, a block at a time, and `Pcm.resample` converts
 a whole buffer at once.
 
 ```kotlin
-val decoded = AudioKodec.decode(bytes)
-val at48k = Pcm.resample(decoded.samples, decoded.format.channels, decoded.format.sampleRate, 48_000)
+--8<-- "ResampleSample.kt:imports"
+
+--8<-- "ResampleSample.kt:resample"
 ```
 
 ## Streaming
@@ -17,23 +20,7 @@ The filter looks a little ahead, so the output trails the input by half its
 length, and `flush` writes the last frames at the end of the stream:
 
 ```kotlin
-val resampler = Resampler(inputRate = 44_100, outputRate = 48_000, channels = 2)
-val out = FloatArray(resampler.maxOutputFrames(4_096) * 2)
-
-AudioKodec.open(source, DecodeOptions(reuseBuffers = true)).use { decoder ->
-    while (true) {
-        val frame = decoder.nextFrame() ?: break
-        var at = 0
-        while (at < frame.frameCount) {
-            val take = minOf(4_096, frame.frameCount - at)
-            val written = resampler.process(frame.samples, at, take, out, 0)
-            play(out, written)
-            at += take
-        }
-    }
-}
-val tail = FloatArray(resampler.pendingOutputFrames * 2)
-play(tail, resampler.flush(tail))
+--8<-- "ResampleSample.kt:resample-stream"
 ```
 
 Nothing is allocated after the resampler is built: the filter is computed

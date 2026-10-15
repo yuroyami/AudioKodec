@@ -338,6 +338,7 @@ public final class io/github/yuroyami/audiokodec/EncodeTarget {
 	public final fun getCodec ()Lio/github/yuroyami/audiokodec/AudioCodec;
 	public final fun getContainer ()Lio/github/yuroyami/audiokodec/AudioContainer;
 	public final fun getDither ()Lio/github/yuroyami/audiokodec/Dither;
+	public final fun getQuality ()Ljava/lang/Float;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -360,6 +361,8 @@ public final class io/github/yuroyami/audiokodec/EncodeTarget$Companion {
 	public static synthetic fun flac$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun opus (IZZI)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun opus$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IZZIILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public final fun vorbis (F)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public static synthetic fun vorbis$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;FILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun wav (ILio/github/yuroyami/audiokodec/Dither;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun wav$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;ILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun wavALaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;
@@ -370,6 +373,8 @@ public final class io/github/yuroyami/audiokodec/EncodeTarget$Companion {
 	public final fun wavMsAdpcm (I)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public static synthetic fun wavMsAdpcm$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 	public final fun wavMuLaw ()Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public final fun wavPack (IILio/github/yuroyami/audiokodec/Dither;)Lio/github/yuroyami/audiokodec/EncodeTarget;
+	public static synthetic fun wavPack$default (Lio/github/yuroyami/audiokodec/EncodeTarget$Companion;IILio/github/yuroyami/audiokodec/Dither;ILjava/lang/Object;)Lio/github/yuroyami/audiokodec/EncodeTarget;
 }
 
 public final class io/github/yuroyami/audiokodec/FadeCurve : java/lang/Enum {

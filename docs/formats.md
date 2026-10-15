@@ -13,7 +13,8 @@ complete support tables and how each format is checked against a reference decod
 | AIFF and AIFF-C | PCM 8/16/24/32-bit big-endian, A-law, mu-law, and on write IEEE float 32/64-bit |
 | AU | PCM 8/16/24/32-bit big-endian, IEEE float 32/64-bit, A-law, mu-law; G.722 and G.726 (Sun's G.721 and G.723) are read only |
 | MP4 and M4A | ALAC 16/20/24/32-bit with one to eight channels, written with packets identical to those of Apple's reference encoder. The other MP4 codings are read only |
-| Ogg | Vorbis, Opus, FLAC and Speex, with up to 256 simultaneous logical streams, are read. Opus is written, mono or stereo, with packets identical to those of libopus's CELT encoder. Tags can be rewritten |
+| [WavPack](wavpack.md) | Integers of 1 to 32 bits and 32-bit float on read, exact integers through `IntPcmAccess`, mono to multichannel, hybrid files without their correction file; lossless 8, 16, 24 and 32-bit integers with one to eight channels on write, byte-identical to the reference encoder's. APEv2 tags are read and written |
+| Ogg | Vorbis at quality 0 to 10 with one to eight channels, and Opus, mono or stereo, with packets identical to those of libopus's CELT encoder. FLAC and Speex are read only, and tags can be rewritten in all four |
 
 RF64 and BW64 are read, and a WAV is written as RF64 automatically when it passes 4 GiB.
 
@@ -32,7 +33,6 @@ integer types are little-endian: `23ni` is 32-bit and `42ni` is 24-bit.
 | MP4, M4A, M4B, 3GP and QuickTime | AAC-LC, ALAC 16/20/24/32-bit, Opus, FLAC, MPEG Layers I, II and III, PCM 8/16/24/32-bit in both byte orders, IEEE float 32/64-bit, A-law, mu-law, AMR-NB and AMR-WB, GSM 06.10, iLBC, AC-3. Tags can be rewritten |
 | ADTS | [AAC-LC](aac.md), with sample-accurate seeking |
 | [AC-3](ac3.md) | Every coding mode from dual mono to 3/2 with the low frequency channel, at 32, 44.1 and 48 kHz. Enhanced AC-3 is refused by name |
-| [WavPack](wavpack.md) | Integers of 1 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, mono to multichannel; hybrid files without their correction file. APEv2 tags are read |
 | [Monkey's Audio](ape.md) | Every compression level, 8 to 32 bits and 32-bit float, exact integers through `IntPcmAccess`, one to 32 channels except seven, from version 3.99 on. APEv2 tags are read |
 | [True Audio](tta.md) | Up to 24 bits, exact integers through `IntPcmAccess`, any number of channels. ID3 and APEv2 tags are read |
 | [Musepack](musepack.md) | Stream version 8, mono and stereo, at 32 to 48 kHz, with the exact length its header states. APEv2 tags are read |
@@ -141,7 +141,7 @@ headers cannot be read.
 
 | Mapping | Headers and tags | Audio |
 |---|---|---|
-| Vorbis | read | decodes, with seeking |
+| Vorbis | read and written | decodes, with seeking, and encodes |
 | FLAC | read | decodes, with seeking |
 | Opus | read and written | decodes, with seeking; encodes mono and stereo |
 | Speex | read | decodes, with seeking that converges after a run-up |
@@ -201,6 +201,10 @@ channel coupling, block switching, and up to eight channels, which come out in
 AudioKodec's channel order rather than Vorbis's own. Vorbis puts the center
 channel second, between the two front channels, where WAV and everything derived
 from it puts it third.
+
+Vorbis also encodes, with `EncodeTarget.vorbis(quality)`. The encoder is lossy,
+streams from any `PcmSource` to any sink, and keeps the exact length of the
+input. [Encoding](encoding.md#vorbis) describes it and what it measured.
 
 [Floor type 0](vorbis-floor-zero.md) describes the curve as line spectral pairs
 instead of line segments. Its vector decoding and Bark-mapped response follow
@@ -360,8 +364,14 @@ WavPack files decode in every mode the encoder has, at 1 to 32 bits and as
 Multichannel audio comes out in AudioKodec's speaker order by the file's
 channel mask. Every block's checksum is verified, and seeking is exact
 because blocks stand alone. Hybrid files decode to their lossy stream,
-without the correction file. APEv2 tags are read as for any file. See
-[WavPack](wavpack.md).
+without the correction file. APEv2 tags are read as for any file, and
+written after the blocks.
+
+Lossless WavPack is written at 8, 16, 24 and 32 bits with one to eight
+channels, in the reference encoder's fast, normal, high and very high modes,
+and the files are byte for byte what `wavpack -m --no-threads` writes for the
+same samples. Each carries the MD5 sum of its audio and a RIFF header, so
+`wvunpack` verifies it and restores a WAV file. See [WavPack](wavpack.md).
 
 ## Monkey's Audio
 

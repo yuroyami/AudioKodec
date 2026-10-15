@@ -58,6 +58,16 @@ Two documentation rules catch people out: no em dashes anywhere, and no claim
 that the committed code does not support. The documentation uses American
 spelling.
 
+A code sample added to `docs/` is not typed into the page. It lives in a test under
+`sample/src/docs/kotlin/io/github/yuroyami/audiokodec/docs/`, a source set
+that sees only the published modules, between `// --8<-- [start:name]` and
+`// --8<-- [end:name]` markers, and the page includes it with
+`--8<-- "File.kt:name"`. The test must run the sample on input it makes itself
+and assert what the page says it does. `./gradlew :sample:docsTest` runs the
+samples, and `mkdocs build --strict` fails on a missing file or marker. The
+Web Audio sample is the one exception to the location: it is Kotlin/JS, so it
+lives in `audiokodec/src/jsTest` and runs with `:audiokodec:jsNodeTest`.
+
 Code follows the official Kotlin style.
 
 ## Running the tests
@@ -108,9 +118,14 @@ For tests without provenance recording:
 ```
 
 `./gradlew :sample:benchmark` measures decode speed against the floors recorded
-in [docs/support.md](docs/support.md#decode-speed) and `./gradlew :sample:test`
-checks the benchmark's own helpers. A change to a decoder's inner loops should
-be measured before and after.
+in [docs/support.md](docs/support.md#decode-speed). A change to a decoder's
+inner loops should be measured before and after. `./gradlew :sample:run` opens
+the sample viewer. `./gradlew :sample:test` checks the benchmark's helpers and
+the viewer: its summary of a file of every decodable container, its waveform
+and playback conversion, and its panel painted off screen. Set
+`AUDIOKODEC_SAMPLE_SCREENS` to a directory to keep those pictures; they go to
+`sample/build/sample-screens` otherwise. Files ffmpeg writes are skipped when it
+is not on `PATH`.
 
 The oracle suites compare against outside tools: `ffmpeg` and `ffprobe`
 for most formats, the reference `flac` tools for FLAC, and Apple's `afconvert`

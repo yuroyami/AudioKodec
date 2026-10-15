@@ -52,6 +52,7 @@ can hold checkouts without them ever reaching the repository.
 | Ogg | RFC 3533, plus the Ogg mapping documents for Vorbis, Opus, FLAC and Speex. Section 4's complete BOS/EOS groups and RFC 7845 section 7.2's per-link Opus pre-skip underpin chained playback; `OggChainOracleTest` checks independent libopusfile output and duration, FFmpeg's two-tone reproducer, changed Vorbis setups and exact 16/24/32-bit FLAC chains. Serial reuse across complete boundaries is an explicit compatibility extension, not permission in RFC 3533. The shared final header/audio page regression in `OggHeaderBoundaryWriteTest` assembles and checksums pages from these specifications; `OggOracleTest` independently verifies all 56 packets of an FFmpeg-generated Opus file and byte-identical FFmpeg PCM after that boundary mutation. Tag writing refuses this layout before output. `OggPageDamageTest` and the same oracle suite verify complete-prefix playback for checksum damage, missing pages and broken continuations against FFmpeg-generated Opus, Vorbis and FLAC recordings |
 | R128 gain tags | [RFC 7845 section 5.2.1](https://www.rfc-editor.org/rfc/rfc7845#section-5.2.1), for the signed 16-bit range, six-character ASCII grammar and gain reference |
 | Vorbis | Xiph.Org Vorbis I specification; [comment specification](https://xiph.org/vorbis/doc/v-comment.html) for counted vectors, repeated names and the separate vendor header. The Vorbis I Ogg mapping's nonzero initial PCM granule and RFC 9639's Ogg FLAC granules underpin `OggGranuleOffsetTest`; FFmpeg-generated recordings with independently shifted page positions retain identical FFmpeg PCM, and the oracle suite checks logical duration and seeks |
+| Vorbis encoding | Xiph.Org Vorbis I specification: sections 3.2.1 (codebook headers and codeword assignment), 4.2.2 to 4.2.4 (identification and setup headers), 4.3 (audio packets), 1.3.3 and 4.3.9 (square polar coupling and channel order), 7 (floor 1) and 8 (residues 1 and 2), and appendix A (the Ogg mapping and its granule positions). RFC 3533 for the pages. Implemented from the text; no encoder source was read. See [Vorbis encoder](#vorbis-encoder) |
 | Vorbis floor 0 | [Vorbis I specification section 6.2](https://xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-920006.2), including vector accumulation, extra final vector values, unsigned amplitude and reserved book selectors. Section 6.2.3 and its 2015 Bark-scale erratum define the odd/even products and frequency mapping. Implemented directly from this text, with no implementation source used. `VorbisFloor0Fixtures` assembles complete streams; direct double products independently check synthesis, FFmpeg's native float decoder checks lookup type one, and its public libvorbis wrapper checks lookup type two at 16-bit precision |
 | MPEG audio framing | ISO/IEC 11172-3 and 13818-3 frame headers, plus the published Xing, VBRI and LAME header layouts |
 | Free-format MPEG | ISO/IEC 11172-3 and 13818-3 free bitrate-index syntax, slot padding and constant frame spacing. MPEG-1 free-format Layer II uses Table 3-B.2a; the measured bitrate does not select a declared-rate table. The owned decoder is reused with measured or indexed packet lengths. LAME's public `--freeformat` executable interface generates MP3; [libmpg123 initialization](https://mpg123.org/api/group__mpg123__init.shtml), [input](https://mpg123.org/api/group__mpg123__input.shtml), [output formats](https://mpg123.org/api/group__mpg123__output.shtml) and [seeking](https://mpg123.org/api/group__mpg123__seek.shtml) document the independent float PCM and exact-length API. Neither tool's implementation source is read. FFmpeg rejects the high-rate free-format fixtures in the qualified environment, so it is not claimed as their decoder oracle |
@@ -84,7 +85,7 @@ Run as programs, never read as source.
 | flac and metaflac | FLAC, natively and inside Ogg, in both directions; ordered raw comments through native FLAC rewrites; [public picture imports and exports](https://xiph.org/flac/documentation_tools_metaflac.html) compare native PICTURE bodies and exact image bytes. `FlacStreamCopyTrimTest` uses RFC 9639 frame and sample numbering; `FlacOracleTest` compares a real FFmpeg stream-copy cut and a variable-sample fixture against FFmpeg PCM, duration and seeks. `FlacBinarySeekTest` measures source bytes at 10%, 50% and 90% of an unindexed recording, and exercises CRC-8-valid fake headers embedded in RFC 9639 verbatim samples; the oracle suite repeats the read bounds on reference FLAC output and verifies the embedded-header PCM with FFmpeg |
 | ExifTool 13.55 | Public command-line interface with duplicate extraction (`-a`) and format groups for RIFF INFO and AIFF text chunk lists, including native singleton limits. Used as an executable oracle; implementation source stays unopened |
 | afconvert (macOS) | CAF and AIFF-C, including direct `23ni` integer comparisons. Apple does not accept `42ni`; equivalent `in24` files check its PCM payload only. On macOS it also decodes the `.m4a` files AudioKodec's ALAC encoder writes, encodes the files that check the iTunes gapless record, and encodes and decodes the AAC files that check AudioKodec's AAC decoder against Apple's |
-| wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form |
+| wavpack and wvunpack | WavPack, built from the commit the port follows, in every encoding mode at 8 to 32 bits, floats, mono to 7.1 and hybrid lossy; lossless files must decode to the exact input integers, and every file to exactly what `wvunpack --raw` writes. ffmpeg's own WavPack encoder supplies files in the older multichannel form. AudioKodec's encoder must write the bytes `wavpack -m --no-threads` writes for the same raw samples, and `wvunpack` must verify its files' checksums and MD5 sums and decode them to the exact input |
 | mac | Monkey's Audio, built from the SDK the port follows, at every compression level from fast to insane, 8, 16, 24 and 32-bit integers and 32-bit float, one to eight channels except seven; every file must decode to exactly the input integers and to exactly what `mac -d` writes |
 | tta (libtta 2.3) | True Audio, the format authors' encoder and decoder, built from `libtta-c-2.3.tar.gz` (SourceForge, SHA-256 `68ba6db2d494dcd4aa6832a40952b88a3d50ca1174ab0ef1e091db16992303c7`). LGPL, so it is built and run as a program and its source is never opened. Its files at 16, 20 and 24 bits with one to six channels, and ffmpeg's at 8, 16 and 24 bits with up to eight, must decode to exactly the input integers, to exactly what `tta -d` writes and to exactly what ffmpeg decodes. It also writes the password-protected files that must be refused by name |
 | mpcenc and libmpcdec r495 | Musepack: `mpcenc` from the operating system's `musepack-tools` package writes the files, and `mpc_float_oracle.c`, a few lines over libmpcdec's public API compiled against the r495 sources, writes the floats the reference decodes them to. `mpcdec` itself writes only 16-bit samples. Every sample must be the same float, at qualities 0 to 10, at 32, 44.1 and 48 kHz, mono and stereo, with each mid/side mode and with noise substitution. The encoder is LGPL and only run |
@@ -92,6 +93,7 @@ Run as programs, never read as source.
 | opencore-amr 0.1.6 and vo-amrwbenc 0.1.3 | AMR-NB and AMR-WB: `amr_oracle.c` over opencore-amr's public interfaces, built from the pinned sources under `reference/amr`, encodes AMR files with opencore's encoder and decodes every AMR and AMR-WB file to its 16-bit samples; `amrwb_encoder.c` encodes AMR-WB files with vo-amrwbenc, built likewise. Every rate of each codec, with and without discontinuous transmission, silence, clipping, AMR-WB decoder homing frames, frames removed and lost, two to six channels, and the same frames in 3GP files ffmpeg writes, must decode to exactly the reference's integers. The encoders are only run |
 | libgsm 1.0.22 | GSM 06.10: `gsm_oracle.c`, a few lines over libgsm's public interface built from the pinned sources under `reference/gsm`, encodes speech, silence, clipping and noise in both layouts and decodes them; the test wraps Microsoft's blocks in WAV files and ffmpeg wraps the plain frames in QuickTime files. WAV files ffmpeg writes through its own libgsm encoder are checked too where ffmpeg has it. Every sample must be libgsm's integer |
 | libilbc 3.0.4 | iLBC: `ilbc_oracle.c`, a few lines over libilbc's public interface built from the pinned sources under `reference/ilbc`, encodes speech, silence, clipping, noise and bursts in both frame sizes and decodes them; the test wraps the frames in the storage format of RFC 3952 and ffmpeg copies them into CAF and QuickTime files. Every sample must be libilbc's integer, also for runs of random frames, which exercise concealment, and for frames altered to state the codebook index libilbc refuses, which must be refused at the same frame |
+| libogg 1.3.5 and libvorbis 1.3.7, for Vorbis encoding | `vorbisfile_oracle.c` over libvorbisfile's public API (`ov_fopen`, `ov_pcm_total`, `ov_read_float`), the library oggdec decodes with, linked against static builds of both from the pinned sources under `reference/libogg` and `reference/libvorbis` (see [Vorbis encoder](#vorbis-encoder)). `VorbisEncodeOracleTest` requires it to open every file the encoder writes, decode it without error and report exactly the input's length, and measures its decode against the input with `OpusCompare`. Only the public API is used; no source is ported |
 | libogg, for multiplexed Ogg tag writing | `ogg_packets.c` over libogg's public interface lists every packet of every logical stream with its granule position, length and hash, and fails on a bad page checksum or a hole in any stream. `OggMultiplexTagOracleTest` writes tags into files ffmpeg made with two interleaved streams and requires every packet but the rewritten comment back unchanged and in order, and the same samples from AudioKodec and from ffmpeg. libogg's source is not read |
 | libebur128 1.2.6 and ffmpeg's `ebur128` | Loudness: `ebur128_oracle.c` over libebur128's public interface, built from the pinned sources under `reference/ebur128`, measures tones and programs at 32 to 96 kHz in mono, stereo and 5.1, whose integrated, momentary and short-term loudness, loudness range and sample peaks `LoudnessMeter` must equal within double rounding, fed in blocks of random size. ffmpeg's `ebur128` filter, an independent implementation, must agree on integrated loudness within 0.1 LU. Only run |
 | ffmpeg's channel mixing | `ChannelMixOracleTest` mixes a different tone in every channel through 24 layout conversions, from 7.1, 6.1, 5.1, 5.0, quad, 3.0 and stereo down, and mono and stereo up, which `Pcm.mixChannels` must match sample for sample within float rounding. Only run |
@@ -554,6 +556,79 @@ The vectors it scores are the RFC 8251 set:
 the archive in `reference/` or the build directory, or downloads the archive
 there and checks its digest, and skips itself when none of that is possible.
 
+## Vorbis encoder
+
+The encoder is written from the Vorbis I specification. The format leaves
+every encoding decision open, so the specification is enough: it fixes what a
+decoder does with the headers and packets, and the encoder builds its own
+codebooks, floors and residues and writes them into its setup header. No
+encoder source was read, libvorbis's included.
+
+The psychoacoustic toolkit in `internal/psy` implements published curves,
+each named where it is used: the Bark scale of Zwicker and Terhardt (1980),
+the equivalent rectangular bandwidth of Glasberg and Moore (1990), the
+absolute threshold of hearing of Terhardt (1979), the spreading function of
+Schroeder, Atal and Hall (1979) and a straight-line one after Zwicker and
+Fastl, the spectral flatness tonality measure and masking offsets of
+Johnston (1988), a minimum signal-to-noise ratio for low partitions in the
+spirit of the `minval` table of ISO/IEC 11172-3 annex D, psychoacoustic
+model 2, and Robert Bristow-Johnson's audio equalizer cookbook for the
+transient detector's filters.
+
+libogg and libvorbis are built only as the test oracle, through their public
+API:
+
+| Field | Value |
+|---|---|
+| Repositories | https://github.com/xiph/ogg and https://github.com/xiph/vorbis |
+| Tags | libogg `v1.3.5`, libvorbis `v1.3.7` |
+| Commits | libogg `e1774cd77f471443541596e09078e78fdc342e4f`, libvorbis `0657aee69dec8508a0011f47f3b69d7538e9d262` |
+| License | BSD-3-Clause, the `COPYING` file of each at those commits |
+| Used | `include/vorbis/vorbisfile.h` and `include/ogg/ogg.h` as the API of the oracle program; the static libraries built from the sources with CMake by `.github/scripts/prepare-codec-oracles.sh` |
+| Not ported | Everything. No source file of either is a basis for AudioKodec code, so no binary of AudioKodec carries their license |
+
+The libvorbis license text, as recorded at that commit:
+
+```
+Copyright (c) 2002-2020 Xiph.org Foundation
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither the name of the Xiph.org Foundation nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+libogg's `COPYING` is the same license under `Copyright (c) 2002, Xiph.org
+Foundation`.
+
+The quality measure is `OpusCompare.kt`, the translation of libopus's
+`opus_compare` described under [Opus](#opus). The bounds the encoder is held
+to were fixed before it was written, from libvorbis, libopus and LAME run as
+programs on a signal of the same kind, and are stated in
+[docs/encoding.md](../docs/encoding.md#vorbis).
+
 ## ALAC
 
 There is no published specification of Apple Lossless beyond its source code,
@@ -599,15 +674,16 @@ order declared in Apple's public header independently of the Kotlin decoder.
 
 WavPack's format is documented in prose (`doc/WavPack5FileFormat.pdf`) for
 its blocks and metadata, and by its source for everything inside them. The
-decoder is a translation of the reference library's decoding half.
+decoder is a translation of the reference library's decoding half, and the
+encoder of its lossless encoding half.
 
 | Field | Value |
 |---|---|
 | Repository | https://github.com/dbry/WavPack |
 | Tag | `5.9.0`, commit `5803634a030e2a11dba602ba057b89cc34486c67` |
 | License | BSD 3-Clause, the `COPYING` file at that commit, reproduced in `NOTICE` |
-| Files | `src/unpack.c`, `src/read_words.c`, `src/entropy_utils.c`, `src/decorr_utils.c`, `src/unpack_floats.c`, the block and metadata handling in `src/open_utils.c` and `src/unpack_utils.c`, `src/wavpack_local.h`, `include/wavpack.h`, and `doc/WavPack5FileFormat.pdf` |
-| Not ported | Pre-4.0 files (`unpack3.c`), DSD (`unpack_dsd.c`), the correction file of hybrid lossless mode, the encoder, and the assembly versions of the decorrelation loops, which compute the same as the C |
+| Files | Decoder: `src/unpack.c`, `src/read_words.c`, `src/entropy_utils.c`, `src/decorr_utils.c`, `src/unpack_floats.c`, the block and metadata handling in `src/open_utils.c` and `src/unpack_utils.c`, `src/wavpack_local.h`, `include/wavpack.h`, and `doc/WavPack5FileFormat.pdf`. Encoder: the lossless paths of `src/pack.c`, `src/write_words.c` and `src/pack_utils.c`, the first (default) filter of each mode in `src/decorr_tables.h`, the default filter search of `execute_mono` and `execute_stereo` with its helpers in `src/extra1.c` and `src/extra2.c`, the logarithm and weight helpers in `src/entropy_utils.c`, and, for the CLI's choices it mirrors, `cli/wavpack.c` |
+| Not ported | Pre-4.0 files (`unpack3.c`), DSD (`unpack_dsd.c`, `pack_dsd.c`), the correction file of hybrid lossless mode, hybrid lossy encoding and its noise shaping (`pack_dns.c`), float encoding (`pack_floats.c`), the extra filter searches of `-x1` to `-x6` beyond the default filter, the multithreaded packer, and the assembly versions of the decorrelation loops, which compute the same as the C |
 
 The arithmetic is the reference's: 32-bit and wrapping where it wraps, with
 its unsigned quantities kept in signed integers and compared and divided
@@ -617,6 +693,16 @@ damaged bitstream it starts again from the beginning and lets the block
 checksum catch the result; the translation reads zeros there, which the
 checksum catches the same way, and a block the reference would mute is an
 error instead.
+
+The encoder makes the reference's choices for its four basic modes: the same
+block lengths, the same filter of each mode set up by the same backwards
+passes, the same repacking with five terms when a residual grows too large,
+false stereo, redundant low bits and the extension stream of 32-bit
+integers, and the same metadata in the same order, with a RIFF header made
+the way the library makes one and an MD5 sum stored as `wavpack -m` stores
+it. Its blocks are compared byte for byte with what `wavpack -m --no-threads`
+writes for the same raw input; the multithreaded packer splits single-stream
+audio differently, which is why the comparison turns it off.
 
 ## Musepack
 
